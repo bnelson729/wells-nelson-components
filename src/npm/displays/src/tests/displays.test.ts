@@ -2,6 +2,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Badge from '../lib/Badge.svelte';
 import Icon from '../lib/Icon.svelte';
+import Modal from '../lib/Modal.svelte';
 import SortableTable from '../lib/SortableTable.svelte';
 import { iconMarkup, registerIcons } from '../lib/icons.js';
 import { sortRows, type SortableColumn } from '../lib/types.js';
@@ -105,5 +106,12 @@ describe('Badge', () => {
 		const badge = el.querySelector('.badge')!;
 		expect(badge.classList.contains('warning')).toBe(true);
 		expect(badge.textContent).toBe('Pending');
+	});
+});
+
+describe('Modal', () => {
+	it('offers a large size for dense content', () => {
+		const el = render(Modal, { title: 'Pick players', size: 'lg', open: false, children: text('Body') });
+		expect(el.querySelector('dialog')!.classList.contains('lg')).toBe(true);
 	});
 });

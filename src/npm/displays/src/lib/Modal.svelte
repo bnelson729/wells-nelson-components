@@ -15,7 +15,8 @@
 		children: Snippet;
 		footer?: Snippet;
 		onclose?: () => void;
-		size?: 'sm' | 'md';
+		/** sm: confirmations; md: forms (default); lg: near full width and height, for dense pickers. */
+		size?: 'sm' | 'md' | 'lg';
 	} = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
@@ -65,6 +66,10 @@
 		width: min(34rem, calc(100vw - 2rem));
 		max-height: min(46rem, calc(100dvh - 2rem));
 		box-shadow: var(--shadow-lg);
+	}
+	.modal.lg {
+		width: min(64rem, calc(100vw - 2rem));
+		max-height: calc(100dvh - 2rem);
 	}
 	.modal.sm {
 		width: min(24rem, calc(100vw - 2rem));

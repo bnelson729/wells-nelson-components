@@ -20,6 +20,7 @@
 
 	const extraIcons = ['layout', 'cursor', 'users', 'database', 'tool'];
 	let modalOpen = $state(false);
+	let modalSize = $state<'sm' | 'md' | 'lg'>('md');
 	let confirmOpen = $state(false);
 	let dangerConfirm = $state(true);
 	let confirmed = $state(0);
@@ -114,7 +115,8 @@
 
 <Panel title="Modal and ConfirmDialog">
 	<div class="row">
-		<Button onclick={() => (modalOpen = true)}>Open modal</Button>
+		<Button onclick={() => ((modalSize = 'md'), (modalOpen = true))}>Open modal</Button>
+		<Button onclick={() => ((modalSize = 'lg'), (modalOpen = true))}>Open large modal</Button>
 		<Button onclick={() => (confirmOpen = true)}>Open confirm</Button>
 		<Toggle label="Danger" bind:checked={dangerConfirm} />
 		<span class="muted">Confirmed {confirmed} times</span>
@@ -144,7 +146,7 @@
 	<div class="frame"><FatalError error="QuotaExceededError: storage is full" /></div>
 </Panel>
 
-<Modal bind:open={modalOpen} title="A modal">
+<Modal bind:open={modalOpen} title={modalSize === 'lg' ? 'A large modal' : 'A modal'} size={modalSize}>
 	<p>Native <code>&lt;dialog&gt;</code> with a scrollable body. Close with Esc, the backdrop, or the buttons.</p>
 	{#each Array(12) as _, i (i)}<p class="muted">Filler line {i + 1}</p>{/each}
 	{#snippet footer()}

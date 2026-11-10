@@ -66,5 +66,5 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 ```
 
 `Button` (primary / secondary / danger / ghost, optional icon, `block`), `IconButton` (button or
-link, required label, `active`), `Modal` (native `<dialog>`, sm / md) and `ConfirmDialog`
+link, required label, `active`), `Modal` (native `<dialog>`, sm / md / lg) and `ConfirmDialog`
 (danger variant, busy state) complete the set. See them all in the sandbox (`npm run sandbox`).
