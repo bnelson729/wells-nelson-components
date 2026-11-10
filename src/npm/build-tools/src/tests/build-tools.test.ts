@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SUPPORTED_LETTERS, markPaths, parseHex, renderPng, renderSvg, writeIcons } from '../icons.js';
 import { renderManifest } from '../manifest.js';
 import { collectStrings, postbuild } from '../postbuild.js';
-import { basePath, devJsonModule, optimizeDeps } from '../vite.js';
+import { WELLS_NELSON_ENTRIES, basePath, devJsonModule, installedEntries, optimizeDeps } from '../vite.js';
 
 const dirs: string[] = [];
 const tempDir = () => {
@@ -125,6 +125,25 @@ describe('vite helpers', () => {
 		const { include } = optimizeDeps(['some-lazy-dep']);
 		expect(include[0]).toBe('some-lazy-dep');
 		expect(include).toContain('rxdb/plugins/replication-supabase');
+	});
+
+	it('pre-bundles only the Wells Nelson entry points the app has installed', () => {
+		const app = tempDir();
+		writeFileSync(join(app, 'package.json'), '{"name":"app"}');
+		const pkg = join(app, 'node_modules', '@wells-nelson', 'interactions');
+		mkdirSync(join(pkg, 'dist', 'account'), { recursive: true });
+		writeFileSync(
+			join(pkg, 'package.json'),
+			JSON.stringify({
+				name: '@wells-nelson/interactions',
+				exports: { '.': { default: './dist/index.js' }, './account': { default: './dist/account/index.js' } }
+			})
+		);
+		writeFileSync(join(pkg, 'dist', 'index.js'), '');
+		writeFileSync(join(pkg, 'dist', 'account', 'index.js'), '');
+		expect(installedEntries(WELLS_NELSON_ENTRIES, app)).toEqual(['@wells-nelson/interactions', '@wells-nelson/interactions/account']);
+		const { include } = optimizeDeps(['fuse.js'], app);
+		expect(include.slice(0, 3)).toEqual(['fuse.js', '@wells-nelson/interactions', '@wells-nelson/interactions/account']);
 	});
 
 	it('serves the JSON in dev only', () => {

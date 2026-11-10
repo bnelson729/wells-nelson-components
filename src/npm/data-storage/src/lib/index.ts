@@ -27,7 +27,16 @@ export { Persisted } from './persisted.svelte.js';
 export { DevicePrefs, defaultPrefsKeys, type DevicePrefsKeys } from './prefs.svelte.js';
 export { field, flatSchema, type FieldSpec } from './schema.js';
 export { createSyncedStore, type SyncedStore, type SyncedStoreConfig } from './store.js';
-export { createSupabaseApi, friendlyError, type Member, type MembersConfig, type SupabaseApi } from './supabase.js';
+export {
+	createSupabaseApi,
+	friendlyError,
+	replicationClient,
+	schemaNotExposed,
+	type Member,
+	type MembersConfig,
+	type SupabaseApi,
+	type SupabaseOptions
+} from './supabase.js';
 export { Tombstones } from './tombstones.svelte.js';
 export {
 	containerIdOf,

@@ -107,3 +107,19 @@ describe('registerAppShellCache', () => {
 		expect(caches.stores.get('app-cache-1')!.has(`${SCOPE}icons/icon-192.png`)).toBe(true);
 	});
 });
+
+describe('registerAppShellCache in development', () => {
+	it('caches nothing and clears what an earlier worker cached', async () => {
+		const sw = fakeSw(SCOPE);
+		await caches.open('demo-cache-old');
+		await caches.open('other-app-cache-1');
+		const result = registerAppShellCache({ sw, version: '1', files: ['a.js'], cachePrefix: 'demo', dev: true });
+		expect(result.precache).toEqual([]);
+		expect(sw.listeners.has('fetch')).toBe(false);
+		let done: Promise<unknown> = Promise.resolve();
+		sw.listeners.get('activate')!({ waitUntil: (p: Promise<unknown>) => (done = p) });
+		await done;
+		expect(await caches.keys()).toEqual(['other-app-cache-1']);
+		expect(sw.clients.claim).toHaveBeenCalled();
+	});
+});

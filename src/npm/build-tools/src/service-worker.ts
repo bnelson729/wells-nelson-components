@@ -6,12 +6,12 @@
  * ```ts
  * // src/service-worker/index.ts
  * /// <reference types="@sveltejs/kit" />
- * import { version } from '$app/env';
+ * import { dev, version } from '$app/env';
  * import { assets, immutable } from '$app/manifest';
  * import { self } from '$app/service-worker';
  * import { registerAppShellCache } from '@wells-nelson/build-tools/service-worker';
  *
- * registerAppShellCache({ sw: self, version, files: [...immutable, ...assets], cachePrefix: 'my-app' });
+ * registerAppShellCache({ sw: self, version, dev, files: [...immutable, ...assets], cachePrefix: 'my-app' });
  * ```
  */
 
@@ -40,10 +40,27 @@ export interface AppShellCacheOptions {
 	files: Array<string | { path: string }>;
 	/** Cache name prefix (default 'app'). */
 	cachePrefix?: string;
+	/**
+	 * Development: cache nothing and delete what an earlier worker cached, so every code change
+	 * loads (a cache-first worker would otherwise keep serving stale dev modules).
+	 */
+	dev?: boolean;
 }
 
-export function registerAppShellCache({ sw, version, files, cachePrefix = 'app' }: AppShellCacheOptions) {
+export function registerAppShellCache({ sw, version, files, cachePrefix = 'app', dev = false }: AppShellCacheOptions) {
 	const CACHE = `${cachePrefix}-cache-${version}`;
+	if (dev) {
+		sw.addEventListener('install', (event: ExtendableEventLike) => event.waitUntil(sw.skipWaiting()));
+		sw.addEventListener('activate', (event: ExtendableEventLike) => {
+			event.waitUntil(
+				(async () => {
+					for (const key of await caches.keys()) if (key.startsWith(`${cachePrefix}-cache-`)) await caches.delete(key);
+					await sw.clients.claim();
+				})()
+			);
+		});
+		return { cacheName: null, precache: [] };
+	}
 	const scope = new URL(sw.registration.scope);
 	// The app root serves the SPA shell (index.html on GitHub Pages, the fallback page elsewhere).
 	const SHELL = scope.href;

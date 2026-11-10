@@ -6,7 +6,7 @@ import type { AppState } from './app.svelte.js';
 import { openDatabase, type Database, type StorageFactory } from './database.js';
 import { createDataSet, disposeDataSet } from './dataset.js';
 import { Persisted } from './persisted.svelte.js';
-import type { SupabaseApi } from './supabase.js';
+import { replicationClient, schemaNotExposed, type SupabaseApi } from './supabase.js';
 import { containerIdOf, type DocMap, type Role, type StoreSchema } from './types.js';
 
 interface UserSyncState {
@@ -33,10 +33,16 @@ export function isRejection(err: unknown): boolean {
 	return !!code && (code === '42501' || code === 'P0001' || code.startsWith('23'));
 }
 
-export function errorMessage(err: unknown): string {
+/**
+ * A replication or API error as one line for the UI. With `schema`, a schema the Supabase API
+ * doesn't expose is reported as the setting to change.
+ */
+export function errorMessage(err: unknown, schema?: string): string {
 	if (err && typeof err === 'object') {
-		const e = err as { message?: string; parameters?: { errors?: { message?: string }[] } };
-		return e.parameters?.errors?.[0]?.message ?? e.message ?? String(err);
+		const e = err as { message?: string; code?: string; parameters?: { errors?: { message?: string; code?: string }[] } };
+		const inner = e.parameters?.errors?.[0];
+		const unexposed = schema ? (schemaNotExposed(inner, schema) ?? schemaNotExposed(e, schema)) : null;
+		return unexposed ?? inner?.message ?? e.message ?? String(err);
 	}
 	return String(err);
 }
@@ -201,7 +207,7 @@ export class CloudSync<D extends DocMap> {
 	}
 
 	#startReplication(db: Database<D>) {
-		const sb = this.#sb.getClient()!;
+		const sb = replicationClient(this.#sb.getClient()!, this.#sb.schema);
 		this.#schema.collections.forEach((name, index) => {
 			const rep = replicateSupabase<any>({
 				replicationIdentifier: `supabase-${name}`,
@@ -222,7 +228,7 @@ export class CloudSync<D extends DocMap> {
 			this.#replications.push(rep);
 			this.#subscriptions.push(
 				rep.error$.subscribe((err) => {
-					this.error = errorMessage(err);
+					this.error = errorMessage(err, this.#sb.schema);
 					if (isRejection(err)) this.rejectedWrite = this.error;
 				}),
 				rep.active$.subscribe((isActive) => {
@@ -342,7 +348,7 @@ export class CloudSync<D extends DocMap> {
 				s.blocked = s.blocked.filter((id) => !memberOf.has(id));
 			});
 		} catch (err) {
-			this.error = errorMessage(err);
+			this.error = errorMessage(err, this.#sb.schema);
 		}
 	}
 

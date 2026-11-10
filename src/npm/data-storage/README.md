@@ -63,6 +63,21 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
 Without roles everyone is an owner. Table and RPC names default to `<noun>_members` and
 `get_<noun>_members`; override with e.g. `members: { membersRpc: 'get_list_collaborators' }`.
 
+## A schema other than `public`
+
+To keep an app's tables in their own Postgres schema (handy when several apps share one Supabase
+project), set `supabaseSchema` on the store and the same `schema` on the migration:
+
+```ts
+createSyncedStore({ ..., supabaseSchema: 'my_app' });
+generateMigration({ ..., schema: 'my_app' });
+```
+
+The migration creates the schema with the grants Supabase's API roles need. In the Supabase
+dashboard, add the schema under **Project Settings → Data API → Exposed schemas**; until then,
+the API can't see it. The store's client reads and writes that schema. It also fixes RxDB's
+realtime subscription, which otherwise always listens on `public`.
+
 ## SQL migration
 
 ```ts

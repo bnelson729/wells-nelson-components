@@ -36,6 +36,32 @@ export interface MigrationConfig {
 	roles?: boolean;
 	membersTable?: string;
 	membersRpc?: string;
+	/**
+	 * Postgres schema for every table, type and function (default 'public'). Any other schema is
+	 * created with the grants Supabase needs; also expose it in the project's Data API settings and
+	 * pass the same name as `supabaseSchema` to the store.
+	 */
+	schema?: string;
+}
+
+/** Move everything the migration creates from `public` into `schema` (`auth.*` is untouched). */
+function inSchema(sql: string, schema: string) {
+	const setup = `-- ---------------------------------------------------------------- schema
+
+create schema if not exists ${schema};
+
+-- The API roles need the same access Supabase grants on public; row level security on every
+-- table still decides what each user can read and write.
+grant usage on schema ${schema} to anon, authenticated, service_role;
+alter default privileges in schema ${schema} grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema ${schema} grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema ${schema} grant all on sequences to anon, authenticated, service_role;
+
+`;
+	return sql
+		.replaceAll('public.', `${schema}.`)
+		.replaceAll('set search_path = public', `set search_path = ${schema}`)
+		.replace('-- ---------------------------------------------------------------- helpers', `${setup}-- ---------------------------------------------------------------- helpers`);
 }
 
 const SQL_TYPES: Record<ColumnType, string> = { text: 'text', number: 'double precision', boolean: 'boolean' };
@@ -70,7 +96,8 @@ export function tablesFromSchemas(
 }
 
 export function generateMigration(config: MigrationConfig): string {
-	const { container, containerField: cf, noun, roles = false } = config;
+	const { container, containerField: cf, noun, roles = false, schema = 'public' } = config;
+	if (!/^[a-z_][a-z0-9_]*$/.test(schema)) throw new Error(`Not a valid schema name: "${schema}".`);
 	const members = config.membersTable ?? `${noun}_members`;
 	const rpc = config.membersRpc ?? `get_${noun}_members`;
 	const isMember = `is_${noun}_member`;
@@ -315,5 +342,6 @@ alter publication supabase_realtime
   add table ${all.map((n) => `public.${n}`).join(', ')};
 `);
 
-	return out.join('');
+	const sql = out.join('');
+	return schema === 'public' ? sql : inSchema(sql, schema);
 }

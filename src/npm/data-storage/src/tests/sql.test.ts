@@ -80,6 +80,31 @@ describe('generateMigration', () => {
 		expect(sql).toContain('  order by m.created_at;');
 	});
 
+	it('builds into a custom schema, leaving auth and the PUBLIC role alone', () => {
+		const sql = generateMigration({ ...listsConfig, schema: 'demo_lists' });
+		expect(sql).toContain('create schema if not exists demo_lists;');
+		expect(sql).toContain('grant usage on schema demo_lists to anon, authenticated, service_role;');
+		expect(sql).toContain('alter default privileges in schema demo_lists grant all on tables to anon, authenticated, service_role;');
+		// Default privileges are set before the first table exists.
+		expect(sql.indexOf('alter default privileges')).toBeLessThan(sql.indexOf('create table'));
+		expect(sql).toContain('create table demo_lists.lists (');
+		expect(sql).toContain('create or replace function demo_lists.current_email()');
+		expect(sql).toContain('set search_path = demo_lists\n');
+		expect(sql).toContain('set search_path = demo_lists, auth\n');
+		expect(sql).toContain('exists (select 1 from auth.users u where lower(u.email) = m.email)');
+		expect(sql).toContain('revoke all on function demo_lists.get_list_collaborators(text) from public, anon;');
+		expect(sql).toContain('  add table demo_lists.lists, demo_lists.entries;');
+		expect(sql).not.toMatch(/public\./);
+	});
+
+	it('is unchanged for an explicit public schema', () => {
+		expect(generateMigration({ ...projectsConfig, schema: 'public' })).toBe(generateMigration(projectsConfig));
+	});
+
+	it('rejects unsafe schema names', () => {
+		expect(() => generateMigration({ ...listsConfig, schema: 'x; drop table y' })).toThrow(/schema name/);
+	});
+
 	it('requires the container among the tables', () => {
 		expect(() => generateMigration({ ...listsConfig, container: 'nope' })).toThrow(/container table/);
 	});

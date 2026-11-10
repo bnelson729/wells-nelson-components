@@ -25,6 +25,11 @@ export interface SyncedStoreConfig<D extends DocMap, C extends CollectionName<D>
 	storage: StorageFactory;
 	/** viewer / editor / owner roles (needs the roles variant of the SQL migration). */
 	roles?: boolean;
+	/**
+	 * Postgres schema for the app's tables and functions (default 'public'). A custom schema must be
+	 * exposed in the Supabase project's Data API settings; generate its SQL with the same `schema`.
+	 */
+	supabaseSchema?: string;
 	/** Override membership table / RPC names (defaults: `<noun>_members`, `get_<noun>_members`). */
 	members?: Partial<Omit<MembersConfig, 'roles' | 'containerField'>>;
 	/** Fields per collection holding ids of other rows in the container (rewritten when copying). */
@@ -44,14 +49,18 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 	config: SyncedStoreConfig<D, C>
 ) {
 	const roles = config.roles ?? false;
-	const supabase = createSupabaseApi(config.env, {
-		table: `${config.nouns.singular}_members`,
-		membersRpc: `get_${config.nouns.singular}_members`,
-		noun: config.nouns.singular,
-		...config.members,
-		containerField: config.containerField,
-		roles
-	});
+	const supabase = createSupabaseApi(
+		config.env,
+		{
+			table: `${config.nouns.singular}_members`,
+			membersRpc: `get_${config.nouns.singular}_members`,
+			noun: config.nouns.singular,
+			...config.members,
+			containerField: config.containerField,
+			roles
+		},
+		{ schema: config.supabaseSchema }
+	);
 	const app = new AppState<D>();
 	const tombstones = new Tombstones(config.appKey);
 	const prefs = config.prefs ?? new DevicePrefs(defaultPrefsKeys(config.appKey, config.nouns));

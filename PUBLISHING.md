@@ -83,6 +83,13 @@ Publisher → GitHub Actions**:
 | Repository | `wells-nelson-components` |
 | Workflow filename | `packages.yml` |
 | Environment name | `npm-publish` |
+| Allowed actions | tick **Allow npm publish** |
+
+**Allow npm publish matters.** New trusted publishers default to `npm stage publish` only (a
+version is uploaded hidden and waits for someone to approve it with 2FA). This workflow runs
+`npm publish`, so without that box the publish fails with **"OIDC permission denied for this
+action"**. npm can't edit an existing connection; to change it, delete the trusted publisher
+and add it again. A new connection must complete a successful publish within 2 days.
 
 Then:
 
@@ -94,6 +101,11 @@ Then:
 From then on, `npm publish` in the workflow authenticates with a short-lived OIDC token from
 GitHub. It needs the job's `id-token: write` permission, which is set, and npm 11.5.1 or newer,
 which ships with Node 24. A new package added to the repo goes through steps 3 and 4 once.
+
+If a release failed (for example with the OIDC error above), fix the setting and use **Re-run
+failed jobs** on that workflow run. Nothing was published or tagged, so it retries the same
+versions. The `0.0.0-stage` versions npm shows are placeholders from staged publishing; they're
+harmless and never become `latest`.
 
 ## Adding a package
 

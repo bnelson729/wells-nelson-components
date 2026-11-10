@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
 /**
@@ -36,9 +37,38 @@ export const SHARED_OPTIMIZE_DEPS = [
 	'rxdb/plugins/storage-dexie'
 ];
 
-/** `optimizeDeps` with the shared list plus the app's own lazily loaded deps (e.g. a search library). */
-export function optimizeDeps(extra: string[] = []) {
-	return { include: [...extra, ...SHARED_OPTIMIZE_DEPS] };
+/**
+ * Entry points of the Wells Nelson packages. They must be pre-bundled at startup too: one
+ * imported only by a lazily loaded page (e.g. `interactions/account`) or by the service worker
+ * otherwise triggers the same mid-session re-bundle.
+ */
+export const WELLS_NELSON_ENTRIES = [
+	'@wells-nelson/displays',
+	'@wells-nelson/interactions',
+	'@wells-nelson/interactions/account',
+	'@wells-nelson/data-storage',
+	'@wells-nelson/build-tools/service-worker'
+];
+
+/** The entries that resolve from `root` (an app installs only the packages it uses). */
+export function installedEntries(entries: string[], root = process.cwd()) {
+	const require = createRequire(join(root, 'package.json'));
+	return entries.filter((id) => {
+		try {
+			require.resolve(id);
+			return true;
+		} catch {
+			return false;
+		}
+	});
+}
+
+/**
+ * `optimizeDeps` with the shared runtime dependencies, every installed Wells Nelson entry point,
+ * and the app's own lazily loaded deps (e.g. a search library).
+ */
+export function optimizeDeps(extra: string[] = [], root = process.cwd()) {
+	return { include: [...extra, ...installedEntries(WELLS_NELSON_ENTRIES, root), ...SHARED_OPTIMIZE_DEPS] };
 }
 
 /**
