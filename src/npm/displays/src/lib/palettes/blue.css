@@ -1,0 +1,32 @@
+/* Blue palette. theme.css already defaults to it; import this to be explicit. */
+:root {
+	--bg: #f3f5f8;
+	--surface-2: #edf0f4;
+	--surface-hover: #e6eaf0;
+	--text: #1b1f26;
+	--muted: #646c78;
+	--border: #dfe3ea;
+	--border-strong: #c3c9d3;
+	--accent: #1f5fa8;
+	--accent-strong: #184c88;
+	--accent-text: #1d58a0;
+	--accent-soft: #dbe7f6;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #111418;
+		--surface: #1a1e24;
+		--surface-2: #21262d;
+		--surface-hover: #282e36;
+		--text: #e6e9ee;
+		--muted: #98a1ad;
+		--border: #2a3038;
+		--border-strong: #434b56;
+		--accent: #4b8ad6;
+		--accent-strong: #62a0e8;
+		--accent-text: #7fb2ef;
+		--accent-soft: #1d2c40;
+		--on-accent: #0b1422;
+	}
+}

@@ -1,0 +1,48 @@
+<script lang="ts">
+	import Button from './Button.svelte';
+	import Modal from './Modal.svelte';
+
+	let {
+		open = $bindable(false),
+		title,
+		message,
+		confirmLabel = 'Confirm',
+		danger = false,
+		onconfirm
+	}: {
+		open?: boolean;
+		title: string;
+		message: string;
+		confirmLabel?: string;
+		danger?: boolean;
+		onconfirm: () => void | Promise<void>;
+	} = $props();
+
+	let busy = $state(false);
+
+	async function confirm() {
+		busy = true;
+		try {
+			await onconfirm();
+			open = false;
+		} finally {
+			busy = false;
+		}
+	}
+</script>
+
+<Modal bind:open {title} size="sm">
+	<p class="message">{message}</p>
+	{#snippet footer()}
+		<Button onclick={() => (open = false)}>Cancel</Button>
+		<Button variant={danger ? 'danger' : 'primary'} onclick={confirm} disabled={busy}>{confirmLabel}</Button>
+	{/snippet}
+</Modal>
+
+<style>
+	.message {
+		margin: 0;
+		line-height: 1.5;
+		white-space: pre-line;
+	}
+</style>

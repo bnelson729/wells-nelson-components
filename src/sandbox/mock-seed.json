@@ -1,0 +1,21 @@
+{
+	"projects": [
+		{
+			"name": "Website refresh",
+			"tasks": [
+				{ "title": "Audit current pages", "external_ref": "TCK-101", "done": true },
+				{ "title": "Draft new navigation", "external_ref": "TCK-102", "done": false },
+				{ "title": "Write copy for home page", "external_ref": "TCK-103", "done": false }
+			],
+			"note": "Navigation depends on the audit."
+		},
+		{
+			"name": "Spring fundraiser",
+			"tasks": [
+				{ "title": "Book the venue", "external_ref": "EVT-7", "done": false },
+				{ "title": "Order supplies", "external_ref": "EVT-8", "done": false }
+			],
+			"note": "Supplies after the venue is confirmed."
+		}
+	]
+}

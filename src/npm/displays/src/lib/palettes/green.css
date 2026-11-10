@@ -1,0 +1,32 @@
+/* Green palette. Import after theme.css. */
+:root {
+	--bg: #f4f5f2;
+	--surface-2: #eef0ec;
+	--surface-hover: #e9ece6;
+	--text: #1d211e;
+	--muted: #69706a;
+	--border: #e1e4de;
+	--border-strong: #c5cac3;
+	--accent: #2f6f4f;
+	--accent-strong: #255a40;
+	--accent-text: #2a6447;
+	--accent-soft: #dcebe2;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #121513;
+		--surface: #1c201d;
+		--surface-2: #232825;
+		--surface-hover: #2a302c;
+		--text: #e7ebe7;
+		--muted: #9aa39c;
+		--border: #2c322e;
+		--border-strong: #444c46;
+		--accent: #4f9a73;
+		--accent-strong: #5fae85;
+		--accent-text: #7cc59e;
+		--accent-soft: #23382c;
+		--on-accent: #0d1a12;
+	}
+}

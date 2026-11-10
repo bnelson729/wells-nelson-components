@@ -1,3 +1,6 @@
+# Custom files
+docs/todo.md
+
 # Logs
 logs
 *.log
@@ -147,3 +150,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Packed workspace tarballs
+packs/

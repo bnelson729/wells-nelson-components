@@ -1,0 +1,227 @@
+name: Packages
+
+# Every push and pull request: build, type-check, test, lint and pack each package on its own.
+#
+# Pushes to main (and manual runs) then publish to npm. Each package has its own semver,
+# tracked by git tags named after the package, e.g. `@wells-nelson/displays@1.4.2`. A package
+# is released when its shipped files changed since its last tag; its next version comes from
+# reecetech/version-increment (patch by default; a manual run can bump minor or major).
+# Setup (npm org, auth, GitHub settings): see PUBLISHING.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Packages to release: comma-separated (displays, interactions, data-storage, build-tools), 'all', or empty for the ones changed since their last release"
+        type: string
+        default: ''
+      increment:
+        description: Version part to increment
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.ref }}
+  # Never cancel a run on main part-way through a release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  package:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: displays
+            needs: ''
+          - package: interactions
+            # Workspace packages it imports; built first so it compiles against their dist output.
+            needs: displays
+          - package: data-storage
+            needs: ''
+          - package: build-tools
+            needs: ''
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Build workspace dependencies
+        if: matrix.needs != ''
+        run: |
+          for dep in ${{ matrix.needs }}; do
+            npm run build -w "src/npm/$dep"
+          done
+
+      - name: Build
+        run: npm run build -w src/npm/${{ matrix.package }}
+      - name: Type-check
+        run: npm run check -w src/npm/${{ matrix.package }}
+      - name: Test
+        run: npm test -w src/npm/${{ matrix.package }}
+      - name: Lint package (publint)
+        run: npm run lint:package -w src/npm/${{ matrix.package }}
+
+      - name: Pack
+        run: |
+          mkdir -p packs
+          npm pack -w src/npm/${{ matrix.package }} --pack-destination packs
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ matrix.package }}
+          path: packs/*.tgz
+          if-no-files-found: error
+
+  compat:
+    name: cross-package types, sandbox and release scripts
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # data-storage's CloudSync / members API must satisfy the interfaces the account UI in
+      # interactions expects (they don't depend on each other at runtime).
+      - run: npm run check:compat
+      # The dev sandbox builds from package sources; keep it compiling as they change.
+      - name: Sandbox type-check
+        run: npm run check -w src/sandbox
+      - name: Sandbox bundle
+        run: npm run bundle -w src/sandbox
+      - name: Release script tests
+        run: npm run test:release
+
+  plan:
+    name: plan releases
+    needs: [package, compat]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.plan.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          # Full history and tags, to diff each package against its last release tag.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+      - id: plan
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: node scripts/release/plan.mjs
+
+  publish:
+    name: publish ${{ matrix.package }}
+    needs: plan
+    if: needs.plan.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    # Optional protection: add required reviewers to this environment in the repo settings.
+    # Its name must match the one in each package's npm trusted publisher settings.
+    environment: npm-publish
+    permissions:
+      contents: write # push the release tag
+      id-token: write # npm trusted publishing (OIDC) and provenance
+    strategy:
+      fail-fast: false
+      # One at a time, in dependency order, so a package sees the tags of the ones before it.
+      max-parallel: 1
+      matrix:
+        package: ${{ fromJSON(needs.plan.outputs.packages) }}
+    concurrency:
+      group: publish-${{ matrix.package }}
+      cancel-in-progress: false
+    env:
+      PKG_DIR: src/npm/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+
+      - id: meta
+        run: echo "name=$(node -p "require('./$PKG_DIR/package.json').name")" >> "$GITHUB_OUTPUT"
+
+      - id: next
+        uses: reecetech/version-increment@2026.8.4
+        with:
+          scheme: semver
+          increment: ${{ inputs.increment || 'patch' }}
+          tag_prefix: ${{ steps.meta.outputs.name }}@
+
+      # If an earlier run published this version but failed before pushing its tag, tag the
+      # commit npm recorded for it and compute the version after it, instead of re-publishing.
+      - id: recover
+        env:
+          NAME: ${{ steps.meta.outputs.name }}
+          VERSION: ${{ steps.next.outputs.version }}
+          TAG: ${{ steps.next.outputs.prefixed-version }}
+        run: |
+          if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then
+            head="$(npm view "$NAME@$VERSION" gitHead 2>/dev/null || true)"
+            echo "$NAME@$VERSION is already on npm; tagging ${head:-HEAD} as $TAG."
+            git tag "$TAG" "${head:-HEAD}"
+            git push origin "refs/tags/$TAG"
+            echo "recovered=true" >> "$GITHUB_OUTPUT"
+          fi
+      - id: after-recover
+        if: steps.recover.outputs.recovered == 'true'
+        uses: reecetech/version-increment@2026.8.4
+        with:
+          scheme: semver
+          increment: ${{ inputs.increment || 'patch' }}
+          tag_prefix: ${{ steps.meta.outputs.name }}@
+
+      - id: version
+        env:
+          VERSION: ${{ steps.after-recover.outputs.version || steps.next.outputs.version }}
+          TAG: ${{ steps.after-recover.outputs.prefixed-version || steps.next.outputs.prefixed-version }}
+        run: |
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG"
+
+      - name: Build
+        run: npm run build
+
+      - name: Set version and sibling ranges
+        run: node scripts/release/prepare-package.mjs ${{ matrix.package }} ${{ steps.version.outputs.version }}
+
+      - name: Publish
+        # Trusted publishing (OIDC) needs no token; NPM_TOKEN is only for bootstrapping the
+        # first release of a package (see PUBLISHING.md).
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish -w "$PKG_DIR"
+
+      - name: Tag the release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+
+      - name: Summary
+        run: echo "Published [\`${{ steps.version.outputs.tag }}\`](https://www.npmjs.com/package/${{ steps.meta.outputs.name }}/v/${{ steps.version.outputs.version }})" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,63 @@
+{
+  "name": "@wells-nelson/build-tools",
+  "version": "0.0.0",
+  "description": "Build and deployment tooling for Wells Nelson SvelteKit PWAs: postbuild, PWA icon generator, Vite config pieces, service worker, and templates.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bnelson729/wells-nelson-components.git",
+    "directory": "src/npm/build-tools"
+  },
+  "homepage": "https://github.com/bnelson729/wells-nelson-components/tree/main/src/npm/build-tools#readme",
+  "bugs": {
+    "url": "https://github.com/bnelson729/wells-nelson-components/issues"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
+    },
+    "./service-worker": {
+      "types": "./dist/service-worker.d.ts",
+      "default": "./dist/service-worker.js"
+    },
+    "./templates/*": "./templates/*"
+  },
+  "bin": {
+    "wn-postbuild": "./dist/cli/postbuild.js",
+    "wn-icons": "./dist/cli/icons.js",
+    "wn-manifest": "./dist/cli/manifest.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint:package": "publint"
+  },
+  "peerDependencies": {
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

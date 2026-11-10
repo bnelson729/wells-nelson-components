@@ -1,0 +1,233 @@
+/*
+ * Wells Nelson shared theme: design tokens (light + dark), base element styles, page helpers
+ * and drag-and-drop styles. Import once from the root layout:
+ *
+ *   import '@wells-nelson/displays/theme.css';
+ *   import '@wells-nelson/displays/palettes/green.css'; // optional, or override --accent* yourself
+ *
+ * The default palette is blue. Override any token on :root after this file (and again inside
+ * `@media (prefers-color-scheme: dark)` for dark mode). App-only tokens stay
+ * in the app's own stylesheet.
+ */
+:root {
+	color-scheme: light;
+	--bg: #f3f5f8;
+	--surface: #ffffff;
+	--surface-2: #edf0f4;
+	--surface-hover: #e6eaf0;
+	--text: #1b1f26;
+	--muted: #646c78;
+	--border: #dfe3ea;
+	--border-strong: #c3c9d3;
+	--accent: #1f5fa8;
+	--accent-strong: #184c88;
+	--accent-text: #1d58a0;
+	--accent-soft: #dbe7f6;
+	--on-accent: #ffffff;
+	--danger: #b3261e;
+	--danger-soft: #f9dedc;
+	--warning: #8a5a00;
+	--warning-soft: #fdf0d5;
+	--radius: 0.6rem;
+	--radius-lg: 1rem;
+	--shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
+	--shadow-lg: 0 10px 30px rgb(0 0 0 / 0.18);
+	--header-h: 3.5rem;
+	--header-offset: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+	--content-w: 42rem;
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
+	font-size: 16px;
+	line-height: 1.4;
+	-webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		color-scheme: dark;
+		--bg: #111418;
+		--surface: #1a1e24;
+		--surface-2: #21262d;
+		--surface-hover: #282e36;
+		--text: #e6e9ee;
+		--muted: #98a1ad;
+		--border: #2a3038;
+		--border-strong: #434b56;
+		--accent: #4b8ad6;
+		--accent-strong: #62a0e8;
+		--accent-text: #7fb2ef;
+		--accent-soft: #1d2c40;
+		--on-accent: #0b1422;
+		--danger: #e5534b;
+		--danger-soft: #3d1c1a;
+		--warning: #e3b341;
+		--warning-soft: #3a2f14;
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	min-height: 100dvh;
+	-webkit-tap-highlight-color: transparent;
+}
+
+a {
+	color: var(--accent-text);
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.2;
+}
+
+input[type='text'],
+input[type='email'],
+input[type='search'],
+input:not([type]) {
+	font: inherit;
+	color: inherit;
+	width: 100%;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+input:focus-visible {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+input[aria-invalid='true'] {
+	border-color: var(--danger);
+}
+
+button {
+	font: inherit;
+	color: inherit;
+}
+
+.visually-hidden {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+/* Page scaffolding */
+.page {
+	max-width: var(--content-w);
+	margin: 0 auto;
+	padding: 1rem 1rem 2rem;
+}
+
+.page-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0.25rem 0 1rem;
+	font-size: 1.5rem;
+}
+
+.stack {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.card {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+}
+
+.row-card {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-height: 3.25rem;
+	padding: 0.25rem 0.5rem 0.25rem 1rem;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+.notice {
+	display: flex;
+	gap: 0.6rem;
+	align-items: flex-start;
+	padding: 0.75rem 1rem;
+	border-radius: var(--radius);
+	background: var(--warning-soft);
+	color: var(--text);
+}
+
+.notice .icon {
+	color: var(--warning);
+	margin-top: 0.1rem;
+}
+
+.empty {
+	padding: 1.5rem 1rem;
+	text-align: center;
+	color: var(--muted);
+}
+
+/* Drag and drop */
+.dnd-active,
+.dnd-active * {
+	user-select: none !important;
+	-webkit-user-select: none !important;
+	cursor: grabbing !important;
+}
+
+[data-dnd-item] {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.dnd-source {
+	opacity: 0.35;
+}
+
+.dnd-ghost {
+	box-shadow: var(--shadow-lg);
+	opacity: 0.95;
+	border-radius: var(--radius);
+	background: var(--surface);
+	list-style: none;
+}
+
+.dnd-indicator {
+	position: fixed;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--accent);
+	pointer-events: none;
+	z-index: 1001;
+}
+
+.dnd-over {
+	outline: 2px dashed var(--accent);
+	outline-offset: 2px;
+	border-radius: var(--radius);
+}
