@@ -3,6 +3,7 @@
 	import {
 		ActiveList,
 		AddRow,
+		AppVersion,
 		Checkbox,
 		CollapsibleSection,
 		Combobox,
@@ -28,6 +29,8 @@
 	let checked = $state(true);
 	let toggled = $state(false);
 	let tagChoice = $state<ComboChoice>(null);
+	let updateAvailable = $state(false);
+	let checks = 0;
 	let tagOptions = $state(tags.map((t) => ({ id: t.id, label: t.label })));
 	let priority = $state<'low' | 'normal' | 'high'>('normal');
 	const nameError = $derived(name && name.trim().length < 3 ? 'At least 3 characters.' : null);
@@ -180,6 +183,21 @@
 		onopen={(p) => (opened = p.name)}
 	/>
 	<p class="muted">Inactive open: {inactiveOpen} · last opened: {opened ?? '—'}</p>
+</Panel>
+
+<Panel title="AppVersion" note="The running version; Update appears once a newer deploy is out. The check here finds one every other time.">
+	<Toggle label="Update available" bind:checked={updateAvailable} />
+	{#key updateAvailable}
+		<AppVersion
+			version="1.4.2"
+			{updateAvailable}
+			onupdate={() => alert('The app would reload here.')}
+			oncheck={async () => {
+				await new Promise((r) => setTimeout(r, 600));
+				return (checks++ % 2) === 1;
+			}}
+		/>
+	{/key}
 </Panel>
 
 <Panel title="AddRow">

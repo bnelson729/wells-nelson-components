@@ -40,13 +40,18 @@ export default defineConfig(({ mode, command }) => ({
 
 ```ts
 /// <reference types="@sveltejs/kit" />
-import { version } from '$app/env';
+import { dev, version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { self } from '$app/service-worker';
 import { registerAppShellCache } from '@wells-nelson/build-tools/service-worker';
 
-registerAppShellCache({ sw: self, version, files: [...immutable, ...assets], cachePrefix: 'my-app' });
+registerAppShellCache({ sw: self, version, dev, files: [...immutable, ...assets], cachePrefix: 'my-app' });
 ```
+
+Navigations go to the network first, so starting the app online always loads the latest deploy;
+offline they fall back to the cached shell. A new worker skips waiting and takes over open
+pages. `networkOnly` paths are never cached (default: SvelteKit's `_app/version.json`, so
+`updated` from `$app/state` notices new deploys). `dev` caches nothing.
 
 ## Templates
 

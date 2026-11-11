@@ -1,5 +1,6 @@
 export { default as ActiveList } from './ActiveList.svelte';
 export { default as AddRow } from './AddRow.svelte';
+export { default as AppVersion } from './AppVersion.svelte';
 export { default as Checkbox } from './Checkbox.svelte';
 export { default as CollapsibleSection } from './CollapsibleSection.svelte';
 export { default as Combobox, sameName, type ComboChoice, type ComboOption } from './Combobox.svelte';

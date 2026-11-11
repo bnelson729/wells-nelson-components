@@ -13,7 +13,8 @@ npm install @wells-nelson/displays @wells-nelson/interactions
 `TextField` (label, error, hint), `Checkbox` (optionally hidden label), `Toggle` (a switch for
 settings that apply at once), `Combobox` (type to filter, offers "Create …"; plus `sameName`),
 `AddRow` (inline "name + plus" that refocuses), `Segmented` (one of a few) and `SearchBar`
-(fixed at the bottom, with a clear button).
+(fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
+does `UndoButton`).
 
 ```svelte
 <ActiveList
@@ -55,6 +56,17 @@ undo.push({ undo: () => setDone(task, false) });
 <UndoButton stack={undo} />
 ```
 
+## App version
+
+The running version, with an Update button once a newer deploy is out (in SvelteKit, feed it
+`updated` from `$app/state`; set `kit.version.name` to the release version and a
+`pollInterval`). Without an update, `oncheck` adds "Check for updates". `onupdate` defaults to
+reloading the page.
+
+```svelte
+<AppVersion version={version} updateAvailable={updated.current} oncheck={() => updated.check()} />
+```
+
 ## Dev wipe
 
 ```svelte
@@ -82,4 +94,5 @@ shape. Wording comes from `nouns` (`{ singular: 'project', plural: 'projects' }`
 
 With `roles`, `ShareModal` shows a role picker and protects the last owner, and
 `ContainerEditModal` offers "Leave" instead of "Delete" while other owners remain. Without roles
-every member counts as an owner. The sandbox's Account page drives every state with a mock.
+every member counts as an owner. `localOnlyReason` keeps a container local-only (e.g. built-in
+sample data): both modals show that text instead of offering to make it cloud-enabled. The sandbox's Account page drives every state with a mock.

@@ -1,3 +1,20 @@
+import type { IconName } from './icons.js';
+
+/** One destination of `TabBar`. */
+export interface TabItem {
+	label: string;
+	icon: IconName;
+	/** Where it goes; without one the tab shows disabled (e.g. nothing to open yet). */
+	href?: string;
+	/** The current section (highlighted, `aria-current="page"`). */
+	active?: boolean;
+	/** A round image instead of the icon, e.g. the signed-in user's avatar. */
+	imageUrl?: string | null;
+	/** A warning dot on the icon, e.g. unsynced changes; `dotLabel` says what it means. */
+	dot?: boolean;
+	dotLabel?: string;
+}
+
 /** A sortable column of `SortableTable`. */
 export interface SortableColumn<T> {
 	/** Unique key; also what `sortKey` refers to. */

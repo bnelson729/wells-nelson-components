@@ -88,6 +88,22 @@ describe('ShareModal', () => {
 	});
 });
 
+describe('ShareModal local-only', () => {
+	it("explains why it can't be shared instead of offering to make it cloud-enabled", () => {
+		render(ShareModal, {
+			...base,
+			location: 'local',
+			cloud: fakeCloud(),
+			members: fakeApi([]),
+			onmakecloud: vi.fn(),
+			localOnlyReason: 'The sample project stays on this device.'
+		});
+		const dialog = document.querySelector('dialog')!;
+		expect(dialog.textContent).toContain('The sample project stays on this device.');
+		expect(dialog.textContent).not.toContain('Make cloud-enabled');
+	});
+});
+
 describe('fetch effects', () => {
 	const members = [{ id: 'm1', email: 'me@x.com', active: true }];
 
@@ -149,6 +165,20 @@ describe('ContainerEditModal', () => {
 		render(ContainerEditModal, { ...base, ...handlers(), roles: true, role: 'owner', location: 'cloud', cloud: fakeCloud(), members: api });
 		await settle();
 		expect(button(document, 'Delete project')).toBeTruthy();
+	});
+
+	it('replaces the cloud option with the reason a container stays local-only', () => {
+		render(ContainerEditModal, {
+			...base,
+			...handlers(),
+			location: 'local',
+			cloud: fakeCloud(),
+			members: fakeApi([]),
+			localOnlyReason: 'The sample project stays on this device.'
+		});
+		const dialog = document.querySelector('dialog')!;
+		expect(dialog.textContent).toContain('The sample project stays on this device.');
+		expect(dialog.textContent).not.toContain('Cloud-enabled');
 	});
 
 	it('renames on save', () => {

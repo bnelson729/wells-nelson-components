@@ -98,6 +98,15 @@ describe('registerAppShellCache', () => {
 		expect(await response!.text()).toBe(`cached ${SCOPE}`);
 	});
 
+	it("leaves SvelteKit's version check to the network, uncached", async () => {
+		const sw = fakeSw(SCOPE);
+		registerAppShellCache({ sw, version: '1', files: [] });
+		expect(await dispatchFetch(sw, new Request(`${SCOPE}_app/version.json`))).toBeUndefined();
+		const custom = fakeSw(SCOPE);
+		registerAppShellCache({ sw: custom, version: '1', files: [], networkOnly: ['build.txt'] });
+		expect(await dispatchFetch(custom, new Request(`${SCOPE}build.txt`))).toBeUndefined();
+	});
+
 	it('caches same-scope assets on first fetch', async () => {
 		const sw = fakeSw(SCOPE);
 		registerAppShellCache({ sw, version: '1', files: [] });

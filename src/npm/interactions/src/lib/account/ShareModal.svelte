@@ -33,6 +33,7 @@
 		signInHref,
 		signInPitch,
 		description,
+		localOnlyReason,
 		onmakecloud,
 		onclose
 	}: {
@@ -53,6 +54,11 @@
 		signInPitch?: string;
 		/** Who can do what, shown above the invite form. */
 		description?: string;
+		/**
+		 * Why this container has to stay local-only (e.g. built-in sample data). The cloud option
+		 * is replaced by this text while it is local.
+		 */
+		localOnlyReason?: string;
 		onmakecloud: () => Promise<unknown>;
 		onclose: () => void;
 	} = $props();
@@ -141,7 +147,9 @@
 </script>
 
 <Modal bind:open title={`Share “${name}”`} {onclose}>
-	{#if !cloud.configured}
+	{#if localOnlyReason && !isCloud}
+		<p>{localOnlyReason}</p>
+	{:else if !cloud.configured}
 		<p class="muted">Sharing isn't available because cloud sync isn't set up for this copy of {appName}.</p>
 	{:else if !signedIn}
 		<p>{pitch}</p>

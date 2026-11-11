@@ -35,6 +35,9 @@
 	--header-h: 3.5rem;
 	--header-offset: calc(var(--header-h) + env(safe-area-inset-top, 0px));
 	--content-w: 42rem;
+	/* Bottom tab bar height (TabBar), and the space fixed bottom UI leaves for it (0 without one). */
+	--tabbar-h: 3.75rem;
+	--footer-offset: 0px;
 	font-family:
 		system-ui,
 		-apple-system,

@@ -4,5 +4,6 @@ export const shell = $state({
 	hideOnScroll: false,
 	wide: false,
 	avatar: false,
+	tabBar: false,
 	palette: 'blue' as 'blue' | 'green'
 });

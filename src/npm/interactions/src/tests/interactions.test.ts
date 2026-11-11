@@ -1,15 +1,43 @@
 import { createRawSnippet, flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ActiveList from '../lib/ActiveList.svelte';
+import AppVersion from '../lib/AppVersion.svelte';
 import CollapsibleSection from '../lib/CollapsibleSection.svelte';
 import { reorder } from '../lib/dnd.js';
 import { LONG_PRESS_MS, longpress } from '../lib/longpress.js';
 import { UndoStack } from '../lib/undo.svelte.js';
-import { render } from './setup.js';
+import { button, render, settle } from './setup.js';
 
 function pointer(type: string, init: { x?: number; y?: number; id?: number } = {}) {
 	return new PointerEvent(type, { bubbles: true, clientX: init.x ?? 0, clientY: init.y ?? 0, pointerId: init.id ?? 1, button: 0 });
 }
+
+describe('AppVersion', () => {
+	it('shows the version and an Update button once a new version is out', () => {
+		const onupdate = vi.fn();
+		const el = render(AppVersion, { version: '1.4.2', updateAvailable: true, onupdate });
+		expect(el.textContent).toContain('Version 1.4.2');
+		expect(el.textContent).toContain('A new version is available.');
+		button(el, 'Update').click();
+		expect(onupdate).toHaveBeenCalled();
+	});
+
+	it('checks on request and says when it is already the latest', async () => {
+		const oncheck = vi.fn(async () => false);
+		const el = render(AppVersion, { version: '1.4.2', oncheck });
+		button(el, 'Check for updates').click();
+		await settle();
+		expect(oncheck).toHaveBeenCalled();
+		expect(el.textContent).toContain('You have the latest version.');
+	});
+
+	it('offers the update when a check finds one', async () => {
+		const el = render(AppVersion, { version: '1.4.2', oncheck: async () => true });
+		button(el, 'Check for updates').click();
+		await settle();
+		expect(button(el, 'Update')).toBeTruthy();
+	});
+});
 
 describe('reorder', () => {
 	it('moves an id to an index counted without it', () => {

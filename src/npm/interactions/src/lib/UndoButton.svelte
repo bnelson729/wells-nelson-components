@@ -2,7 +2,7 @@
 	import { Icon } from '@wells-nelson/displays';
 	import type { UndoStack } from './undo.svelte.js';
 
-	/** Floating Undo button, bottom left (above a `SearchBar`), shown while `stack.visible`. */
+	/** Floating Undo button, bottom left (above a `SearchBar` and any `TabBar`), shown while `stack.visible`. */
 	let { stack, label = 'Undo' }: { stack: UndoStack; label?: string } = $props();
 </script>
 
@@ -17,7 +17,7 @@
 	.undo {
 		position: fixed;
 		left: max(1rem, calc(50vw - var(--content-w) / 2 + 1rem));
-		bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+		bottom: calc(4.75rem + max(env(safe-area-inset-bottom, 0px), var(--footer-offset, 0px)));
 		z-index: 45;
 		display: inline-flex;
 		align-items: center;

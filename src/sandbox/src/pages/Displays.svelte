@@ -75,6 +75,13 @@
 	<Toggle label="Wide (64rem)" bind:checked={shell.wide} />
 </Panel>
 
+<Panel
+	title="TabBar"
+	note="Bottom navigation for phones. While it's shown, the search bar and Undo on the Interactions page sit above it (--footer-offset)."
+>
+	<Toggle label="Show the tab bar" bind:checked={shell.tabBar} />
+</Panel>
+
 <Panel title="Button and IconButton">
 	<div class="row">
 		<Button variant="primary" icon="plus">Primary</Button>

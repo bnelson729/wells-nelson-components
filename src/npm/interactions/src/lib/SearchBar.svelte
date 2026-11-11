@@ -21,9 +21,10 @@
 		position: fixed;
 		left: 0;
 		right: 0;
-		bottom: 0;
+		/* Above a bottom tab bar when there is one (--footer-offset includes the safe area then). */
+		bottom: var(--footer-offset, 0px);
 		z-index: 40;
-		padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+		padding: 0.5rem 1rem calc(0.5rem + max(0px, env(safe-area-inset-bottom, 0px) - var(--footer-offset, 0px)));
 		background: linear-gradient(to top, var(--bg) 70%, transparent);
 	}
 	.inner {
@@ -55,6 +56,6 @@
 		display: none;
 	}
 	.spacer {
-		height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+		height: calc(4.5rem + max(0px, env(safe-area-inset-bottom, 0px) - var(--footer-offset, 0px)));
 	}
 </style>

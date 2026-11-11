@@ -1,7 +1,9 @@
 /**
  * Offline-first app shell for a SvelteKit service worker. Everything the app needs is precached
- * on install; navigations fall back to the cached shell (the app root) when the network is
- * unavailable; cross-origin requests (Supabase, Google avatars) are left to the network.
+ * on install; navigations go to the network first (so starting the app online always
+ * loads the latest deploy) and fall back to the cached shell (the app root) offline. A new
+ * deploy's worker installs, skips waiting and takes over open pages straight away. Cross-origin
+ * requests (Supabase, Google avatars) are left to the network.
  *
  * ```ts
  * // src/service-worker/index.ts
@@ -45,9 +47,22 @@ export interface AppShellCacheOptions {
 	 * loads (a cache-first worker would otherwise keep serving stale dev modules).
 	 */
 	dev?: boolean;
+	/**
+	 * Paths (relative to the scope) that always go to the network and are never cached. Defaults
+	 * to SvelteKit's `_app/version.json`, so its update check (`updated` in `$app/state`) sees
+	 * new deploys instead of the first answer it ever cached.
+	 */
+	networkOnly?: string[];
 }
 
-export function registerAppShellCache({ sw, version, files, cachePrefix = 'app', dev = false }: AppShellCacheOptions) {
+export function registerAppShellCache({
+	sw,
+	version,
+	files,
+	cachePrefix = 'app',
+	dev = false,
+	networkOnly = ['_app/version.json']
+}: AppShellCacheOptions) {
 	const CACHE = `${cachePrefix}-cache-${version}`;
 	if (dev) {
 		sw.addEventListener('install', (event: ExtendableEventLike) => event.waitUntil(sw.skipWaiting()));
@@ -64,6 +79,7 @@ export function registerAppShellCache({ sw, version, files, cachePrefix = 'app',
 	const scope = new URL(sw.registration.scope);
 	// The app root serves the SPA shell (index.html on GitHub Pages, the fallback page elsewhere).
 	const SHELL = scope.href;
+	const NETWORK_ONLY = new Set(networkOnly.map((p) => new URL(p, scope).pathname));
 	const PRECACHE = files.map((f) => new URL(typeof f === 'string' ? f : f.path, scope).href).concat(SHELL);
 
 	sw.addEventListener('install', (event: ExtendableEventLike) => {
@@ -89,7 +105,7 @@ export function registerAppShellCache({ sw, version, files, cachePrefix = 'app',
 		const { request } = event;
 		if (request.method !== 'GET') return;
 		const url = new URL(request.url);
-		if (url.origin !== scope.origin) return;
+		if (url.origin !== scope.origin || NETWORK_ONLY.has(url.pathname)) return;
 
 		if (request.mode === 'navigate') {
 			event.respondWith(

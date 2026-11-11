@@ -31,6 +31,7 @@
 		nouns,
 		signInHref,
 		contentsLabel = 'everything in it',
+		localOnlyReason,
 		isDefault,
 		ondefaultchange,
 		onrename,
@@ -53,6 +54,11 @@
 		signInHref: string;
 		/** What gets deleted along with it, e.g. "all its tasks and notes". */
 		contentsLabel?: string;
+		/**
+		 * Why this container has to stay local-only (e.g. built-in sample data). The cloud option
+		 * is replaced by this text while it is local.
+		 */
+		localOnlyReason?: string;
 		isDefault: boolean;
 		ondefaultchange: (isDefault: boolean) => void;
 		onrename: (name: string) => void;
@@ -172,7 +178,9 @@
 
 	<section class="group">
 		<h3>Sync</h3>
-		{#if signedIn}
+		{#if localOnlyReason && !isCloud}
+			<p class="muted small"><Icon name="wifi-off" size={16} /> {localOnlyReason}</p>
+		{:else if signedIn}
 			<Toggle
 				label="Cloud-enabled"
 				bind:checked={cloudToggle}

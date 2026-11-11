@@ -15,13 +15,14 @@ import '@wells-nelson/displays/palettes/green.css';
 Tokens: `--bg`, `--surface`, `--surface-2`, `--surface-hover`, `--text`, `--muted`, `--border`,
 `--border-strong`, `--accent`, `--accent-strong`, `--accent-text`, `--accent-soft`, `--on-accent`,
 `--danger`, `--danger-soft`, `--warning`, `--warning-soft`, `--radius`, `--radius-lg`, `--shadow`,
-`--shadow-lg`, `--header-h`, `--header-offset`, `--content-w`. Helpers: `.page`, `.page-title`,
+`--shadow-lg`, `--header-h`, `--header-offset`, `--content-w`, `--tabbar-h`, `--footer-offset`
+(the space fixed bottom UI leaves for a `TabBar`; 0 without one). Helpers: `.page`, `.page-title`,
 `.stack`, `.card`, `.row-card`, `.muted`, `.notice`, `.empty`, `.visually-hidden`, plus
 drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
 
 ## Icons
 
-The base set: alert, check, chevron, cloud, cloud-pending, gear, grip, mail, pencil, plus,
+The base set: alert, check, chevron, cloud, cloud-pending, gear, grip, home, mail, pencil, plus,
 refresh, search, share, trash, undo, user, wifi-off, x. Register app icons at startup:
 
 ```ts
@@ -45,6 +46,15 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 	{#snippet brand()}MA{/snippet}
 	{#snippet nav()}<IconButton icon="calendar" label="Schedule" href={…} active={…} />{/snippet}
 </AppHeader>
+
+<!-- Phones: a bottom tab bar instead of the header (set --header-h: 0px at that width). -->
+<TabBar
+	items={[
+		{ label: 'Home', icon: 'home', href: resolve('/'), active: routeId === '/' },
+		{ label: 'Schedule', icon: 'calendar', href: projectId ? scheduleHref : undefined }, // no href: disabled
+		{ label: 'Profile', icon: 'user', href: resolve('/profile'), imageUrl: avatar, dot: unsynced, dotLabel: 'Unsynced changes' }
+	]}
+/>
 
 <SortableTable
 	title="Members"

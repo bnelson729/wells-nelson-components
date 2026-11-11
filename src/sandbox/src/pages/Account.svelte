@@ -26,6 +26,8 @@
 	let location = $state<ContainerLocation>('cloud');
 	let emailLink = $state(true);
 	let isDefault = $state(false);
+	let sample = $state(false);
+	const localOnlyReason = $derived(sample ? 'This is the built-in sample project. It stays on this device.' : undefined);
 	let modal = $state<'share' | 'edit' | 'prompt' | null>(null);
 	let containerName = $state('Website refresh');
 
@@ -63,6 +65,7 @@
 	<div class="grid">
 		<Toggle label="Roles (viewer / editor / owner)" bind:checked={roles} />
 		<Toggle label="Default container" bind:checked={isDefault} />
+		<Toggle label="Must stay local-only (localOnlyReason)" bind:checked={sample} />
 	</div>
 	<Segmented
 		label="Where the project lives"
@@ -109,6 +112,7 @@
 		{nouns}
 		appName="Demo"
 		signInHref="#/account"
+		{localOnlyReason}
 		onmakecloud={async () => {
 			await cloud.action('makeCloud(pr1)')();
 			location = 'cloud';
@@ -127,6 +131,7 @@
 		{nouns}
 		signInHref="#/account"
 		contentsLabel="all its tasks and notes"
+		{localOnlyReason}
 		{isDefault}
 		ondefaultchange={(on) => ((isDefault = on), cloud.note(`default → ${on}`))}
 		onrename={(n) => ((containerName = n), cloud.note(`rename → ${n}`))}

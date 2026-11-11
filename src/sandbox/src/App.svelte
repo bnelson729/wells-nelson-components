@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AppHeader, IconButton } from '@wells-nelson/displays';
+	import { AppHeader, IconButton, TabBar } from '@wells-nelson/displays';
 	import greenPalette from '@wells-nelson/displays/palettes/green.css?inline';
 	import type { Component } from 'svelte';
 	import Account from './pages/Account.svelte';
@@ -57,6 +57,20 @@
 		{/each}
 	{/snippet}
 </AppHeader>
+
+{#if shell.tabBar}
+	<TabBar
+		items={pages.map((p) => ({
+			label: p.label.split(' ')[0],
+			icon: p.icon,
+			href: `#/${p.id}`,
+			active: route === p.id,
+			imageUrl: p.id === 'account' && shell.avatar ? AVATAR : null,
+			dot: p.id === 'account' && shell.unsynced,
+			dotLabel: 'Unsynced changes'
+		}))}
+	/>
+{/if}
 
 <main class="page main">
 	<h1 class="page-title">{page.label}</h1>

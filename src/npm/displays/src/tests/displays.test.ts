@@ -4,6 +4,7 @@ import Badge from '../lib/Badge.svelte';
 import Icon from '../lib/Icon.svelte';
 import Modal from '../lib/Modal.svelte';
 import SortableTable from '../lib/SortableTable.svelte';
+import TabBar from '../lib/TabBar.svelte';
 import { iconMarkup, registerIcons } from '../lib/icons.js';
 import { sortRows, type SortableColumn } from '../lib/types.js';
 import { text } from './snippet.js';
@@ -26,7 +27,7 @@ function render<P extends Record<string, unknown>>(component: any, props: P) {
 
 describe('icons', () => {
 	it('ships the base set', () => {
-		for (const name of ['plus', 'x', 'check', 'pencil', 'trash', 'share', 'chevron', 'alert', 'cloud', 'wifi-off', 'user', 'gear', 'undo', 'refresh', 'mail', 'search']) {
+		for (const name of ['plus', 'x', 'check', 'pencil', 'trash', 'share', 'chevron', 'alert', 'cloud', 'wifi-off', 'user', 'gear', 'undo', 'refresh', 'mail', 'search', 'home']) {
 			expect(iconMarkup(name), name).not.toBe('');
 		}
 	});
@@ -43,6 +44,33 @@ describe('icons', () => {
 	it('hides decorative icons from assistive tech', () => {
 		const el = render(Icon, { name: 'plus' });
 		expect(el.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
+	});
+});
+
+describe('TabBar', () => {
+	const items = [
+		{ label: 'Home', icon: 'home', href: '/', active: true },
+		{ label: 'List', icon: 'check' },
+		{ label: 'Profile', icon: 'user', href: '/profile', dot: true, dotLabel: 'Unsynced changes' }
+	];
+
+	it('links each tab, marks the current one and disables tabs without a link', () => {
+		const el = render(TabBar, { items });
+		const links = [...el.querySelectorAll('a')];
+		expect(links.map((a) => a.textContent?.trim())).toEqual(['Home', 'Profile (Unsynced changes)']);
+		expect(links[0].getAttribute('aria-current')).toBe('page');
+		expect(links[1].getAttribute('aria-current')).toBeNull();
+		expect(el.querySelector('[aria-disabled="true"]')!.textContent).toContain('List');
+	});
+
+	it('reserves the bottom of the screen while mounted', () => {
+		const target = document.createElement('div');
+		document.body.append(target);
+		const instance = mount(TabBar, { target, props: { items } });
+		flushSync();
+		expect(document.documentElement.style.getPropertyValue('--footer-offset')).toContain('--tabbar-h');
+		unmount(instance);
+		expect(document.documentElement.style.getPropertyValue('--footer-offset')).toBe('');
 	});
 });
 
