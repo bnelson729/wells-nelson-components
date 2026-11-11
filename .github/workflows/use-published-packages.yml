@@ -84,7 +84,10 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      - name: Find tarball dependencies and their published versions
+      # Every tarball spec is rewritten before anything is installed: an install sees the whole
+      # tree, so a tarball left for later (its path only exists on the machine that packed it)
+      # would fail it.
+      - name: Point tarball dependencies at their published versions
         id: find
         env:
           SCOPE: ${{ inputs.scope }}
@@ -92,37 +95,52 @@ jobs:
         run: |
           node <<'EOF'
           const { execFileSync } = require('node:child_process');
-          const { appendFileSync, readFileSync } = require('node:fs');
-          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-          const sections = { dependencies: '--save-prod', devDependencies: '--save-dev', optionalDependencies: '--save-optional' };
-          const found = {};
-          for (const section of Object.keys(sections)) {
+          const { appendFileSync, existsSync, readFileSync, writeFileSync } = require('node:fs');
+          // Keep the file's own indentation and final newline.
+          const save = (file, text, data) => {
+            const indent = text.match(/^[ \t]+(?=")/m)?.[0] ?? '  ';
+            writeFileSync(file, JSON.stringify(data, null, indent) + (text.endsWith('\n') ? '\n' : ''));
+          };
+          const pkgText = readFileSync('package.json', 'utf8');
+          const pkg = JSON.parse(pkgText);
+          const replaced = [];
+          for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
             for (const [name, spec] of Object.entries(pkg[section] ?? {})) {
               if (!name.startsWith(process.env.SCOPE) || !/^file:.*\.tgz$/.test(spec)) continue;
               const version = execFileSync('npm', ['view', `${name}@${process.env.DIST_TAG}`, 'version'], { encoding: 'utf8' }).trim();
               if (!version) throw new Error(`${name} has no published version tagged ${process.env.DIST_TAG}`);
               console.log(`${section}: ${name} ${spec} -> ^${version}`);
-              (found[section] ??= []).push(`${name}@^${version}`);
+              // Same section, new range: the package stays a dependency or dev dependency.
+              pkg[section][name] = `^${version}`;
+              replaced.push(`${name}@^${version}`);
             }
           }
-          const all = Object.values(found).flat();
-          if (all.length === 0) console.log('No local tarball dependencies.');
-          const out = [`replaced=${all.join(' ')}`];
-          for (const [section, flag] of Object.entries(sections)) out.push(`${section}=${(found[section] ?? []).join(' ')}`);
-          appendFileSync(process.env.GITHUB_OUTPUT, out.join('\n') + '\n');
+          if (replaced.length === 0) console.log('No local tarball dependencies.');
+          else {
+            save('package.json', pkgText, pkg);
+            // Drop the lock's entries for those packages (they point at the tarballs), so npm
+            // resolves them from the registry. Everything else stays locked.
+            if (existsSync('package-lock.json')) {
+              const lockText = readFileSync('package-lock.json', 'utf8');
+              const lock = JSON.parse(lockText);
+              const names = replaced.map((r) => r.slice(0, r.lastIndexOf('@')));
+              for (const key of Object.keys(lock.packages ?? {})) {
+                if (names.some((n) => key === `node_modules/${n}` || key.startsWith(`node_modules/${n}/`))) delete lock.packages[key];
+              }
+              const root = lock.packages?.[''];
+              if (root) for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+                for (const name of names) if (root[section]?.[name] !== undefined) root[section][name] = pkg[section][name];
+              }
+              save('package-lock.json', lockText, lock);
+            }
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `replaced=${replaced.join(' ')}\n`);
           EOF
 
       - name: Install the published versions
         if: steps.find.outputs.replaced != ''
-        env:
-          PROD: ${{ steps.find.outputs.dependencies }}
-          DEV: ${{ steps.find.outputs.devDependencies }}
-          OPTIONAL: ${{ steps.find.outputs.optionalDependencies }}
         run: |
-          # Each package stays in the section it was in.
-          if [ -n "$PROD" ]; then npm install --save-prod $PROD; fi
-          if [ -n "$DEV" ]; then npm install --save-dev $DEV; fi
-          if [ -n "$OPTIONAL" ]; then npm install --save-optional $OPTIONAL; fi
+          npm install
           if grep -n '"file:[^"]*\.tgz"' package.json package-lock.json; then
             echo "::error::Local tarball references are still in package.json or package-lock.json."
             exit 1
