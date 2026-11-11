@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SUPPORTED_LETTERS, markPaths, parseHex, renderPng, renderSvg, writeIcons } from '../icons.js';
 import { renderManifest } from '../manifest.js';
 import { collectStrings, postbuild } from '../postbuild.js';
-import { WELLS_NELSON_ENTRIES, basePath, devJsonModule, installedEntries, optimizeDeps } from '../vite.js';
+import { WELLS_NELSON_ENTRIES, basePath, contentSecurityPolicy, devJsonModule, installedEntries, optimizeDeps } from '../vite.js';
 
 const dirs: string[] = [];
 const tempDir = () => {
@@ -170,5 +170,21 @@ describe('renderManifest', () => {
 		expect(m.start_url).toBe('./');
 		expect(m.theme_color).toBe('#1f5fa8');
 		expect(m.icons.map((i: { src: string }) => i.src)).toContain('icons/icon-maskable-512.png');
+	});
+});
+
+describe('contentSecurityPolicy', () => {
+	it('allows only the app and its Supabase project to be reached', () => {
+		const csp = contentSecurityPolicy({ supabaseUrl: 'https://abcd.supabase.co' });
+		expect(csp.mode).toBe('hash');
+		expect(csp.directives['script-src']).toEqual(['self']);
+		expect(csp.directives['connect-src']).toEqual(['self', 'https://abcd.supabase.co', 'wss://abcd.supabase.co']);
+		expect(csp.directives['object-src']).toEqual(['none']);
+	});
+
+	it('falls back to any Supabase project, and takes extra sources', () => {
+		const csp = contentSecurityPolicy({ connect: ['https://api.example.com'], img: ['https://img.example.com'] });
+		expect(csp.directives['connect-src']).toEqual(['self', 'https://*.supabase.co', 'wss://*.supabase.co', 'https://api.example.com']);
+		expect(csp.directives['img-src']).toContain('https://img.example.com');
 	});
 });

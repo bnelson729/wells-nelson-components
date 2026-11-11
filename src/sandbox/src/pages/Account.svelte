@@ -4,6 +4,7 @@
 	import {
 		AccountPanel,
 		ContainerEditModal,
+		DeviceDataCard,
 		LocalItemsPrompt,
 		ShareModal,
 		type ContainerLocation,
@@ -33,6 +34,25 @@
 
 	const pendingProject = $derived(cloud.pendingIds.includes('pr1'));
 	const returnUrl = () => `${window.location.origin}${window.location.pathname}#/account`;
+
+	/** DeviceDataCard: the browser's answer to "keep this data?", and a log of exports / imports. */
+	let keeps = $state<'yes' | 'no' | 'unknown'>('no');
+	const persisted = $derived(keeps === 'yes' ? true : keeps === 'no' ? false : null);
+	let dataLog = $state<string[]>([]);
+	const log = (line: string) => (dataLog = [line, ...dataLog].slice(0, 5));
+	async function mockExport(items: { id: string; location: ContainerLocation }[]) {
+		log(`Exported ${items.map((i) => nameOf(i.id)).join(', ')}`);
+		return { format: 'wells-nelson-containers', version: 1, app: 'demo', containers: items };
+	}
+	async function mockImport(data: unknown) {
+		if (cloud.failNext) {
+			cloud.failNext = false;
+			throw new Error('Mock: this file is not a backup of this app.');
+		}
+		const count = (data as { containers?: unknown[] })?.containers?.length ?? 0;
+		log(`Imported ${count} project(s)`);
+		return Array.from({ length: count }, (_, i) => `new${i}`);
+	}
 </script>
 
 <Panel title="Mock sync state" note="Every switch feeds the components below through the same interfaces data-storage implements.">
@@ -59,6 +79,28 @@
 
 <Panel title="AccountPanel" note="The profile page body. Its state follows the switches above.">
 	<AccountPanel {cloud} account={cloud} {nouns} appName="Demo" {returnUrl} pendingName={nameOf} {emailLink} />
+</Panel>
+
+<Panel title="DeviceDataCard" note="Storage status and backups on the profile. Export downloads a mock file; import it again (Fail the next call makes the import fail).">
+	<Segmented
+		label="Browser keeps the data"
+		bind:value={keeps}
+		options={[
+			{ value: 'yes', label: 'Permanently' },
+			{ value: 'no', label: 'May clear it' },
+			{ value: 'unknown', label: "Doesn't say" }
+		]}
+	/>
+	<DeviceDataCard
+		{nouns}
+		items={projects.map((p, i) => ({ ...p, location: i === 0 ? 'cloud' : 'local' }))}
+		{persisted}
+		onpersist={async () => ((keeps = 'yes'), true)}
+		onexport={mockExport}
+		onimport={mockImport}
+		filename="demo"
+	/>
+	{#if dataLog.length}<p class="log">{dataLog.join(' · ')}</p>{/if}
 </Panel>
 
 <Panel title="Sharing and editing a container">

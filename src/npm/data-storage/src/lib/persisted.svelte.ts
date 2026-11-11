@@ -1,4 +1,9 @@
-/** Reactive value mirrored to localStorage. Storage failures (private mode, quota) are ignored. */
+import { reportError } from './errors.js';
+
+/**
+ * Reactive value mirrored to localStorage. Storage failures (private mode, quota) don't break the
+ * app; a failed write is reported once.
+ */
 export class Persisted<T> {
 	#key: string;
 	#value = $state() as T;
@@ -35,8 +40,8 @@ export class Persisted<T> {
 	static write(key: string, value: unknown) {
 		try {
 			localStorage.setItem(key, JSON.stringify(value));
-		} catch {
-			/* ignore */
+		} catch (err) {
+			reportError('prefs', err);
 		}
 	}
 

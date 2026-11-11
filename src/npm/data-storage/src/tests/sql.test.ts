@@ -70,9 +70,36 @@ describe('generateMigration', () => {
 		expect(sql).toContain('$$;\n\n-- ---------------------------------------------------------------- membership');
 	});
 
+	it('only lets confirmed emails in, and hardens sharing', () => {
+		const sql = generateMigration(projectsConfig);
+		expect(sql).toContain('where u.id = auth.uid() and u.email_confirmed_at is not null');
+		expect(sql).not.toContain("auth.jwt() ->> 'email'");
+		// Two owners demoting each other at once: the second waits for the first.
+		expect(sql).toContain('perform 1 from public.projects where id = old.project_id for update;');
+		// Nothing new goes into a deleted project.
+		expect(sql).toContain("with check (public.is_project_member(project_id, 'owner') and public.is_project_live(project_id));");
+		expect(sql).toContain('with check (public.is_project_member(project_id, %2$L) and public.is_project_live(project_id))');
+		expect(sql).toContain("with check (auth.uid() is not null and public.current_email() <> '');");
+		// "active" only for owners, and only "signed in since invited".
+		expect(sql).toContain("case when public.is_project_member(p_project_id, 'owner') or m.email = public.current_email() then");
+		expect(sql).toContain('u.last_sign_in_at >= m.created_at');
+		expect(sql).toContain("or (role = 'owner' and public.is_project_member(project_id))");
+	});
+
+	it('gives signed-out callers nothing but error reporting', () => {
+		const sql = generateMigration(projectsConfig);
+		expect(sql).toContain('create table public.client_errors (');
+		expect(sql).toContain('revoke all on function public.is_project_member(text, public.project_role) from public, anon;');
+		expect(sql).toContain('revoke all on function public.current_email() from public, anon;');
+		expect(sql).toContain(
+			'grant execute on function public.report_client_error(text, text, text, text, text, text) to anon, authenticated;'
+		);
+		expect(sql.match(/to anon/g)).toHaveLength(1);
+	});
+
 	it('builds the flat-sharing variant', () => {
 		const sql = generateMigration(listsConfig);
-		expect(sql).not.toContain('role');
+		expect(sql.replace('service role', '')).not.toContain('role');
 		expect(sql).toContain('create or replace function public.is_list_member(p_list_id text)');
 		expect(sql).toContain('create policy "members unshare their lists" on public.list_members');
 		expect(sql).toContain(`'create policy "members insert" on public.%1$s`);
@@ -84,14 +111,15 @@ describe('generateMigration', () => {
 		const sql = generateMigration({ ...listsConfig, schema: 'demo_lists' });
 		expect(sql).toContain('create schema if not exists demo_lists;');
 		expect(sql).toContain('grant usage on schema demo_lists to anon, authenticated, service_role;');
-		expect(sql).toContain('alter default privileges in schema demo_lists grant all on tables to anon, authenticated, service_role;');
+		expect(sql).toContain('alter default privileges in schema demo_lists grant all on tables to authenticated, service_role;');
+		expect(sql).not.toMatch(/default privileges.*anon/);
 		// Default privileges are set before the first table exists.
 		expect(sql.indexOf('alter default privileges')).toBeLessThan(sql.indexOf('create table'));
 		expect(sql).toContain('create table demo_lists.lists (');
 		expect(sql).toContain('create or replace function demo_lists.current_email()');
 		expect(sql).toContain('set search_path = demo_lists\n');
 		expect(sql).toContain('set search_path = demo_lists, auth\n');
-		expect(sql).toContain('exists (select 1 from auth.users u where lower(u.email) = m.email)');
+		expect(sql).toContain('select 1 from auth.users u where lower(u.email) = m.email and u.last_sign_in_at >= m.created_at');
 		expect(sql).toContain('revoke all on function demo_lists.get_list_collaborators(text) from public, anon;');
 		expect(sql).toContain('  add table demo_lists.lists, demo_lists.entries;');
 		expect(sql).not.toMatch(/public\./);

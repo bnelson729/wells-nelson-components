@@ -5,6 +5,7 @@ import { createContainerOps, type RemapHook } from './containers.js';
 import { openDatabase, setStorageFactory, type StorageFactory } from './database.js';
 import { createDataSet, type DataSet } from './dataset.js';
 import type { EnvConfig } from './env.js';
+import { onWriteError, remoteReporter, reportError, setErrorReporter } from './errors.js';
 import { DevicePrefs, defaultPrefsKeys } from './prefs.svelte.js';
 import { createSupabaseApi, type MembersConfig } from './supabase.js';
 import { Tombstones } from './tombstones.svelte.js';
@@ -38,6 +39,17 @@ export interface SyncedStoreConfig<D extends DocMap, C extends CollectionName<D>
 	remap?: RemapHook<D>;
 	/** A `DevicePrefs` subclass with app-specific prefs. */
 	prefs?: DevicePrefs;
+	/**
+	 * localStorage key of the Supabase session (default `<appKey>-auth`), so apps sharing an
+	 * origin don't share, or sign each other out of, a session.
+	 */
+	authStorageKey?: string;
+	/**
+	 * Send failed writes, sync errors, failed pref saves and uncaught errors to the
+	 * `report_client_error` function of the app's Supabase schema (from the generated migration).
+	 * Pass the deployed version (`version` from `$app/env`). Off when cloud sync isn't configured.
+	 */
+	reportErrors?: { version?: string };
 }
 
 /**
@@ -59,7 +71,7 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 			containerField: config.containerField,
 			roles
 		},
-		{ schema: config.supabaseSchema }
+		{ schema: config.supabaseSchema, storageKey: config.authStorageKey ?? `${config.appKey}-auth` }
 	);
 	const app = new AppState<D>();
 	const tombstones = new Tombstones(config.appKey);
@@ -81,8 +93,41 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 		supabase,
 		roles,
 		refs: config.refs,
-		remap: config.remap
+		remap: config.remap,
+		appKey: config.appKey
 	});
+
+	onWriteError((message) => (app.writeError = message));
+
+	/**
+	 * Ask the browser to keep this site's data (it may decide on its own, or ask the user). The
+	 * result is `app.persisted`. Called on start; call it again from a button to retry.
+	 */
+	async function requestPersistence(): Promise<boolean | null> {
+		const storage = typeof navigator === 'undefined' ? undefined : navigator.storage;
+		if (!storage?.persisted || !storage.persist) return (app.persisted = null);
+		try {
+			app.persisted = (await storage.persisted()) || (await storage.persist());
+		} catch {
+			app.persisted = null;
+		}
+		return app.persisted;
+	}
+
+	function startErrorReporting() {
+		if (!config.reportErrors || !config.env.cloudConfigured || typeof window === 'undefined') return;
+		setErrorReporter(
+			remoteReporter({
+				supabaseUrl: config.env.supabaseUrl,
+				supabaseAnonKey: config.env.supabaseAnonKey,
+				schema: supabase.schema,
+				app: config.appKey,
+				version: config.reportErrors.version
+			})
+		);
+		window.addEventListener('error', (e) => reportError('unhandled', e.error ?? e.message));
+		window.addEventListener('unhandledrejection', (e) => reportError('unhandled', e.reason));
+	}
 
 	let started: Promise<void> | undefined;
 
@@ -92,15 +137,18 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 	 */
 	function init(options: { beforeReady?: (local: DataSet<D>) => Promise<void> } = {}): Promise<void> {
 		started ??= (async () => {
+			startErrorReporting();
 			setStorageFactory(config.storage);
 			const db = await openDatabase<D>(`${config.appKey}_local`, config, { storage: config.storage });
 			const local = createDataSet('local', db, config);
 			await options.beforeReady?.(local).catch((err) => console.error('Startup hook failed', err));
 			app.local = local;
 			app.ready = true;
+			void requestPersistence();
 			await cloud.init();
 		})().catch((err) => {
 			console.error(err);
+			reportError('fatal', err);
 			app.fatal = err instanceof Error ? err.message : String(err);
 		});
 		return started;
@@ -124,7 +172,7 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 		await local?.db.remove();
 	}
 
-	return { config, roles, app, cloud, tombstones, prefs, supabase, ops, init, resetDevice };
+	return { config, roles, app, cloud, tombstones, prefs, supabase, ops, init, resetDevice, requestPersistence };
 }
 
 export type SyncedStore<D extends DocMap, C extends CollectionName<D> = CollectionName<D>> = ReturnType<

@@ -10,63 +10,20 @@ on its own:
 | --- | --- |
 | [`@wells-nelson/displays`](src/npm/displays) | `Button`, `IconButton`, `Icon` (+ `registerIcons`), `Modal`, `ConfirmDialog`, `Badge`, `AppHeader`, `SortableTable`, `Leaderboards`, `Splash`, `FatalError`, `theme.css` and palettes |
 | [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `Checkbox`, `Toggle`, `Combobox`, `AddRow`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `longpress`, drag and drop, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
-| [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations), `Persisted`, `flatSchema`, `envConfig`; SQL migration generator under `/sql` |
-| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, Vite helpers, the app-shell service worker, and Pages workflow / manifest templates |
+| [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations, export / import, persistent storage, error reporting), `Persisted`, `flatSchema`, `envConfig`; SQL migration generator under `/sql` |
+| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and Pages workflow / manifest templates |
 
 Dependencies between them: `interactions` depends on `displays`. Nothing else depends on another
 package. The account components in `interactions/account` describe what they need from the sync
 layer as plain interfaces (`CloudStatus`, `AccountActions`, `MembersApi`); `data-storage`'s
 `CloudSync` and members API satisfy them, which [tests/compat](tests/compat) checks.
 
-## Sandbox
+## Contributing
 
-```sh
-npm install
-npm run sandbox      # http://localhost:5180
-```
+Setup, the sandbox, checks, how changes reach `main` and how packages are released:
+[CONTRIBUTING.md](CONTRIBUTING.md) and [PUBLISHING.md](PUBLISHING.md).
 
-[src/sandbox](src/sandbox) is a private dev app with a page per package, built straight from
-package sources (edits hot-reload) and driven by mock data:
-
-- **Displays**: theme tokens and palettes, every icon, buttons, badges, modals, a sortable table
-  and leaderboards. The sandbox header is `AppHeader`; its options are switchable here.
-- **Interactions**: inputs, sections with long-press drag and drop between and across them,
-  undo, search, `ActiveList`, `longpress`, and the dev wipe.
-- **Account and sharing**: `AccountPanel`, `ShareModal`, `ContainerEditModal` and
-  `LocalItemsPrompt` against a mock sync layer with a switch for every state (signed out,
-  offline, expired session, pending changes, roles, failing calls) and a log of the calls made.
-- **Data storage**: a real `createSyncedStore` in IndexedDB: add mock projects, duplicate one
-  (watch ids get rewritten), delete (tombstones), the device storage it writes, and the SQL
-  migration for its schema. Local-only unless `src/sandbox/.env.local` sets
-  `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (apply the shown migration first).
-- **Build tools**: icons rendered from your letters and colors, the manifest, `basePath`, and
-  `postbuild` run against a throwaway mock build (try the leak check). These call small endpoints
-  on the dev server, since the code runs in Node.
-
-## Working on the packages
-
-```sh
-npm run build        # all packages, in dependency order
-npm run check        # svelte-check / tsc for each package and the sandbox, then the cross-package type check
-npm test             # vitest in each package
-npm run pack:all     # tarballs in packs/
-```
-
-One package: `npm run build -w src/npm/displays` (build `displays` before working on
-`interactions`, which compiles against its `dist`).
-
-## CI and releases
-
-[.github/workflows/packages.yml](.github/workflows/packages.yml) runs one job per package
-(build, type-check, test, publint, pack) and uploads each tarball as an artifact. A second job
-checks that the packages' types fit together, that the sandbox compiles, and that the release
-scripts pass their tests.
-
-On `main`, each package whose shipped files changed since its last release is published to npm
-with its own version, tagged `@wells-nelson/<package>@<version>`. Setup, auth and manual
-releases: [PUBLISHING.md](PUBLISHING.md).
-
-### Trying unreleased changes in an app
+## Trying unreleased changes in an app
 
 Pack the packages (`npm run pack:all`) and install the tarballs in the app
 (`npm install ../wells-nelson-components/packs/wells-nelson-displays-0.0.0.tgz`). Once the change is
@@ -74,6 +31,7 @@ published, the reusable workflow
 [use-published-packages.yml](.github/workflows/use-published-packages.yml) puts the app back on npm: on
 the app's pull request it replaces each `file:…tgz` dependency with the latest published version,
 reinstalls, runs the app's checks and commits package.json and package-lock.json to the branch.
+Its `replaced` output lists what it swapped.
 
 ```yaml
 # the app's .github/workflows/published-packages.yml
@@ -86,12 +44,28 @@ jobs:
   packages:
     uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
     with:
-      verify: npm run check && npm run build # default: check, test and build, each if present
+      verify: npm run check && npm test && npm run build # default: check, test and build, each if present
+
+  # A commit pushed with GITHUB_TOKEN doesn't start the pull request's other workflows; start the
+  # app's CI on it so its required check reports on the new commit.
+  ci:
+    needs: packages
+    if: needs.packages.outputs.replaced != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_HEAD_REF"
+        env:
+          GH_TOKEN: ${{ github.token }}
 ```
 
+The app's CI workflow then needs `workflow_dispatch` among its triggers, and should fail while
+`package.json` still has a `file:…tgz` dependency, so such a branch can't be merged.
+
 Other inputs: `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`,
-`commit-message`. Forks are skipped. Pushes made with the default `GITHUB_TOKEN` don't trigger other
-workflows; pass a `token` secret (Contents: write) if the pull request's checks should re-run on the commit.
+`commit-message`. Forks are skipped. Instead of the `ci` job above, a `token` secret (a fine-grained token
+with Contents: write) makes the push itself trigger the pull request's workflows.
 
 ## Using them in an app
 

@@ -1,10 +1,11 @@
 import type { User } from '@supabase/supabase-js';
-import { replicateSupabase, type RxSupabaseReplicationState } from 'rxdb/plugins/replication-supabase';
+import type { RxSupabaseReplicationState } from 'rxdb/plugins/replication-supabase';
 import type { Subscription } from 'rxjs';
 import { tick } from 'svelte';
 import type { AppState } from './app.svelte.js';
 import { openDatabase, type Database, type StorageFactory } from './database.js';
 import { createDataSet, disposeDataSet } from './dataset.js';
+import { reportError } from './errors.js';
 import { Persisted } from './persisted.svelte.js';
 import { replicationClient, schemaNotExposed, type SupabaseApi } from './supabase.js';
 import { containerIdOf, type DocMap, type Role, type StoreSchema } from './types.js';
@@ -94,6 +95,7 @@ export class CloudSync<D extends DocMap> {
 	#lastMembershipCheck = 0;
 	#signingOut = false;
 	#queue: Promise<unknown> = Promise.resolve();
+	#attached: Promise<void> | null = null;
 
 	constructor(options: CloudSyncOptions<D>) {
 		this.#appKey = options.appKey;
@@ -157,7 +159,22 @@ export class CloudSync<D extends DocMap> {
 			window.addEventListener('offline', () => (this.online = false));
 		}
 
-		const sb = this.#sb.getClient();
+		// supabase-js (and the replication) only load when there may be a session: a stored one or
+		// a sign-in redirect. Otherwise they load when the user signs in.
+		if (this.#sb.mayHaveSession()) await this.#attach();
+	}
+
+	/** Load the client, restore its session and follow auth changes (once). */
+	#attach(): Promise<void> {
+		this.#attached ??= this.#doAttach().catch((err) => {
+			this.#attached = null;
+			throw err;
+		});
+		return this.#attached;
+	}
+
+	async #doAttach() {
+		const sb = await this.#sb.loadClient();
 		if (!sb) return;
 
 		const { data } = await sb.auth.getSession();
@@ -202,11 +219,12 @@ export class CloudSync<D extends DocMap> {
 		this.user = user;
 		this.sessionExpired = false;
 		this.#app.cloud = createDataSet('cloud', db, this.#schema);
-		this.#startReplication(db);
+		await this.#startReplication(db);
 		this.#scheduleSettle();
 	}
 
-	#startReplication(db: Database<D>) {
+	async #startReplication(db: Database<D>) {
+		const { replicateSupabase } = await import('rxdb/plugins/replication-supabase');
 		const sb = replicationClient(this.#sb.getClient()!, this.#sb.schema);
 		this.#schema.collections.forEach((name, index) => {
 			const rep = replicateSupabase<any>({
@@ -230,6 +248,8 @@ export class CloudSync<D extends DocMap> {
 				rep.error$.subscribe((err) => {
 					this.error = errorMessage(err, this.#sb.schema);
 					if (isRejection(err)) this.rejectedWrite = this.error;
+					// Offline failures are expected; anything else is worth knowing about.
+					if (isRejection(err) || this.online) reportError('sync', this.error, `${name} ${(err as { parameters?: { direction?: string } }).parameters?.direction ?? ''}`);
 				}),
 				rep.active$.subscribe((isActive) => {
 					if (isActive) this.#activeReps.add(index);
@@ -359,6 +379,7 @@ export class CloudSync<D extends DocMap> {
 	}
 
 	async signInWithGoogle(redirectTo: string) {
+		await this.#attach();
 		const sb = this.#sb.getClient();
 		if (!sb) throw new Error('Cloud sync is not configured.');
 		const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
@@ -367,6 +388,7 @@ export class CloudSync<D extends DocMap> {
 
 	/** Email a magic sign-in link. The link has to be opened in this browser (PKCE). */
 	async signInWithEmail(email: string, redirectTo: string) {
+		await this.#attach();
 		const sb = this.#sb.getClient();
 		if (!sb) throw new Error('Cloud sync is not configured.');
 		const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: redirectTo } });

@@ -36,11 +36,14 @@ export interface ServiceWorkerScopeLike {
 
 export interface AppShellCacheOptions {
 	sw: ServiceWorkerScopeLike;
-	/** Build version; each deploy gets a fresh cache and old ones are deleted. */
+	/** Build version; each deploy gets a fresh cache and this app's old ones are deleted. */
 	version: string;
 	/** Files to precache, relative to the scope (SvelteKit's `immutable` and `assets`). */
 	files: Array<string | { path: string }>;
-	/** Cache name prefix (default 'app'). */
+	/**
+	 * Cache name prefix (default 'app'). Give every app on the same origin its own prefix: a worker
+	 * only deletes caches named `<cachePrefix>-cache-*`, so apps sharing an origin keep each other's.
+	 */
 	cachePrefix?: string;
 	/**
 	 * Development: cache nothing and delete what an earlier worker cached, so every code change
@@ -95,7 +98,11 @@ export function registerAppShellCache({
 	sw.addEventListener('activate', (event: ExtendableEventLike) => {
 		event.waitUntil(
 			(async () => {
-				for (const key of await caches.keys()) if (key !== CACHE) await caches.delete(key);
+				// Only this app's older caches: other apps on the same origin (e.g. two GitHub Pages
+				// project sites under one user) keep theirs.
+				for (const key of await caches.keys()) {
+					if (key !== CACHE && key.startsWith(`${cachePrefix}-cache-`)) await caches.delete(key);
+				}
 				await sw.clients.claim();
 			})()
 		);

@@ -54,7 +54,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('registerAppShellCache', () => {
-	it('precaches the files and the shell, and drops old caches on activate', async () => {
+	it("precaches the files and the shell, and drops its own old caches (not other apps') on activate", async () => {
 		const sw = fakeSw(SCOPE);
 		const { cacheName, precache } = registerAppShellCache({
 			sw,
@@ -66,6 +66,7 @@ describe('registerAppShellCache', () => {
 		expect(precache).toEqual([`${SCOPE}_app/immutable/a.js`, `${SCOPE}favicon.svg`, SCOPE]);
 
 		await caches.open('demo-cache-v1');
+		await caches.open('other-app-cache-7');
 		let done: Promise<unknown> = Promise.resolve();
 		sw.listeners.get('install')!({ waitUntil: (p: Promise<unknown>) => (done = p) });
 		await done;
@@ -74,7 +75,7 @@ describe('registerAppShellCache', () => {
 
 		sw.listeners.get('activate')!({ waitUntil: (p: Promise<unknown>) => (done = p) });
 		await done;
-		expect(await caches.keys()).toEqual(['demo-cache-v2']);
+		expect((await caches.keys()).sort()).toEqual(['demo-cache-v2', 'other-app-cache-7']);
 		expect(sw.clients.claim).toHaveBeenCalled();
 	});
 

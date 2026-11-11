@@ -27,7 +27,7 @@ function render<P extends Record<string, unknown>>(component: any, props: P) {
 
 describe('icons', () => {
 	it('ships the base set', () => {
-		for (const name of ['plus', 'x', 'check', 'pencil', 'trash', 'share', 'chevron', 'alert', 'cloud', 'wifi-off', 'user', 'gear', 'undo', 'refresh', 'mail', 'search', 'home']) {
+		for (const name of ['plus', 'x', 'check', 'pencil', 'trash', 'share', 'chevron', 'alert', 'cloud', 'wifi-off', 'user', 'gear', 'undo', 'refresh', 'mail', 'search', 'home', 'download', 'upload']) {
 			expect(iconMarkup(name), name).not.toBe('');
 		}
 	});

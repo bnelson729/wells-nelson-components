@@ -183,9 +183,9 @@
 					<li>
 						<div class="who">
 							<span class="email">{m.email}{me ? ' (you)' : ''}</span>
-							{#if !m.active}
+							{#if m.active === false}
 								<Badge tone="warning">Pending</Badge>
-							{:else if !roles}
+							{:else if m.active && !roles}
 								<Badge tone="accent">Active</Badge>
 							{/if}
 						</div>
@@ -218,9 +218,12 @@
 			{#if roles && isOwner && ownerCount <= 1}
 				<p class="muted small">You're the only owner. To step down, make someone else an owner first.</p>
 			{/if}
-			<p class="muted small">
-				Pending means they haven't signed in to {appName} yet; they get the {nouns.singular} the first time they do.
-			</p>
+			{#if shown.some((m) => m.active === false)}
+				<p class="muted small">
+					Pending means they haven't signed in to {appName} since you shared it; they get the {nouns.singular} the
+					first time they do.
+				</p>
+			{/if}
 		{:else if list}
 			<p class="muted small">Not shared with anyone yet.</p>
 		{/if}

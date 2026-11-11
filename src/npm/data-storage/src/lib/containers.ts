@@ -2,6 +2,7 @@ import type { RxCollection } from 'rxdb/plugins/core';
 import type { AppState } from './app.svelte.js';
 import type { CloudSync } from './cloud.svelte.js';
 import type { DataSet } from './dataset.js';
+import { writeFailed } from './errors.js';
 import type { DevicePrefs } from './prefs.svelte.js';
 import type { Member, SupabaseApi } from './supabase.js';
 import type { Tombstones } from './tombstones.svelte.js';
@@ -32,6 +33,8 @@ export interface ContainerOpsOptions<D extends DocMap, C extends CollectionName<
 	/** Fields per collection holding ids of other rows in the same container, e.g. `{ items: ['category_id'] }`. */
 	refs?: { [N in CollectionName<D>]?: (keyof D[N] & string)[] };
 	remap?: RemapHook<D>;
+	/** The store's appKey, written into exports and checked on import. */
+	appKey?: string;
 }
 
 /** A container as listed by the app (one entry even while it moves between data sets). */
@@ -41,9 +44,23 @@ export interface ContainerEntry<T> {
 	role: Role;
 }
 
-/** Persisting a TanStack DB transaction in the background, logging failures. */
+/**
+ * Persisting a TanStack DB transaction in the background. A failure is reported and shown
+ * (`app.writeError` through the store), not just logged.
+ */
 export function persist(tx: { when(state: 'settled'): Promise<unknown> }) {
-	tx.when('settled').catch((err) => console.error('Failed to save change', err));
+	tx.when('settled').catch(writeFailed);
+}
+
+/** The file format of `exportContainers`. */
+export interface ContainerExport {
+	format: 'wells-nelson-containers';
+	version: 1;
+	/** The store's appKey: a file only imports into the app that wrote it. */
+	app: string;
+	exportedAt: string;
+	/** One entry per container: every row of it, by collection. */
+	containers: Record<string, Record<string, unknown>[]>[];
 }
 
 export const now = () => Date.now();
@@ -215,6 +232,77 @@ export function createContainerOps<D extends DocMap, C extends CollectionName<D>
 		return cid;
 	}
 
+	/**
+	 * Every row of the given containers as one JSON-ready object (a backup the user keeps). Each
+	 * container is read from the data set it lives in.
+	 */
+	async function exportContainers(items: { id: string; location: Location }[]): Promise<ContainerExport> {
+		const containers: ContainerExport['containers'] = [];
+		for (const { id, location } of items) {
+			const docs = await readContainer(app.dataSet(location), id);
+			if (docs[container].length === 0) continue;
+			containers.push(docs as unknown as Record<string, Record<string, unknown>[]>);
+		}
+		return {
+			format: 'wells-nelson-containers',
+			version: 1,
+			app: options.appKey ?? '',
+			exportedAt: new Date().toISOString(),
+			containers
+		};
+	}
+
+	/** Keep only the schema's fields, and only with the schema's types; anything else is not a backup. */
+	function cleanRow(name: CollectionName<D>, row: unknown): Record<string, unknown> {
+		const props = (schema.schemas[name] as { properties: Record<string, { type?: unknown }> }).properties;
+		if (!row || typeof row !== 'object') throw new Error('This file is not a backup of this app.');
+		const out: Record<string, unknown> = {};
+		for (const [key, prop] of Object.entries(props)) {
+			const value = (row as Record<string, unknown>)[key];
+			const type = prop.type === 'number' ? 'number' : prop.type === 'boolean' ? 'boolean' : 'string';
+			if (typeof value !== type || (type === 'number' && !Number.isFinite(value))) {
+				throw new Error(`This backup has an invalid ${name} row (${key}).`);
+			}
+			out[key] = value;
+		}
+		return out;
+	}
+
+	/**
+	 * Add every container of an `exportContainers` file to this device as new local-only
+	 * containers (fresh ids, so importing twice makes two copies and nothing is overwritten).
+	 * Returns the new container ids.
+	 */
+	async function importContainers(data: unknown): Promise<string[]> {
+		const file = data as Partial<ContainerExport> | null;
+		if (!file || file.format !== 'wells-nelson-containers' || !Array.isArray(file.containers)) {
+			throw new Error('This file is not a backup of this app.');
+		}
+		if (file.version !== 1) throw new Error('This backup was made by a newer version of the app. Update the app first.');
+		if (options.appKey && file.app !== options.appKey) throw new Error('This backup is from a different app.');
+		// Check everything before writing anything.
+		const parsed = file.containers.map((entry) => {
+			const docs = {} as ContainerDocs<D>;
+			for (const name of collections) {
+				const rows = (entry as Record<string, unknown>)[name] ?? [];
+				if (!Array.isArray(rows)) throw new Error('This file is not a backup of this app.');
+				(docs as Record<string, unknown[]>)[name] = rows.map((r) => cleanRow(name, r));
+			}
+			const head = docs[container][0];
+			if (docs[container].length !== 1 || !head) throw new Error('This file is not a backup of this app.');
+			return { docs, id: head.id };
+		});
+		const local = app.dataSet('local');
+		const ids: string[] = [];
+		for (const { docs, id } of parsed) {
+			const { rows, containerId } = remapContainer(docs, id, true);
+			await insertContainerDocs(local, rows);
+			prefs.markPrompted([containerId]);
+			ids.push(containerId);
+		}
+		return ids;
+	}
+
 	/** Remove a cloud container from this device only; nothing is deleted on Supabase. */
 	async function purgeCloudContainer(containerId: string) {
 		const ds = app.dataSet('cloud');
@@ -350,6 +438,8 @@ export function createContainerOps<D extends DocMap, C extends CollectionName<D>
 		insertContainerDocs,
 		remapContainer,
 		copyContainer,
+		exportContainers,
+		importContainers,
 		makeCloud,
 		makeLocal,
 		deleteContainer,

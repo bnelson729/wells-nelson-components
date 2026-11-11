@@ -95,4 +95,17 @@ shape. Wording comes from `nouns` (`{ singular: 'project', plural: 'projects' }`
 With `roles`, `ShareModal` shows a role picker and protects the last owner, and
 `ContainerEditModal` offers "Leave" instead of "Delete" while other owners remain. Without roles
 every member counts as an owner. `localOnlyReason` keeps a container local-only (e.g. built-in
-sample data): both modals show that text instead of offering to make it cloud-enabled. The sandbox's Account page drives every state with a mock.
+sample data): both modals show that text instead of offering to make it cloud-enabled. A member's
+`active` may be `null` (the server didn't say); then neither Active nor Pending is shown.
+
+`DeviceDataCard` is a Profile card for the data on this device: whether the browser keeps it for good
+(`persisted`, with a "Keep data on this device" button via `onpersist`, and a Home Screen tip on iOS),
+export of every container or one (`onexport` returns the JSON) and import of a backup file (`onimport`).
+With `@wells-nelson/data-storage`:
+
+```svelte
+<DeviceDataCard nouns={NOUNS} items={entries.map((e) => ({ id: e.container.id, name: e.container.name, location: e.location }))}
+	persisted={store.app.persisted} onpersist={store.requestPersistence}
+	onexport={(items) => store.ops.exportContainers(items)} onimport={(data) => store.ops.importContainers(data)}
+	filename="my-app" />
+``` The sandbox's Account page drives every state with a mock.

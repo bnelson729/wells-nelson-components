@@ -1,6 +1,7 @@
 import { flushSync } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import ContainerEditModal from '../lib/account/ContainerEditModal.svelte';
+import DeviceDataCard from '../lib/account/DeviceDataCard.svelte';
 import LocalItemsPrompt from '../lib/account/LocalItemsPrompt.svelte';
 import ShareModal from '../lib/account/ShareModal.svelte';
 import type { CloudStatus, Member, MembersApi } from '../lib/account/types.js';
@@ -213,5 +214,63 @@ describe('LocalItemsPrompt', () => {
 		await settle();
 		expect(onmakecloud).toHaveBeenCalledExactlyOnceWith('a');
 		expect(onprompted).toHaveBeenCalledWith(['a', 'b']);
+	});
+});
+
+describe('ShareModal without member status', () => {
+	it("shows neither Active nor Pending when the server doesn't say", async () => {
+		const api = fakeApi([
+			{ id: 'm1', email: 'me@x.com', active: true, role: 'viewer' },
+			{ id: 'm2', email: 'owner@x.com', active: null, role: 'owner' }
+		]);
+		const cloud = fakeCloud();
+		render(ShareModal, { ...base, location: 'cloud', cloud, members: api, roles: true, role: 'viewer', onmakecloud: vi.fn() });
+		await settle();
+		const dialog = document.querySelector('dialog')!;
+		expect(dialog.textContent).toContain('owner@x.com');
+		expect(dialog.textContent).not.toContain('Pending');
+	});
+});
+
+describe('DeviceDataCard', () => {
+	const items = [
+		{ id: 'a', name: 'Website refresh', location: 'local' as const },
+		{ id: 'b', name: 'B', location: 'cloud' as const }
+	];
+
+	it('shows whether data is kept, asks again, and exports everything', async () => {
+		const onpersist = vi.fn(async () => true);
+		const onexport = vi.fn(async () => ({ format: 'x' }));
+		URL.createObjectURL = vi.fn(() => 'blob:x');
+		URL.revokeObjectURL = vi.fn();
+		const root = render(DeviceDataCard, { nouns, items, persisted: false, onpersist, onexport, onimport: vi.fn(), filename: 'demo' });
+		expect(root.textContent).toContain('The browser may clear it');
+		button(root, 'Keep data on this device').click();
+		await settle();
+		expect(onpersist).toHaveBeenCalled();
+
+		button(root, 'Export all projects').click();
+		await settle();
+		expect(onexport).toHaveBeenCalledWith([
+			{ id: 'a', location: 'local' },
+			{ id: 'b', location: 'cloud' }
+		]);
+	});
+
+	it('imports a file and says what was added, or why not', async () => {
+		const onimport = vi.fn(async () => ['n1', 'n2']);
+		const root = render(DeviceDataCard, { nouns, items, persisted: true, onexport: vi.fn(), onimport, filename: 'demo' });
+		expect(root.textContent).toContain('Stored permanently');
+		const input = root.querySelector<HTMLInputElement>('input[type=file]')!;
+		const pick = (text: string) => {
+			Object.defineProperty(input, 'files', { configurable: true, value: [new File([text], 'b.json')] });
+			input.dispatchEvent(new Event('change', { bubbles: true }));
+		};
+		pick('{"format":"wells-nelson-containers"}');
+		await vi.waitFor(() => expect(root.textContent).toContain('Added 2 projects'));
+		expect(onimport).toHaveBeenCalledWith({ format: 'wells-nelson-containers' });
+
+		pick('not json');
+		await vi.waitFor(() => expect(root.textContent).toContain('not a backup'));
 	});
 });

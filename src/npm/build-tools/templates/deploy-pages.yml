@@ -26,6 +26,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Nothing ships unless it type-checks and its tests pass.
+      - run: npm run check --if-present
+      - run: npm test --if-present
       - run: npm run build
         env:
           # Repository variables (Settings > Secrets and variables > Actions > Variables).

@@ -93,3 +93,52 @@ export function devJsonModule({ id, file, enabled }: { id: string; file: string;
 		}
 	};
 }
+
+/**
+ * SvelteKit `csp` options for an offline-first app on static hosting. SvelteKit adds a
+ * `<meta http-equiv="content-security-policy">` with hashes of its own inline scripts, so only
+ * the app's bundled scripts run: injected markup can't load or run other scripts. Network access
+ * is limited to the app's origin and its Supabase project (REST and Realtime); images also allow
+ * data/blob URLs and Google profile pictures. Styles allow inline (Svelte transitions use them).
+ *
+ * ```js
+ * sveltekit({ csp: contentSecurityPolicy({ supabaseUrl: env.VITE_SUPABASE_URL }), ... })
+ * ```
+ */
+export function contentSecurityPolicy({
+	supabaseUrl,
+	connect = [],
+	img = []
+}: {
+	/** The project URL (`VITE_SUPABASE_URL`); without it any `*.supabase.co` project is allowed. */
+	supabaseUrl?: string;
+	/** Extra `connect-src` sources. */
+	connect?: string[];
+	/** Extra `img-src` sources. */
+	img?: string[];
+} = {}) {
+	let supabase = ['https://*.supabase.co', 'wss://*.supabase.co'];
+	if (supabaseUrl) {
+		try {
+			const { host, protocol } = new URL(supabaseUrl);
+			supabase = [`${protocol}//${host}`, `${protocol === 'http:' ? 'ws' : 'wss'}://${host}`];
+		} catch {
+			/* keep the wildcard */
+		}
+	}
+	// Typed loosely (`any[]`) so it fits SvelteKit's `CspDirectives` without depending on SvelteKit.
+	const directives: Record<string, any[]> = {
+		'default-src': ['self'],
+		'script-src': ['self'],
+		'style-src': ['self', 'unsafe-inline'],
+		'img-src': ['self', 'data:', 'blob:', 'https://*.googleusercontent.com', ...img],
+		'font-src': ['self'],
+		'connect-src': ['self', ...supabase, ...connect],
+		'worker-src': ['self'],
+		'manifest-src': ['self'],
+		'object-src': ['none'],
+		'base-uri': ['self'],
+		'form-action': ['self']
+	};
+	return { mode: 'hash' as const, directives };
+}

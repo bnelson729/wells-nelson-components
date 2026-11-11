@@ -1,5 +1,6 @@
 export { default as AccountPanel } from './AccountPanel.svelte';
 export { default as ContainerEditModal } from './ContainerEditModal.svelte';
+export { default as DeviceDataCard } from './DeviceDataCard.svelte';
 export { default as LocalItemsPrompt } from './LocalItemsPrompt.svelte';
 export { default as ShareModal } from './ShareModal.svelte';
 export { default as SignInCard } from './SignInCard.svelte';

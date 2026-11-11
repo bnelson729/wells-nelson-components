@@ -22,8 +22,8 @@ drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
 
 ## Icons
 
-The base set: alert, check, chevron, cloud, cloud-pending, gear, grip, home, mail, pencil, plus,
-refresh, search, share, trash, undo, user, wifi-off, x. Register app icons at startup:
+The base set: alert, check, chevron, cloud, cloud-pending, download, gear, grip, home, mail, pencil, plus,
+refresh, search, share, trash, undo, upload, user, wifi-off, x. Register app icons at startup:
 
 ```ts
 import { registerIcons } from '@wells-nelson/displays';

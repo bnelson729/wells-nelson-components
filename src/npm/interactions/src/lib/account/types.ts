@@ -51,8 +51,11 @@ export interface AccountActions {
 export interface Member {
 	id: string;
 	email: string;
-	/** True when the email belongs to a registered user; false means the invite is pending. */
-	active: boolean;
+	/**
+	 * True once the invited person has signed in since being invited; false while the invite is
+	 * pending. Null when the server doesn't tell this user (e.g. non-owners).
+	 */
+	active: boolean | null;
 	/** Present when the app uses roles. */
 	role?: Role | null;
 }

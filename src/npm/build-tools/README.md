@@ -36,6 +36,17 @@ export default defineConfig(({ mode, command }) => ({
 }));
 ```
 
+### Content Security Policy
+
+`contentSecurityPolicy({ supabaseUrl })` returns SvelteKit `csp` options: hashes for SvelteKit's inline
+scripts and no other scripts, network access only to the app and its Supabase project (REST and
+Realtime), images from the app, `data:`/`blob:` and Google profile pictures. Pass `connect` / `img` for
+more sources.
+
+```js
+sveltekit({ csp: contentSecurityPolicy({ supabaseUrl: env.VITE_SUPABASE_URL }), ... })
+```
+
 ## Service worker (`@wells-nelson/build-tools/service-worker`)
 
 ```ts
@@ -52,6 +63,10 @@ Navigations go to the network first, so starting the app online always loads the
 offline they fall back to the cached shell. A new worker skips waiting and takes over open
 pages. `networkOnly` paths are never cached (default: SvelteKit's `_app/version.json`, so
 `updated` from `$app/state` notices new deploys). `dev` caches nothing.
+
+On activate a worker deletes only its own older caches (`<cachePrefix>-cache-*`). Give each app
+on an origin its own `cachePrefix`: GitHub Pages project sites of one user all share
+`https://<user>.github.io`.
 
 ## Templates
 

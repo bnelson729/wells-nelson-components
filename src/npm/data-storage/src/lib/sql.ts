@@ -1,9 +1,11 @@
 /**
  * Generates the Supabase migration for an app's tables: `_deleted` / `_modified` replication
- * columns with their trigger and checkpoint index, `current_email()`, a membership table with
- * an `is_<noun>_member` helper and RLS on every table, the creator-becomes-member trigger, the
- * "touch rows on new share" trigger, the members RPC (active / pending) and the realtime
- * publication. With `roles`, members are viewer / editor / owner and the last owner is protected.
+ * columns with their trigger and checkpoint index, `current_email()` (confirmed emails only), a
+ * membership table with an `is_<noun>_member` helper and RLS on every table, the
+ * creator-becomes-member trigger, the "touch rows on new share" trigger, the members RPC
+ * (active / pending), a write-only `client_errors` table with its `report_client_error`
+ * function, and the realtime publication. With `roles`, members are viewer / editor / owner and
+ * the last owner is protected. Signed-out callers (`anon`) get nothing but `report_client_error`.
  *
  * Pure string building: no database or Svelte dependency, so it runs from a plain Node script.
  */
@@ -50,12 +52,13 @@ function inSchema(sql: string, schema: string) {
 
 create schema if not exists ${schema};
 
--- The API roles need the same access Supabase grants on public; row level security on every
--- table still decides what each user can read and write.
+-- Signed-in users (authenticated) get table access, and row level security on every table decides
+-- what each one can read and write. Signed-out callers (anon) get none, so a table added later
+-- without RLS still isn't public; anon only reaches report_client_error, granted below.
 grant usage on schema ${schema} to anon, authenticated, service_role;
-alter default privileges in schema ${schema} grant all on tables to anon, authenticated, service_role;
-alter default privileges in schema ${schema} grant all on functions to anon, authenticated, service_role;
-alter default privileges in schema ${schema} grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema ${schema} grant all on tables to authenticated, service_role;
+alter default privileges in schema ${schema} grant all on functions to authenticated, service_role;
+alter default privileges in schema ${schema} grant all on sequences to authenticated, service_role;
 
 `;
 	return sql
@@ -131,12 +134,20 @@ begin
 end;
 $$;
 
+-- The signed-in user's email, only once confirmed: a session whose email was never verified
+-- (e.g. a password sign-up with confirmation off) matches no membership. Read from auth.users,
+-- not the token, so a changed email applies right away.
 create or replace function public.current_email()
 returns text
 language sql
 stable
+security definer
+set search_path = ''
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', ''));
+  select coalesce((
+    select lower(u.email) from auth.users u
+    where u.id = auth.uid() and u.email_confirmed_at is not null
+  ), '');
 $$;
 
 -- ---------------------------------------------------------------- membership
@@ -169,15 +180,32 @@ as $$
   );
 $$;
 
+-- False once the ${noun} is deleted: nobody can add members or new rows to it. (Members still
+-- read and update its rows, so every device syncs the deletion.)
+create or replace function public.is_${noun}_live(p_${cf} text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select not exists (select 1 from public.${container} c where c.id = p_${cf} and c._deleted);
+$$;
+
 alter table public.${members} enable row level security;
 `);
 
 	if (roles) {
 		add(`
+-- Editors and owners see every member; viewers see the owners and themselves.
 create policy "members read members" on public.${members}
-  for select to authenticated using (public.${isMember}(${cf}));
+  for select to authenticated using (
+    email = public.current_email()
+    or public.${isMember}(${cf}, 'editor')
+    or (role = 'owner' and public.${isMember}(${cf}))
+  );
 create policy "owners invite" on public.${members}
-  for insert to authenticated with check (public.${isMember}(${cf}, 'owner'));
+  for insert to authenticated with check (public.${isMember}(${cf}, 'owner') and public.is_${noun}_live(${cf}));
 create policy "owners change roles" on public.${members}
   for update to authenticated using (public.${isMember}(${cf}, 'owner'));
 -- Owners remove anyone; everyone can remove themselves (leave the ${noun}).
@@ -192,6 +220,9 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Lock the ${noun} first, so two owners demoting each other at once can't both see "another
+  -- owner exists".
+  perform 1 from public.${container} where id = old.${cf} for update;
   if old.role = 'owner' and (tg_op = 'DELETE' or new.role <> 'owner') then
     if not exists (
       select 1 from public.${members}
@@ -215,7 +246,7 @@ create trigger ${members}_keep_owner before update or delete on public.${members
 create policy "members read memberships of their ${container}" on public.${members}
   for select to authenticated using (public.${isMember}(${cf}));
 create policy "members share their ${container}" on public.${members}
-  for insert to authenticated with check (public.${isMember}(${cf}));
+  for insert to authenticated with check (public.${isMember}(${cf}) and public.is_${noun}_live(${cf}));
 create policy "members unshare their ${container}" on public.${members}
   for delete to authenticated using (public.${isMember}(${cf}));
 `);
@@ -254,13 +285,13 @@ ${
 	writer
 		? `    execute format(
       'create policy "editors insert" on public.%1$s for insert to authenticated
-         with check (public.${isMember}(${cf}, %2$L))', t, '${writer}');
+         with check (public.${isMember}(${cf}, %2$L) and public.is_${noun}_live(${cf}))', t, '${writer}');
     execute format(
       'create policy "editors update" on public.%1$s for update to authenticated
          using (public.${isMember}(${cf}, %2$L)) with check (public.${isMember}(${cf}, %2$L))', t, '${writer}');`
 		: `    execute format(
       'create policy "members insert" on public.%1$s for insert to authenticated
-         with check (public.${isMember}(${cf}))', t);
+         with check (public.${isMember}(${cf}) and public.is_${noun}_live(${cf}))', t);
     execute format(
       'create policy "members update" on public.%1$s for update to authenticated
          using (public.${isMember}(${cf})) with check (public.${isMember}(${cf}))', t);`
@@ -270,11 +301,11 @@ ${
 }end;
 $$;
 
--- ${cap(container)}: any signed-in user creates one (and becomes ${roles ? 'its owner' : 'a member'}); ${roles ? 'only owners rename / delete' : 'members rename / delete'}.
+-- ${cap(container)}: any signed-in user with a confirmed email creates one (and becomes ${roles ? 'its owner' : 'a member'}); ${roles ? 'only owners rename / delete' : 'members rename / delete'}.
 create policy "members read" on public.${container}
   for select to authenticated using (public.${isMember}(id));
 create policy "signed-in users create ${container}" on public.${container}
-  for insert to authenticated with check (auth.uid() is not null);
+  for insert to authenticated with check (auth.uid() is not null and public.current_email() <> '');
 create policy "${roles ? 'owners' : 'members'} update" on public.${container}
   for update to authenticated using (public.${isMember}(id${roles ? ", 'owner'" : ''})) with check (public.${isMember}(id${roles ? ", 'owner'" : ''}));
 
@@ -318,8 +349,9 @@ $$;
 create trigger ${members}_touch after insert on public.${members}
   for each row execute function public.touch_${noun}_for_new_member();
 
--- Members of a ${noun}${roles ? ' with their role' : ''}, flagging which emails belong to a registered user
--- ("active") vs pending invites.
+-- Members of a ${noun}${roles ? ' with their role' : ''}. "active" says whether an invited person has signed in
+-- since being invited (false: the invite is still pending); it never reveals whether an email has
+-- an account.${roles ? '\n-- Only owners see it (null for others). Viewers only see the owners and themselves.' : ''}
 create or replace function public.${rpc}(p_${cf} text)
 returns table (id uuid, email text, ${roles ? `role public.${roleType}, ` : ''}active boolean)
 language sql
@@ -327,14 +359,78 @@ stable
 security definer
 set search_path = public, auth
 as $$
-  select m.id, m.email, ${roles ? 'm.role, ' : ''}exists (select 1 from auth.users u where lower(u.email) = m.email) as active
+  select m.id, m.email,${roles ? ' m.role,' : ''}
+    ${roles ? `case when public.${isMember}(p_${cf}, 'owner') or m.email = public.current_email() then ` : ''}m.email = public.current_email() or exists (
+      select 1 from auth.users u where lower(u.email) = m.email and u.last_sign_in_at >= m.created_at
+    )${roles ? ' end' : ''} as active
   from public.${members} m
-  where m.${cf} = p_${cf} and public.${isMember}(p_${cf})
+  where m.${cf} = p_${cf} and public.${isMember}(p_${cf})${
+		roles
+			? `
+    and (public.${isMember}(p_${cf}, 'editor') or m.role = 'owner' or m.email = public.current_email())`
+			: ''
+	}
   order by ${roles ? 'm.role desc, ' : ''}m.created_at;
 $$;
 
+-- ---------------------------------------------------------------- client errors
+
+-- Errors the app reports (failed local writes, sync errors, crashes), written only through
+-- report_client_error. No policies: nobody reads them through the API; use the dashboard or the
+-- service role.
+create table public.client_errors (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  app text not null,
+  version text not null,
+  kind text not null,
+  message text not null,
+  detail text not null,
+  path text not null,
+  user_id uuid
+);
+create index client_errors_created_idx on public.client_errors (created_at);
+alter table public.client_errors enable row level security;
+revoke all on public.client_errors from anon, authenticated;
+
+create or replace function public.report_client_error(
+  p_app text, p_version text, p_kind text, p_message text, p_detail text, p_path text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- At most 300 reports an hour from everyone together, so a loop or abuse can't fill the
+  -- database; reports are kept for 30 days.
+  if (select count(*) from public.client_errors where created_at > now() - interval '1 hour') >= 300 then
+    return;
+  end if;
+  delete from public.client_errors where created_at < now() - interval '30 days';
+  insert into public.client_errors (app, version, kind, message, detail, path, user_id)
+  values (
+    left(coalesce(p_app, ''), 40), left(coalesce(p_version, ''), 40), left(coalesce(p_kind, ''), 40),
+    left(coalesce(p_message, ''), 500), left(coalesce(p_detail, ''), 4000), left(coalesce(p_path, ''), 200),
+    auth.uid()
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------- function privileges
+
+-- Postgres lets everyone (public) execute new functions. Only signed-in users may call these,
+-- and signed-out callers only report errors.
+revoke all on function public.current_email() from public, anon;
+revoke all on function public.${isMember}(text${roles ? `, public.${roleType}` : ''}) from public, anon;
+revoke all on function public.is_${noun}_live(text) from public, anon;
 revoke all on function public.${rpc}(text) from public, anon;
+revoke all on function public.report_client_error(text, text, text, text, text, text) from public;
+grant execute on function public.current_email() to authenticated;
+grant execute on function public.${isMember}(text${roles ? `, public.${roleType}` : ''}) to authenticated;
+grant execute on function public.is_${noun}_live(text) to authenticated;
 grant execute on function public.${rpc}(text) to authenticated;
+grant execute on function public.report_client_error(text, text, text, text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------- realtime
 
