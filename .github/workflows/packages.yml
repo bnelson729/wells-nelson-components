@@ -186,7 +186,7 @@ jobs:
           fi
       - id: after-recover
         if: steps.recover.outputs.recovered == 'true'
-        uses: reecetech/version-increment@2026.8.4
+        uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6
         with:
           scheme: semver
           increment: ${{ inputs.increment || 'patch' }}

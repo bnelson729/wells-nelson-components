@@ -66,6 +66,33 @@ On `main`, each package whose shipped files changed since its last release is pu
 with its own version, tagged `@wells-nelson/<package>@<version>`. Setup, auth and manual
 releases: [PUBLISHING.md](PUBLISHING.md).
 
+### Trying unreleased changes in an app
+
+Pack the packages (`npm run pack:all`) and install the tarballs in the app
+(`npm install ../wells-nelson-components/packs/wells-nelson-displays-0.0.0.tgz`). Once the change is
+published, the reusable workflow
+[use-published-packages.yml](.github/workflows/use-published-packages.yml) puts the app back on npm: on
+the app's pull request it replaces each `file:…tgz` dependency with the latest published version,
+reinstalls, runs the app's checks and commits package.json and package-lock.json to the branch.
+
+```yaml
+# the app's .github/workflows/published-packages.yml
+on:
+  pull_request:
+    paths: [package.json, package-lock.json]
+permissions:
+  contents: write
+jobs:
+  packages:
+    uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
+    with:
+      verify: npm run check && npm run build # default: check, test and build, each if present
+```
+
+Other inputs: `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`,
+`commit-message`. Forks are skipped. Pushes made with the default `GITHUB_TOKEN` don't trigger other
+workflows; pass a `token` secret (Contents: write) if the pull request's checks should re-run on the commit.
+
 ## Using them in an app
 
 ```sh
