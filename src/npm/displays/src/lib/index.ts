@@ -10,5 +10,6 @@ export { default as Modal } from './Modal.svelte';
 export { default as SortableTable } from './SortableTable.svelte';
 export { default as Splash } from './Splash.svelte';
 export { default as TabBar } from './TabBar.svelte';
+export { PHONE_LAYOUT_QUERY, phoneLayout } from './layout.js';
 export { baseIcons, hasIcon, iconMarkup, registerIcons, type BaseIconName, type IconName } from './icons.js';
 export { sortRows, type Leaderboard, type SortableColumn, type TabItem } from './types.js';

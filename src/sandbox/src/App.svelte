@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AppHeader, IconButton, TabBar } from '@wells-nelson/displays';
+	import { AppHeader, IconButton, phoneLayout, TabBar } from '@wells-nelson/displays';
 	import greenPalette from '@wells-nelson/displays/palettes/green.css?inline';
 	import type { Component } from 'svelte';
 	import Account from './pages/Account.svelte';
@@ -27,6 +27,8 @@
 			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="#c46b2f"/><text x="20" y="26" font-family="sans-serif" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">AB</text></svg>'
 		);
 
+	const showTabBar = $derived(shell.tabBar === 'on' || (shell.tabBar === 'auto' && phoneLayout.current));
+
 	// The palette is switched by adding / removing the green stylesheet.
 	$effect(() => {
 		if (shell.palette !== 'green') return;
@@ -40,6 +42,7 @@
 <svelte:window onhashchange={() => (route = fromHash())} />
 <svelte:head><title>{page.label} · Sandbox</title></svelte:head>
 
+{#if !showTabBar}
 <AppHeader
 	brandHref="#/displays"
 	brandLabel="Sandbox home"
@@ -49,16 +52,24 @@
 	unsynced={shell.unsynced}
 	hideOnScroll={shell.hideOnScroll}
 	width={shell.wide ? '64rem' : undefined}
+	labels={shell.labels === 'active' ? 'active' : 'always'}
+	profileShowLabel={shell.profileLabel}
+	profileLabel="Account"
 >
 	{#snippet brand()}WN{/snippet}
 	{#snippet nav()}
 		{#each pages.filter((p) => p.id !== 'account') as p (p.id)}
-			<IconButton icon={p.icon} label={p.label} href={`#/${p.id}`} active={route === p.id} />
+			<IconButton
+				icon={p.icon}
+				label={p.label.split(' ')[0]}
+				href={`#/${p.id}`}
+				active={route === p.id}
+				showLabel={shell.labels !== 'none'}
+			/>
 		{/each}
 	{/snippet}
 </AppHeader>
-
-{#if shell.tabBar}
+{:else}
 	<TabBar
 		items={pages.map((p) => ({
 			label: p.label.split(' ')[0],

@@ -24,6 +24,8 @@ interface UserSyncState {
 
 const emptyState = (): UserSyncState => ({ pending: {}, blocked: [], revoked: [], roles: {}, lastSync: null });
 const MEMBERSHIP_CHECK_INTERVAL = 30_000;
+/** Longest a new container's other rows wait for the container row to be pushed. */
+const CONTAINER_WAIT_MS = 20_000;
 
 /** Push errors caused by the server refusing the write (RLS, triggers), not by connectivity. */
 export function isRejection(err: unknown): boolean {
@@ -48,7 +50,7 @@ export function errorMessage(err: unknown, schema?: string): string {
 	return String(err);
 }
 
-export interface CloudSyncOptions<D extends DocMap> {
+export interface CloudSyncOptions<D extends DocMap<D>> {
 	/** Prefix for database names and localStorage keys, e.g. 'demo'. */
 	appKey: string;
 	schema: StoreSchema<D>;
@@ -64,7 +66,7 @@ export interface CloudSyncOptions<D extends DocMap> {
  * pending changes per container (cleared once replication settles), last sync time, blocked
  * containers, membership / revocation checks, cached roles and rejected writes.
  */
-export class CloudSync<D extends DocMap> {
+export class CloudSync<D extends DocMap<D>> {
 	readonly configured: boolean;
 	user = $state.raw<User | null>(null);
 	/** Supabase dropped the session on its own (e.g. refresh token revoked); data is kept until sign-in. */
@@ -96,6 +98,9 @@ export class CloudSync<D extends DocMap> {
 	#signingOut = false;
 	#queue: Promise<unknown> = Promise.resolve();
 	#attached: Promise<void> | null = null;
+	/** New cloud containers whose own row hasn't reached Supabase yet (see `expectNewContainer`). */
+	#unsent = new Map<string, () => void>();
+	#unsentWaits = new Map<string, Promise<void>>();
 
 	constructor(options: CloudSyncOptions<D>) {
 		this.#appKey = options.appKey;
@@ -223,10 +228,41 @@ export class CloudSync<D extends DocMap> {
 		this.#scheduleSettle();
 	}
 
+	/**
+	 * Hold back a new cloud container's other rows until the container's own row has reached
+	 * Supabase. Each collection replicates on its own, and the server only accepts a child row once
+	 * its container exists (row level security checks the membership the container insert
+	 * creates); without this, a container copied to the cloud with its rows has some of them
+	 * rejected until the next retry.
+	 */
+	expectNewContainer(containerId: string) {
+		if (this.#unsent.has(containerId)) return;
+		let release!: () => void;
+		const sent = new Promise<void>((resolve) => (release = resolve));
+		this.#unsent.set(containerId, release);
+		this.#unsentWaits.set(containerId, sent);
+	}
+
+	#containerSent(containerId: string) {
+		this.#unsent.get(containerId)?.();
+		this.#unsent.delete(containerId);
+		this.#unsentWaits.delete(containerId);
+	}
+
+	/** Waits while the container's own row is still on its way (bounded: if it's refused, the server decides). */
+	async #afterContainer(containerId: string) {
+		const sent = this.#unsentWaits.get(containerId);
+		if (!sent) return;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([sent, new Promise<void>((r) => (timer = setTimeout(r, CONTAINER_WAIT_MS)))]);
+		clearTimeout(timer);
+	}
+
 	async #startReplication(db: Database<D>) {
 		const { replicateSupabase } = await import('rxdb/plugins/replication-supabase');
 		const sb = replicationClient(this.#sb.getClient()!, this.#sb.schema);
 		this.#schema.collections.forEach((name, index) => {
+			const isContainer = name === this.#schema.container;
 			const rep = replicateSupabase<any>({
 				replicationIdentifier: `supabase-${name}`,
 				client: sb,
@@ -239,8 +275,12 @@ export class CloudSync<D extends DocMap> {
 				pull: { batchSize: 200 },
 				push: {
 					batchSize: 50,
-					modifier: (doc: any) =>
-						this.#state.value.blocked.includes(containerIdOf(this.#schema, name, doc)) ? null : doc
+					modifier: async (doc: any) => {
+						const containerId = containerIdOf(this.#schema, name, doc);
+						if (this.#state.value.blocked.includes(containerId)) return null;
+						if (!isContainer) await this.#afterContainer(containerId);
+						return doc;
+					}
 				}
 			});
 			this.#replications.push(rep);
@@ -257,7 +297,10 @@ export class CloudSync<D extends DocMap> {
 					this.active = this.#activeReps.size > 0;
 				}),
 				rep.received$.subscribe(() => this.#scheduleSettle()),
-				rep.sent$.subscribe(() => this.#scheduleSettle())
+				rep.sent$.subscribe((doc) => {
+					if (isContainer) this.#containerSent(doc.id);
+					this.#scheduleSettle();
+				})
 			);
 		});
 	}
@@ -270,6 +313,7 @@ export class CloudSync<D extends DocMap> {
 		this.#replications = [];
 		this.#activeReps.clear();
 		this.active = false;
+		for (const id of [...this.#unsent.keys()]) this.#containerSent(id);
 		await Promise.allSettled(reps.map((r) => r.cancel()));
 
 		const ds = this.#app.cloud;

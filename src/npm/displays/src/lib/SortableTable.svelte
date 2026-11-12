@@ -47,7 +47,7 @@
 	}
 </script>
 
-<section class="table-card card">
+<section class="table-card card selectable">
 	{#if title}<h2>{title}</h2>{/if}
 	{#if rows.length === 0}
 		<p class="muted empty-row">{emptyText}</p>

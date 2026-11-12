@@ -11,6 +11,7 @@
 		SortableTable,
 		Splash,
 		baseIcons,
+		phoneLayout,
 		type SortableColumn
 	} from '@wells-nelson/displays';
 	import { Segmented, Toggle } from '@wells-nelson/interactions';
@@ -65,6 +66,14 @@
 		{/each}
 	</div>
 	<div class="notice"><Icon name="alert" /> A <code>.notice</code> using the warning tokens.</div>
+	<label class="date">
+		<span>A <code>datetime-local</code> input, styled like the text inputs</span>
+		<input type="datetime-local" value="2026-06-07T10:00" step="300" />
+	</label>
+	<p class="muted">
+		On a touch screen this text can't be selected; fields and <code>.selectable</code> content (the tables
+		and leaderboards below) can.
+	</p>
 	<div class="card empty">An <code>.empty</code> state inside a <code>.card</code>.</div>
 </Panel>
 
@@ -73,13 +82,32 @@
 	<Toggle label="Avatar image" bind:checked={shell.avatar} />
 	<Toggle label="Hide on scroll (scroll down to try)" bind:checked={shell.hideOnScroll} />
 	<Toggle label="Wide (64rem)" bind:checked={shell.wide} />
+	<Segmented
+		label="Nav labels (showLabel, and the header's labels option)"
+		bind:value={shell.labels}
+		options={[
+			{ value: 'none', label: 'None' },
+			{ value: 'always', label: 'Always' },
+			{ value: 'active', label: 'Active only' }
+		]}
+	/>
+	<Toggle label="Label the profile (profileShowLabel)" bind:checked={shell.profileLabel} />
 </Panel>
 
 <Panel
 	title="TabBar"
-	note="Bottom navigation for phones. While it's shown, the search bar and Undo on the Interactions page sit above it (--footer-offset)."
+	note="Bottom navigation for phones, instead of the header. While it's shown, the search bar and Undo on the Interactions page sit above it (--footer-offset). Automatic follows phoneLayout: narrow screens, and touch screens held sideways."
 >
-	<Toggle label="Show the tab bar" bind:checked={shell.tabBar} />
+	<Segmented
+		label="Tab bar"
+		bind:value={shell.tabBar}
+		options={[
+			{ value: 'off', label: 'Off' },
+			{ value: 'on', label: 'On' },
+			{ value: 'auto', label: 'Automatic' }
+		]}
+	/>
+	<p class="muted">phoneLayout matches this screen: <strong>{phoneLayout.current ? 'yes' : 'no'}</strong></p>
 </Panel>
 
 <Panel title="Button and IconButton">
@@ -96,6 +124,7 @@
 		<IconButton icon="share" label="Share" active={activeIcon} onclick={() => (activeIcon = !activeIcon)} />
 		<IconButton icon="trash" label="Delete" disabled />
 		<IconButton icon="gear" label="Settings (link)" href="#/displays" />
+		<IconButton icon="home" label="Home" href="#/displays" showLabel />
 		<span class="muted">The share button toggles <code>active</code>.</span>
 	</div>
 </Panel>
@@ -171,6 +200,13 @@
 />
 
 <style>
+	.date {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
 	.swatches {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));

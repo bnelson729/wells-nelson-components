@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ActiveList from '../lib/ActiveList.svelte';
 import AppVersion from '../lib/AppVersion.svelte';
 import CollapsibleSection from '../lib/CollapsibleSection.svelte';
+import Combobox from '../lib/Combobox.svelte';
 import { reorder } from '../lib/dnd.js';
 import { LONG_PRESS_MS, longpress } from '../lib/longpress.js';
 import { UndoStack } from '../lib/undo.svelte.js';
-import { button, render, settle } from './setup.js';
+import { preventZoom } from '../lib/zoom.js';
+import { button, render, resize, settle } from './setup.js';
 
 function pointer(type: string, init: { x?: number; y?: number; id?: number } = {}) {
 	return new PointerEvent(type, { bubbles: true, clientX: init.x ?? 0, clientY: init.y ?? 0, pointerId: init.id ?? 1, button: 0 });
@@ -169,5 +171,77 @@ describe('ActiveList', () => {
 		box.click();
 		flushSync();
 		expect(ontoggle).toHaveBeenCalledWith(items[0], false);
+	});
+
+	const props = { items, noun: 'Members', label: (i: { name: string }) => i.name, onopen: () => {}, ontoggle: () => {} };
+
+	it('collapses the active section on request, starting expanded every time', () => {
+		const el = render(ActiveList, { ...props, collapsibleActive: true });
+		const toggle = button(el, 'Active members 1');
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		toggle.click();
+		flushSync();
+		expect(el.textContent).not.toContain('Ann');
+		expect(render(ActiveList, { ...props, collapsibleActive: true }).textContent).toContain('Ann');
+	});
+
+	it('shows both sections side by side, expanded, once wide enough', () => {
+		const el = render(ActiveList, { ...props, collapsibleActive: true, sideBySide: true });
+		const list = el.querySelector('.active-list')!;
+		resize(list, 500);
+		expect(list.classList.contains('columns')).toBe(false);
+		expect(el.textContent).not.toContain('Bo');
+
+		resize(list, 800);
+		expect(list.classList.contains('columns')).toBe(true);
+		expect(el.textContent).toContain('Ann');
+		expect(el.textContent).toContain('Bo');
+		expect(el.querySelector('button.toggle')).toBeNull();
+	});
+
+	it('keeps an empty inactive column when side by side', () => {
+		const el = render(ActiveList, { ...props, items: [items[0]], sideBySide: true });
+		resize(el.querySelector('.active-list')!, 800);
+		expect(el.querySelectorAll('section')).toHaveLength(2);
+		expect(el.textContent).toContain('Inactive members');
+	});
+});
+
+describe('preventZoom', () => {
+	it('allows panning only, cancels Safari pinch gestures, and undoes both', () => {
+		const undo = preventZoom();
+		expect(document.documentElement.style.touchAction).toBe('pan-x pan-y');
+		const pinch = new Event('gesturestart', { cancelable: true });
+		document.dispatchEvent(pinch);
+		expect(pinch.defaultPrevented).toBe(true);
+
+		undo();
+		expect(document.documentElement.style.touchAction).toBe('');
+		const later = new Event('gesturestart', { cancelable: true });
+		document.dispatchEvent(later);
+		expect(later.defaultPrevented).toBe(false);
+	});
+});
+
+describe('Combobox in a scrolling container', () => {
+	afterEach(() => vi.restoreAllMocks());
+
+	it('makes room below for the options when it is near the end, and gives it back on close', () => {
+		const scroller = render(Combobox, { label: 'Department', options: [{ id: 'd1', label: 'Dairy' }] });
+		scroller.style.overflowY = 'auto';
+		// jsdom has no layout: the field ends at 300px and its open list would reach 500px.
+		vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+			const bottom = this.getAttribute('role') === 'listbox' ? 500 : 300;
+			return { bottom, top: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+		});
+
+		const input = scroller.querySelector('input')!;
+		input.dispatchEvent(new FocusEvent('focus'));
+		flushSync();
+		expect(scroller.querySelector<HTMLElement>('.reserve')?.style.height).toBe('208px');
+
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		flushSync();
+		expect(scroller.querySelector('.reserve')).toBeNull();
 	});
 });

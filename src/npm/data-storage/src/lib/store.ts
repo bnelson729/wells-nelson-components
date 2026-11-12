@@ -15,7 +15,7 @@ import type { CollectionName, DocMap, Nouns, StoreSchema } from './types.js';
  * `C` is the container collection; pass it (`createSyncedStore<Docs, 'projects'>`) so container
  * rows are typed as that document rather than a union of every document.
  */
-export interface SyncedStoreConfig<D extends DocMap, C extends CollectionName<D> = CollectionName<D>>
+export interface SyncedStoreConfig<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>>
 	extends StoreSchema<D, C> {
 	/** Prefix for database names and localStorage keys, e.g. 'demo' → `demo_local`, `demo:hidden`. */
 	appKey: string;
@@ -57,7 +57,7 @@ export interface SyncedStoreConfig<D extends DocMap, C extends CollectionName<D>
  * sets), cloud sync, tombstones, device prefs, the Supabase members API and container
  * operations. Create it once in a module and import it where needed.
  */
-export function createSyncedStore<D extends DocMap, C extends CollectionName<D> = CollectionName<D>>(
+export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>>(
 	config: SyncedStoreConfig<D, C>
 ) {
 	const roles = config.roles ?? false;
@@ -175,6 +175,6 @@ export function createSyncedStore<D extends DocMap, C extends CollectionName<D> 
 	return { config, roles, app, cloud, tombstones, prefs, supabase, ops, init, resetDevice, requestPersistence };
 }
 
-export type SyncedStore<D extends DocMap, C extends CollectionName<D> = CollectionName<D>> = ReturnType<
+export type SyncedStore<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>> = ReturnType<
 	typeof createSyncedStore<D, C>
 >;

@@ -11,9 +11,13 @@
 </script>
 
 <script lang="ts">
+	import { tick, untrack } from 'svelte';
+
 	/**
 	 * Dropdown with type-to-filter. Typing text that doesn't exactly match an option (ignoring
-	 * case and surrounding spaces) offers to create a new entry with that name.
+	 * case and surrounding spaces) offers to create a new entry with that name. Inside something
+	 * that scrolls (e.g. a `Modal`), opening it near the end adds room below so the options aren't
+	 * cut off.
 	 */
 	let {
 		label,
@@ -98,6 +102,37 @@
 		}
 	}
 
+	let combo: HTMLDivElement | undefined = $state();
+	let list: HTMLUListElement | undefined = $state();
+	/** Extra space below the field while open, so the options fit inside a scrolling container. */
+	let reserve = $state(0);
+
+	/** The nearest ancestor that scrolls, e.g. a modal's body; null when it's the page itself. */
+	function scrollParent(el: HTMLElement): HTMLElement | null {
+		for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+			const { overflowY } = getComputedStyle(p);
+			if (overflowY === 'auto' || overflowY === 'scroll') return p;
+		}
+		return null;
+	}
+
+	$effect(() => {
+		void rows.length;
+		if (!open || !list || !combo) {
+			reserve = 0;
+			return;
+		}
+		const scroller = scrollParent(combo);
+		const last = scroller?.lastElementChild;
+		if (!scroller || !last) return;
+		// Where the container's content ends without our extra space, and how far the options reach.
+		const padding = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+		const contentEnd = last.getBoundingClientRect().bottom + padding - untrack(() => reserve);
+		const needed = Math.ceil(list.getBoundingClientRect().bottom + 8 - contentEnd);
+		reserve = Math.max(0, needed);
+		void tick().then(() => list?.scrollIntoView?.({ block: 'nearest' }));
+	});
+
 	let blurTimer: ReturnType<typeof setTimeout> | undefined;
 	// Don't let a pending blur timer run after the component is gone (e.g. its modal closed).
 	$effect(() => () => clearTimeout(blurTimer));
@@ -113,53 +148,61 @@
 	}
 </script>
 
-<div class="combo">
+<div class="combo" bind:this={combo}>
 	<label for={id} class:visually-hidden={hideLabel}>{label}</label>
-	<input
-		{id}
-		type="text"
-		role="combobox"
-		autocomplete="off"
-		aria-expanded={open}
-		aria-controls={listId}
-		aria-autocomplete="list"
-		aria-invalid={error ? 'true' : undefined}
-		{placeholder}
-		bind:value={text}
-		oninput={onInput}
-		onfocus={() => (open = true)}
-		onclick={() => (open = true)}
-		onblur={onBlur}
-		onkeydown={onKeydown}
-	/>
-	{#if open && rows.length > 0}
-		<ul id={listId} role="listbox" class="options">
-			{#each rows as row, i (row.kind === 'option' ? row.option.id : '__create')}
-				<li
-					role="option"
-					aria-selected={i === highlighted}
-					class:highlighted={i === highlighted}
-					class:create={row.kind === 'create'}
-					onmousedown={(e) => {
-						e.preventDefault();
-						select(row);
-					}}
-					onmouseenter={() => (highlighted = i)}
-				>
-					{#if row.kind === 'option'}{row.option.label}{:else}{createLabel} “{query}”{/if}
-				</li>
-			{/each}
-		</ul>
-	{/if}
+	<div class="control">
+		<input
+			{id}
+			type="text"
+			role="combobox"
+			autocomplete="off"
+			aria-expanded={open}
+			aria-controls={listId}
+			aria-autocomplete="list"
+			aria-invalid={error ? 'true' : undefined}
+			{placeholder}
+			bind:value={text}
+			oninput={onInput}
+			onfocus={() => (open = true)}
+			onclick={() => (open = true)}
+			onblur={onBlur}
+			onkeydown={onKeydown}
+		/>
+		{#if open && rows.length > 0}
+			<ul id={listId} role="listbox" class="options" bind:this={list}>
+				{#each rows as row, i (row.kind === 'option' ? row.option.id : '__create')}
+					<li
+						role="option"
+						aria-selected={i === highlighted}
+						class:highlighted={i === highlighted}
+						class:create={row.kind === 'create'}
+						onmousedown={(e) => {
+							e.preventDefault();
+							select(row);
+						}}
+						onmouseenter={() => (highlighted = i)}
+					>
+						{#if row.kind === 'option'}{row.option.label}{:else}{createLabel} “{query}”{/if}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
 	{#if error}<p class="error">{error}</p>{/if}
+	{#if reserve > 0}<div class="reserve" style:height="{reserve}px" aria-hidden="true"></div>{/if}
 </div>
 
 <style>
 	.combo {
-		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
+	}
+	.control {
+		position: relative;
+	}
+	.reserve {
+		flex: none;
 	}
 	label {
 		font-weight: 600;

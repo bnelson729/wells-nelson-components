@@ -14,6 +14,7 @@ Peer dependencies: `svelte`, `rxdb`, `rxjs`, `@tanstack/db`, `@tanstack/rxdb-db-
 import { createSyncedStore, envConfig, field, flatSchema } from '@wells-nelson/data-storage';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 
+// Docs maps collection names to document types, as a `type` or an `interface`.
 // Pass the container collection as the second type argument so its rows are typed precisely.
 export const store = createSyncedStore<Docs, 'projects'>({
 	appKey: 'demo', // demo_local, demo_cloud_<user>, demo:hidden, demo:sync:<user>, demo:defaultProject…
@@ -51,7 +52,9 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
   show it until dismissed) and `persisted` (whether the browser keeps the data for good).
 - `cloud`: `CloudSync`: session (Google, email link), replication, `pendingIds`, `hasPending`,
   `lastSync`, `online`, `active`, `error`, `rejectedWrite`, `roleOf`, `revokedIds`,
-  `forceResync`, `signOut`.
+  `forceResync`, `signOut`. Each collection replicates on its own; a container created in or moved to
+  the cloud (`createContainer`, `makeCloud`) holds its other rows back until its own row has reached
+  Supabase (`expectNewContainer`, at most 20 s), so row level security doesn't refuse them.
 - `ops`: container operations (`createContainer`, `renameContainer`, `makeCloud`, `makeLocal`,
   `deleteContainer`, `leaveContainer`, `keepRevokedCopy`, `removeRevoked`, `entries`,
   `exportContainers`, `importContainers`) and the row

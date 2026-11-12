@@ -5,7 +5,9 @@
 	/**
 	 * Active rows first, then a collapsible inactive section. Each row has an active checkbox and a
 	 * pencil that opens it; tapping the name does nothing. Bind `inactiveOpen` to persist whether
-	 * the inactive section is expanded (e.g. to device preferences).
+	 * the inactive section is expanded (e.g. to device preferences). `collapsibleActive` lets the
+	 * active section collapse too (always expanded when shown again), and `sideBySide` puts the
+	 * two sections in columns, both expanded, once the list is wide enough.
 	 */
 	let {
 		items,
@@ -16,7 +18,9 @@
 		readOnly = false,
 		inactiveOpen = $bindable(false),
 		emptyText = 'None yet.',
-		appearance = 'card'
+		appearance = 'card',
+		collapsibleActive = false,
+		sideBySide = false
 	}: {
 		items: T[];
 		/** Plural noun for headings, e.g. "Members". */
@@ -32,7 +36,23 @@
 		 * so the rows read like lines on paper.
 		 */
 		appearance?: 'card' | 'lines';
+		/** The active section can be collapsed too. Not remembered: it starts expanded every time. */
+		collapsibleActive?: boolean;
+		/**
+		 * When the list is at least `SIDE_BY_SIDE_MIN` wide, show active and inactive side by side,
+		 * both always expanded (the collapse toggles go away).
+		 */
+		sideBySide?: boolean;
 	} = $props();
+
+	/** Width (px) from which `sideBySide` puts the sections in columns: two 20rem columns. */
+	const SIDE_BY_SIDE_MIN = 640;
+
+	let width = $state(0);
+	let activeOpen = $state(true);
+	const columns = $derived(sideBySide && width >= SIDE_BY_SIDE_MIN);
+	const showActive = $derived(columns || !collapsibleActive || activeOpen);
+	const showInactive = $derived(columns || inactiveOpen);
 
 	const sectionClass = $derived(['group', appearance, appearance === 'card' && 'card']);
 
@@ -57,34 +77,57 @@
 	</li>
 {/snippet}
 
-<section class={sectionClass}>
-	<h2>Active {noun.toLowerCase()} <span class="count">{active.length}</span></h2>
-	<ul>
-		{#each active as item (item.id)}
-			{@render row(item)}
-		{:else}
-			<li class="muted empty-row">{emptyText}</li>
-		{/each}
-	</ul>
-</section>
-
-{#if inactive.length > 0}
+<div class="active-list" class:columns bind:clientWidth={width}>
 	<section class={sectionClass}>
-		<button type="button" class="toggle" aria-expanded={inactiveOpen} onclick={() => (inactiveOpen = !inactiveOpen)}>
-			<span class="chev" class:collapsed={!inactiveOpen}><Icon name="chevron" size={20} /></span>
-			Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span>
-		</button>
-		{#if inactiveOpen}
+		{#if collapsibleActive && !columns}
+			<button type="button" class="toggle strong" aria-expanded={activeOpen} onclick={() => (activeOpen = !activeOpen)}>
+				<span class="chev" class:collapsed={!activeOpen}><Icon name="chevron" size={20} /></span>
+				Active {noun.toLowerCase()} <span class="count">{active.length}</span>
+			</button>
+		{:else}
+			<h2>Active {noun.toLowerCase()} <span class="count">{active.length}</span></h2>
+		{/if}
+		{#if showActive}
 			<ul>
-				{#each inactive as item (item.id)}
+				{#each active as item (item.id)}
 					{@render row(item)}
+				{:else}
+					<li class="muted empty-row">{emptyText}</li>
 				{/each}
 			</ul>
 		{/if}
 	</section>
-{/if}
+
+	{#if inactive.length > 0 || columns}
+		<section class={sectionClass}>
+			{#if columns}
+				<h2 class="muted-heading">Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span></h2>
+			{:else}
+				<button type="button" class="toggle" aria-expanded={inactiveOpen} onclick={() => (inactiveOpen = !inactiveOpen)}>
+					<span class="chev" class:collapsed={!inactiveOpen}><Icon name="chevron" size={20} /></span>
+					Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span>
+				</button>
+			{/if}
+			{#if showInactive}
+				<ul>
+					{#each inactive as item (item.id)}
+						{@render row(item)}
+					{:else}
+						<li class="muted empty-row">None.</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/if}
+</div>
 
 <style>
+	.columns {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0 0.75rem;
+		align-items: start;
+	}
 	.card {
 		margin-bottom: 0.75rem;
 		overflow: hidden;
@@ -109,6 +152,12 @@
 		background: none;
 		cursor: pointer;
 		padding-left: 0.5rem;
+		color: var(--muted);
+	}
+	.toggle.strong {
+		color: inherit;
+	}
+	.muted-heading {
 		color: var(--muted);
 	}
 	.chev {

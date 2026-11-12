@@ -21,12 +21,12 @@ export type TSCollection<T extends object> = ReturnType<typeof makeCollection<T>
  * One RxDB database plus a TanStack DB collection on top of each RxDB collection.
  * Components query the TanStack collections; bulk operations go straight to RxDB.
  */
-export type DataSet<D extends DocMap> = {
+export type DataSet<D extends DocMap<D>> = {
 	location: Location;
 	db: Database<D>;
 } & { [N in CollectionName<D>]: TSCollection<D[N]> };
 
-export function createDataSet<D extends DocMap>(
+export function createDataSet<D extends DocMap<D>>(
 	location: Location,
 	db: Database<D>,
 	schema: Pick<StoreSchema<D>, 'collections' | 'container' | 'containerField' | 'indexContainerField'>
@@ -43,6 +43,6 @@ export function createDataSet<D extends DocMap>(
 	return ds as DataSet<D>;
 }
 
-export async function disposeDataSet<D extends DocMap>(ds: DataSet<D>, collections: readonly CollectionName<D>[]) {
+export async function disposeDataSet<D extends DocMap<D>>(ds: DataSet<D>, collections: readonly CollectionName<D>[]) {
 	await Promise.all(collections.map((n) => (ds[n] as unknown as { cleanup(): Promise<void> }).cleanup()));
 }

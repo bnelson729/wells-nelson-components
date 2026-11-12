@@ -109,6 +109,38 @@ input:not([type]) {
 	background: var(--surface);
 }
 
+/*
+ * Date and time inputs match the text inputs. iOS draws its own control that ignores the padding
+ * and changes size with the value, so there it's reset to a plain box of the same height.
+ */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+	font: inherit;
+	color: inherit;
+	width: 100%;
+	min-height: calc(1.4em + 1.2rem + 2px);
+	padding: 0.6rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+@supports (-webkit-touch-callout: none) {
+	input[type='date'],
+	input[type='time'],
+	input[type='datetime-local'] {
+		-webkit-appearance: none;
+		appearance: none;
+		display: block;
+	}
+	input::-webkit-date-and-time-value {
+		margin: 0;
+		text-align: left;
+		min-height: 1.4em;
+	}
+}
+
 input:focus-visible {
 	outline: none;
 	border-color: var(--accent);
@@ -122,6 +154,27 @@ input[aria-invalid='true'] {
 button {
 	font: inherit;
 	color: inherit;
+}
+
+/*
+ * Touch screens: text can't be selected by accident (a long press selects instead of acting like
+ * an app). Fields, and anything marked `.selectable` (reports, tables, logs), still can.
+ * `Leaderboards` and `SortableTable` are selectable.
+ */
+@media (hover: none) and (pointer: coarse) {
+	body {
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+	input,
+	textarea,
+	[contenteditable],
+	.selectable {
+		-webkit-user-select: text;
+		user-select: text;
+		-webkit-touch-callout: default;
+	}
 }
 
 .visually-hidden {

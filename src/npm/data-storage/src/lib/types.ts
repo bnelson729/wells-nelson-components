@@ -10,10 +10,14 @@ export interface DocBase {
 	updated_at: number;
 }
 
-/** Collection name → document type, e.g. `{ projects: ProjectDoc; tasks: TaskDoc }`. */
-export type DocMap = { [name: string]: DocBase };
+/**
+ * Collection name → document type, e.g. `{ projects: ProjectDoc; tasks: TaskDoc }`, as a `type`
+ * alias or an `interface`. Generics constrain with `D extends DocMap<D>` (every key of `D` is a
+ * document), which an interface satisfies; a plain `DocMap` is any such map.
+ */
+export type DocMap<D = Record<string, DocBase>> = { [K in keyof D]: DocBase };
 
-export type CollectionName<D extends DocMap> = keyof D & string;
+export type CollectionName<D extends DocMap<D>> = keyof D & string;
 
 /** Where a container lives: only on this device, or replicated to Supabase. */
 export type Location = 'local' | 'cloud';
@@ -30,7 +34,7 @@ export interface Nouns {
  * The shape of an app's data. A **container** (a project, a list…) owns every other row through
  * `containerField` and is the unit that gets shared, synced and moved between data sets.
  */
-export interface StoreSchema<D extends DocMap, C extends CollectionName<D> = CollectionName<D>> {
+export interface StoreSchema<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>> {
 	/** Every collection, parents before children (the container first). */
 	collections: readonly CollectionName<D>[];
 	schemas: { [N in CollectionName<D>]: RxJsonSchema<D[N]> };
@@ -43,7 +47,7 @@ export interface StoreSchema<D extends DocMap, C extends CollectionName<D> = Col
 }
 
 /** The container a document belongs to (containers are their own container). */
-export function containerIdOf<D extends DocMap>(
+export function containerIdOf<D extends DocMap<D>>(
 	schema: Pick<StoreSchema<D>, 'container' | 'containerField'>,
 	collection: CollectionName<D>,
 	doc: object

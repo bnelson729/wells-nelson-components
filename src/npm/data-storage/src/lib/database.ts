@@ -7,8 +7,8 @@ import {
 } from 'rxdb/plugins/core';
 import type { CollectionName, DocMap, StoreSchema } from './types.js';
 
-export type Collections<D extends DocMap> = { [N in CollectionName<D>]: RxCollection<D[N]> };
-export type Database<D extends DocMap> = RxDatabase<Collections<D>>;
+export type Collections<D extends DocMap<D>> = { [N in CollectionName<D>]: RxCollection<D[N]> };
+export type Database<D extends DocMap<D>> = RxDatabase<Collections<D>>;
 
 const IGNORED_FIELDS = new Set(['_meta', '_rev', '_attachments']);
 
@@ -49,7 +49,7 @@ export interface OpenDatabaseOptions {
 }
 
 /** Create an RxDB database with one collection per schema, all using last-write-wins. */
-export async function openDatabase<D extends DocMap>(
+export async function openDatabase<D extends DocMap<D>>(
 	name: string,
 	schema: Pick<StoreSchema<D>, 'collections' | 'schemas'>,
 	{ storage, multiInstance = true }: OpenDatabaseOptions = {}

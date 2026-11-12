@@ -14,6 +14,36 @@ if (!proto.showModal) {
 	};
 }
 
+// jsdom has no ResizeObserver (Svelte's size bindings use it). This one reports when a test calls `resize`.
+const observers = new Set<{ callback: ResizeObserverCallback; targets: Set<Element>; observer: ResizeObserver }>();
+if (!('ResizeObserver' in globalThis)) {
+	globalThis.ResizeObserver = class {
+		#entry: { callback: ResizeObserverCallback; targets: Set<Element>; observer: ResizeObserver };
+		constructor(callback: ResizeObserverCallback) {
+			this.#entry = { callback, targets: new Set(), observer: this as unknown as ResizeObserver };
+			observers.add(this.#entry);
+		}
+		observe(target: Element) {
+			this.#entry.targets.add(target);
+		}
+		unobserve(target: Element) {
+			this.#entry.targets.delete(target);
+		}
+		disconnect() {
+			this.#entry.targets.clear();
+		}
+	} as unknown as typeof ResizeObserver;
+}
+
+/** Give an element a width (jsdom lays nothing out) and tell its observers. */
+export function resize(el: Element, width: number) {
+	Object.defineProperty(el, 'clientWidth', { configurable: true, value: width });
+	for (const o of observers) {
+		if (o.targets.has(el)) o.callback([{ target: el, contentRect: { width } } as unknown as ResizeObserverEntry], o.observer);
+	}
+	flushSync();
+}
+
 let mounted: ReturnType<typeof mount>[] = [];
 afterEach(() => {
 	for (const m of mounted) unmount(m);

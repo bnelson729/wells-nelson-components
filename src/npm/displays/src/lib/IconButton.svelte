@@ -9,7 +9,8 @@
 		onclick,
 		active = false,
 		size = 22,
-		disabled = false
+		disabled = false,
+		showLabel = false
 	}: {
 		icon: IconName;
 		label: string;
@@ -18,16 +19,43 @@
 		active?: boolean;
 		size?: number;
 		disabled?: boolean;
+		/**
+		 * Show the label to the right of the icon. In `AppHeader`'s nav, its `labels` option can
+		 * limit this to the active button.
+		 */
+		showLabel?: boolean;
 	} = $props();
 </script>
 
+{#snippet content()}
+	<Icon name={icon} {size} />
+	{#if showLabel}<span class="text" aria-hidden="true">{label}</span>{/if}
+{/snippet}
+
 {#if href}
-	<a class="icon-btn" class:active {href} aria-label={label} title={label} aria-current={active ? 'page' : undefined}>
-		<Icon name={icon} {size} />
+	<a
+		class="icon-btn"
+		class:active
+		class:labeled={showLabel}
+		{href}
+		aria-label={label}
+		title={showLabel ? undefined : label}
+		aria-current={active ? 'page' : undefined}
+	>
+		{@render content()}
 	</a>
 {:else}
-	<button type="button" class="icon-btn" class:active aria-label={label} title={label} {onclick} {disabled}>
-		<Icon name={icon} {size} />
+	<button
+		type="button"
+		class="icon-btn"
+		class:active
+		class:labeled={showLabel}
+		aria-label={label}
+		title={showLabel ? undefined : label}
+		{onclick}
+		{disabled}
+	>
+		{@render content()}
 	</button>
 {/if}
 
@@ -44,6 +72,19 @@
 		color: inherit;
 		cursor: pointer;
 		text-decoration: none;
+	}
+	.labeled {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		width: auto;
+		padding: 0 0.85rem 0 0.6rem;
+		border-radius: 1.25rem;
+	}
+	.text {
+		font-size: 0.92rem;
+		font-weight: 600;
+		white-space: nowrap;
 	}
 	.icon-btn:hover:not(:disabled) {
 		background: var(--surface-hover);

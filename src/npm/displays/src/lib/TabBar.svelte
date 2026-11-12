@@ -4,17 +4,21 @@
 
 	/**
 	 * Fixed bottom navigation for phones: one tab per top-level destination, icon over label.
-	 * Use it instead of `AppHeader` on small screens (set `--header-h: 0px` there so the page
-	 * starts at the top). While mounted it sets `--footer-offset` on <html>, which `SearchBar`,
-	 * `UndoButton` and other fixed bottom UI use to sit above it, and it leaves a spacer of its
-	 * height at the end of the page.
+	 * Use it instead of `AppHeader` on phones (`phoneLayout` says when). While mounted it sets
+	 * `--header-h: 0px` on <html>, so pages start at the top, and `--footer-offset`, which
+	 * `SearchBar`, `UndoButton` and other fixed bottom UI use to sit above it; it leaves a spacer
+	 * of its height at the end of the page.
 	 */
 	let { items, label = 'Main' }: { items: TabItem[]; label?: string } = $props();
 
 	$effect(() => {
 		const root = document.documentElement.style;
 		root.setProperty('--footer-offset', 'calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px))');
-		return () => root.removeProperty('--footer-offset');
+		root.setProperty('--header-h', '0px');
+		return () => {
+			root.removeProperty('--footer-offset');
+			root.removeProperty('--header-h');
+		};
 	});
 </script>
 

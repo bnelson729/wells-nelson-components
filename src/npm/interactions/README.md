@@ -11,7 +11,9 @@ npm install @wells-nelson/displays @wells-nelson/interactions
 ## Inputs
 
 `TextField` (label, error, hint), `Checkbox` (optionally hidden label), `Toggle` (a switch for
-settings that apply at once), `Combobox` (type to filter, offers "Create …"; plus `sameName`),
+settings that apply at once), `Combobox` (type to filter, offers "Create …"; plus `sameName`. Inside
+something that scrolls, like a `Modal`, opening it near the end adds room below so its options
+aren't cut off),
 `AddRow` (inline "name + plus" that refocuses), `Segmented` (one of a few) and `SearchBar`
 (fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
 does `UndoButton`).
@@ -24,6 +26,8 @@ does `UndoButton`).
 	onopen={edit}
 	ontoggle={(p, on) => setActive(p, on)}
 	bind:inactiveOpen={() => !prefs.isCollapsed('people-inactive', true), (open) => prefs.setCollapsed('people-inactive', !open)}
+	collapsibleActive
+	sideBySide
 />
 
 <CollapsibleSection title={status.name} count={rows.length} collapsed={…} ontogglecollapse={…}
@@ -31,6 +35,10 @@ does `UndoButton`).
 	{#each rows as row (row.id)}<li data-dnd-item>…</li>{/each}
 </CollapsibleSection>
 ```
+
+`ActiveList`'s `collapsibleActive` lets the active section collapse too; that isn't remembered, so
+it's expanded whenever the list is shown again. With `sideBySide`, once the list is 40rem wide
+the active and inactive sections sit side by side, both always expanded.
 
 Both take `appearance`: `card` (default) draws rounded cards; `lines` fills the container edge to
 edge with rules between rows, like lines on paper. A `lines` CollapsibleSection's pinned header
@@ -43,6 +51,13 @@ needs an opaque background: set `--section-header-bg` to whatever it sits on (de
   `reorder(ids, id, index)`: long-press (300 ms) drag for touch and mouse, with an insertion line
   for ordered zones and the scroll position restored after the drop. Both actions use the same
   press detection (`watchPress`).
+
+## Zoom
+
+`preventZoom()` stops pinch and double-tap zoom (iPad and iPhone Safari, the home-screen app and
+Android) for app-like screens; call it once on the client, e.g. in the root layout's `onMount`. It
+returns a function that undoes it. People who rely on zooming lose it, so keep text and controls
+big enough without.
 
 ## Undo
 

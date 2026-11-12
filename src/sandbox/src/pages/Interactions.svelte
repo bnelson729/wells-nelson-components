@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, IconButton } from '@wells-nelson/displays';
+	import { Badge, Button, IconButton, Modal } from '@wells-nelson/displays';
 	import {
 		ActiveList,
 		AddRow,
@@ -16,6 +16,7 @@
 		UndoStack,
 		dropZone,
 		longpress,
+		preventZoom,
 		reorder,
 		wipeAllData,
 		type ComboChoice,
@@ -86,6 +87,14 @@
 	let people = $state(mockPeople.map((p) => ({ ...p })));
 	let inactiveOpen = $state(false);
 	let opened = $state<string | null>(null);
+	let collapsibleActive = $state(true);
+	let sideBySide = $state(true);
+	let comboModal = $state(false);
+	let modalTag = $state<ComboChoice>(null);
+	let noZoom = $state(false);
+	$effect(() => {
+		if (noZoom) return preventZoom();
+	});
 
 	// ------------------------------------------------ long press
 	let presses = $state(0);
@@ -100,6 +109,7 @@
 	</div>
 	<Toggle label="Applies immediately" bind:checked={toggled} />
 	<Combobox label="Tag" options={tagOptions} bind:choice={tagChoice} createLabel="Create tag" />
+	<Button onclick={() => (comboModal = true)}>Combobox at the end of a modal</Button>
 	<div class="row">
 		<span class="muted">Choice: <code>{JSON.stringify(tagChoice)}</code></span>
 		{#if tagChoice && 'newName' in tagChoice}<Button onclick={createTag}>Create it</Button>{/if}
@@ -179,9 +189,13 @@
 		label={(p) => p.name}
 		bind:inactiveOpen
 		{appearance}
+		{collapsibleActive}
+		{sideBySide}
 		ontoggle={(p, on) => (people.find((x) => x.id === p.id)!.active = on)}
 		onopen={(p) => (opened = p.name)}
 	/>
+	<Toggle label="Active section collapses (collapsibleActive)" bind:checked={collapsibleActive} />
+	<Toggle label="Side by side once 40rem wide (sideBySide)" bind:checked={sideBySide} />
 	<p class="muted">Inactive open: {inactiveOpen} · last opened: {opened ?? '—'}</p>
 </Panel>
 
@@ -199,6 +213,18 @@
 		/>
 	{/key}
 </Panel>
+
+<Panel title="preventZoom" note="Stops pinch and double-tap zoom on this page (try it on a phone or tablet).">
+	<Toggle label="Prevent zoom" bind:checked={noZoom} />
+</Panel>
+
+<Modal bind:open={comboModal} title="New task">
+	<TextField label="Title" value="Write the summary" />
+	<Combobox label="Tag" options={tagOptions} bind:choice={modalTag} createLabel="Create tag" />
+	{#snippet footer()}
+		<Button variant="primary" onclick={() => (comboModal = false)}>Done</Button>
+	{/snippet}
+</Modal>
 
 <Panel title="AddRow">
 	<AddRow placeholder="Add a person" label="Add person" onadd={(n) => (people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }])} />

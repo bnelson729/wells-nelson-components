@@ -5,7 +5,7 @@ import type { DocMap, Location } from './types.js';
  * Holds the two data sets: `local` (this device only, never synced) is always open;
  * `cloud` exists only while signed in and replicates to Supabase.
  */
-export class AppState<D extends DocMap> {
+export class AppState<D extends DocMap<D>> {
 	local = $state.raw<DataSet<D> | null>(null);
 	cloud = $state.raw<DataSet<D> | null>(null);
 	ready = $state(false);

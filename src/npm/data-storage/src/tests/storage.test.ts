@@ -5,7 +5,7 @@ import { envConfig } from '../lib/env.js';
 import { Persisted } from '../lib/persisted.svelte.js';
 import { DevicePrefs, defaultPrefsKeys } from '../lib/prefs.svelte.js';
 import { Tombstones } from '../lib/tombstones.svelte.js';
-import { containerIdOf } from '../lib/types.js';
+import { containerIdOf, type DocMap } from '../lib/types.js';
 import { collections, eventually, makeStore, schemas, type Docs } from './fixture.js';
 
 afterEach(() => localStorage.clear());
@@ -101,8 +101,8 @@ describe('openDatabase', () => {
 describe('containerIdOf', () => {
 	it('treats the container as its own container', () => {
 		const s = { container: 'projects', containerField: 'project_id' };
-		expect(containerIdOf(s, 'projects', { id: 't' })).toBe('t');
-		expect(containerIdOf(s, 'tasks', { id: 'p', project_id: 't' })).toBe('t');
+		expect(containerIdOf<DocMap>(s, 'projects', { id: 't' })).toBe('t');
+		expect(containerIdOf<DocMap>(s, 'tasks', { id: 'p', project_id: 't' })).toBe('t');
 	});
 });
 

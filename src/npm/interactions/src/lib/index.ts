@@ -24,3 +24,4 @@ export { LONG_PRESS_MS, longpress } from './longpress.js';
 export { watchPress, type PressOptions } from './press.js';
 export { UndoStack, type UndoEntry, type UndoStackOptions } from './undo.svelte.js';
 export { wipeAllData, type WipeOptions } from './wipe.js';
+export { preventZoom } from './zoom.js';

@@ -20,6 +20,11 @@ Tokens: `--bg`, `--surface`, `--surface-2`, `--surface-hover`, `--text`, `--mute
 `.stack`, `.card`, `.row-card`, `.muted`, `.notice`, `.empty`, `.visually-hidden`, plus
 drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
 
+Date and time inputs (`date`, `time`, `datetime-local`) match the text inputs, and on iOS keep a
+fixed size whatever their value. On touch screens text can't be selected (a long press acts like an
+app, not a page), except in fields and anything marked `.selectable`; `Leaderboards` and
+`SortableTable` are.
+
 ## Icons
 
 The base set: alert, check, chevron, cloud, cloud-pending, download, gear, grip, home, mail, pencil, plus,
@@ -42,12 +47,13 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 	unsynced={cloud.hasAnyPending || cloud.sessionExpired}
 	hideOnScroll
 	width={isDashboard ? '64rem' : undefined}
+	labels="always"
 >
 	{#snippet brand()}MA{/snippet}
-	{#snippet nav()}<IconButton icon="calendar" label="Schedule" href={…} active={…} />{/snippet}
+	{#snippet nav()}<IconButton icon="calendar" label="Schedule" href={…} active={…} showLabel />{/snippet}
 </AppHeader>
 
-<!-- Phones: a bottom tab bar instead of the header (set --header-h: 0px at that width). -->
+<!-- Phones: a bottom tab bar instead of the header. -->
 <TabBar
 	items={[
 		{ label: 'Home', icon: 'home', href: resolve('/'), active: routeId === '/' },
@@ -75,6 +81,24 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 <FatalError error={app.fatal} />
 ```
 
+Nav buttons with `showLabel` show their label to the right of the icon. `AppHeader`'s `labels` decides
+which: `always` (default) all of them, `active` only the current one. `profileShowLabel` does the same
+for the avatar (off by default).
+
+**Phones.** Show a `TabBar` instead of the `AppHeader` when `phoneLayout.current` is true: narrow
+screens (up to 40rem) and touch screens held sideways (up to 30rem tall). It goes by the screen,
+not the user agent, which can't tell an iPad from a Mac; the query is `PHONE_LAYOUT_QUERY`. While
+mounted, `TabBar` sets `--header-h: 0px` so pages start at the top, and `--footer-offset` so fixed
+bottom UI sits above it.
+
+```svelte
+<script>
+	import { phoneLayout } from '@wells-nelson/displays';
+</script>
+
+{#if phoneLayout.current}<TabBar items={…} />{:else}<AppHeader …>…</AppHeader>{/if}
+```
+
 `Button` (primary / secondary / danger / ghost, optional icon, `block`), `IconButton` (button or
-link, required label, `active`), `Modal` (native `<dialog>`, sm / md / lg) and `ConfirmDialog`
+link, required label, `active`, `showLabel`), `Modal` (native `<dialog>`, sm / md / lg) and `ConfirmDialog`
 (danger variant, busy state) complete the set. See them all in the sandbox (`npm run sandbox`).

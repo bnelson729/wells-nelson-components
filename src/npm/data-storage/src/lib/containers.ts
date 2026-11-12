@@ -9,20 +9,20 @@ import type { Tombstones } from './tombstones.svelte.js';
 import type { CollectionName, DocMap, Location, Role, StoreSchema } from './types.js';
 
 /** Every row of one container, by collection. */
-export type ContainerDocs<D extends DocMap> = { [N in CollectionName<D>]: D[N][] };
+export type ContainerDocs<D extends DocMap<D>> = { [N in CollectionName<D>]: D[N][] };
 
 /**
  * App-specific id references a copy has to rewrite, beyond `id`, the container field and the
  * `refs` fields: composite ids and ids inside text fields. `map` turns an old id into the copy's
  * id (the identity when ids are kept).
  */
-export type RemapHook<D extends DocMap> = <N extends CollectionName<D>>(
+export type RemapHook<D extends DocMap<D>> = <N extends CollectionName<D>>(
 	collection: N,
 	row: D[N],
 	map: (id: string) => string
 ) => D[N];
 
-export interface ContainerOpsOptions<D extends DocMap, C extends CollectionName<D> = CollectionName<D>> {
+export interface ContainerOpsOptions<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>> {
 	schema: StoreSchema<D, C>;
 	app: AppState<D>;
 	cloud: CloudSync<D>;
@@ -66,7 +66,7 @@ export interface ContainerExport {
 export const now = () => Date.now();
 export const uid = () => crypto.randomUUID();
 
-export type ContainerOps<D extends DocMap, C extends CollectionName<D> = CollectionName<D>> = ReturnType<
+export type ContainerOps<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>> = ReturnType<
 	typeof createContainerOps<D, C>
 >;
 
@@ -74,7 +74,7 @@ export type ContainerOps<D extends DocMap, C extends CollectionName<D> = Collect
  * Operations on whole containers and the low-level row helpers they're built from. Every write
  * to a cloud data set marks the container pending so the profile can show unsynced changes.
  */
-export function createContainerOps<D extends DocMap, C extends CollectionName<D> = CollectionName<D>>(
+export function createContainerOps<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>>(
 	options: ContainerOpsOptions<D, C>
 ) {
 	const { schema, app, cloud, tombstones, prefs, supabase, remap } = options;
@@ -150,8 +150,11 @@ export function createContainerOps<D extends DocMap, C extends CollectionName<D>
 		const t = now();
 		const hasCreatedAt = 'created_at' in ((schema.schemas[container] as { properties: object }).properties ?? {});
 		const doc = { ...fields, id, updated_at: t, ...(hasCreatedAt ? { created_at: t } : {}) } as unknown as D[C];
+		if (ds.location === 'cloud') {
+			cloud.setRole(id, 'owner');
+			cloud.expectNewContainer(id);
+		}
 		insertDoc(ds, container, doc, id);
-		if (ds.location === 'cloud') cloud.setRole(id, 'owner');
 		return id;
 	}
 
@@ -225,6 +228,7 @@ export function createContainerOps<D extends DocMap, C extends CollectionName<D>
 		if (to.location === 'cloud') {
 			cloud.markPending(cid);
 			cloud.setRole(cid, 'owner');
+			cloud.expectNewContainer(cid);
 		}
 		// Rows deliberately written again (e.g. a container moved back here) must not stay hidden.
 		for (const name of collections) tombstones.unhide(to.location, rows[name].map((r) => r.id));
