@@ -11,12 +11,17 @@ on its own:
 | [`@wells-nelson/displays`](src/npm/displays) | `Button`, `IconButton`, `Icon` (+ `registerIcons`), `Modal`, `ConfirmDialog`, `Badge`, `AppHeader`, `SortableTable`, `Leaderboards`, `Splash`, `FatalError`, `theme.css` and palettes |
 | [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `Checkbox`, `Toggle`, `Combobox`, `AddRow`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `longpress`, drag and drop, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
 | [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations, export / import, persistent storage, error reporting), `Persisted`, `flatSchema`, `envConfig`; SQL migration generator under `/sql` |
-| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and Pages workflow / manifest templates |
+| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and templates (deploy, CI, nightly database workflow and its SQL, manifest) |
 
 Dependencies between them: `interactions` depends on `displays`. Nothing else depends on another
 package. The account components in `interactions/account` describe what they need from the sync
 layer as plain interfaces (`CloudStatus`, `AccountActions`, `MembersApi`); `data-storage`'s
 `CloudSync` and members API satisfy them, which [tests/compat](tests/compat) checks.
+
+## Starting a new site
+
+[ONBOARDING.md](ONBOARDING.md) is the recipe for a new app or website on these packages: the decisions to make,
+the files to create, the database, CI and deploys, and the traps that have bitten before.
 
 ## Contributing
 
@@ -27,45 +32,27 @@ Setup, the sandbox, checks, how changes reach `main` and how packages are releas
 
 Pack the packages (`npm run pack:all`) and install the tarballs in the app
 (`npm install ../wells-nelson-components/packs/wells-nelson-displays-0.0.0.tgz`). Once the change is
-published, the reusable workflow
-[use-published-packages.yml](.github/workflows/use-published-packages.yml) puts the app back on npm: on
-the app's pull request it replaces each `file:…tgz` dependency with the latest published version,
-reinstalls, runs the app's checks and commits package.json and package-lock.json to the branch.
-Its `replaced` output lists what it swapped.
+published, the app's **Use published packages** workflow (below) puts it back on npm: on the app's pull
+request it replaces each `file:…tgz` dependency with the latest published version, reinstalls, runs the
+app's checks, commits package.json and package-lock.json to the branch and runs the app's CI again.
 
-```yaml
-# the app's .github/workflows/published-packages.yml
-on:
-  pull_request:
-    paths: [package.json, package-lock.json]
-permissions:
-  contents: write
-jobs:
-  packages:
-    uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
-    with:
-      verify: npm run check && npm test && npm run build # default: check, test and build, each if present
+## Reusable workflows
 
-  # A commit pushed with GITHUB_TOKEN doesn't start the pull request's other workflows; start the
-  # app's CI on it so its required check reports on the new commit.
-  ci:
-    needs: packages
-    if: needs.packages.outputs.replaced != ''
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_HEAD_REF"
-        env:
-          GH_TOKEN: ${{ github.token }}
-```
+Sites built on these packages keep almost nothing in their own workflows: each one calls a reusable
+workflow here, at `@main`, so a fix reaches every site at once. The callers are the build-tools
+[templates](src/npm/build-tools/README.md#templates); a site only fills in its repository name or schema.
 
-The app's CI workflow then needs `workflow_dispatch` among its triggers, and should fail while
-`package.json` still has a `file:…tgz` dependency, so such a branch can't be merged.
+| Workflow | What it does | The site's caller |
+| --- | --- | --- |
+| [site-ci.yml](.github/workflows/site-ci.yml) | Pull requests: fails on local tarball dependencies, then type-check, tests, build. The required check is **ci / Check, test and build**. | `ci.yml` (`pull_request`, `workflow_dispatch`) |
+| [site-deploy.yml](.github/workflows/site-deploy.yml) | `main`: reserves the next `v*` tag, builds with the site's `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BASE_PATH` variables, deploys to Pages, records a GitHub release. Inputs: `base-path`, `increment`. | `deploy.yml` (grants `contents`, `pages` and `id-token` write) |
+| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, using the site's `supabase/ops/` and its `database` environment. Input: `schema`. | `database.yml` (`schedule`) |
+| [site-published-packages.yml](.github/workflows/site-published-packages.yml) | Pull requests that change package files: swaps local tarballs for published versions (`use-published-packages.yml`), then starts the site's CI on the new commit. | `published-packages.yml` (grants `contents` and `actions` write) |
+| [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own. Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
 
-Other inputs: `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`,
-`commit-message`. Forks are skipped. Instead of the `ci` job above, a `token` secret (a fine-grained token
-with Contents: write) makes the push itself trigger the pull request's workflows.
+Reusable workflows read the calling site's variables and run their jobs in its environments, so the
+settings stay in each site's repository. Changing one of these workflows changes every site's next run:
+check it against the callers' permissions (a job can't ask for more than its caller grants).
 
 ## Using them in an app
 

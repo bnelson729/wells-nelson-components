@@ -45,6 +45,7 @@
     "svelte": "^5.40.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@supabase/supabase-js": "^2.119.0",
     "@tanstack/db": "^1.0.0-rc.1.4",
     "@tanstack/rxdb-db-collection": "^1.0.0-rc.1.4",

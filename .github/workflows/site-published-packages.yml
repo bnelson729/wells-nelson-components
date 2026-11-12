@@ -1,0 +1,57 @@
+name: Site published packages
+
+# Reusable for a site's pull requests: when package.json still installs @wells-nelson packages
+# from local tarballs, swap them for the published versions, check, commit to the branch
+# (use-published-packages.yml), then start the site's CI workflow on the new commit (a commit
+# pushed by a workflow doesn't start pull_request runs by itself).
+#
+# Call it from the site's .github/workflows/published-packages.yml (build-tools template
+# `published-packages.yml`):
+#
+#   on:
+#     pull_request:
+#       branches: [main]
+#       paths: [package.json, package-lock.json]
+#   jobs:
+#     packages:
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@main
+#       permissions:
+#         contents: write
+#         actions: write
+
+on:
+  workflow_call:
+    inputs:
+      verify:
+        description: Shell commands that must pass before committing
+        type: string
+        default: npm run check --if-present && npm test --if-present && npm run build
+      ci-workflow:
+        description: The site's CI workflow file, started again on the new commit
+        type: string
+        default: ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
+    permissions:
+      contents: write
+    with:
+      verify: ${{ inputs.verify }}
+
+  ci:
+    needs: packages
+    if: needs.packages.outputs.replaced != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Run CI on the new commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref }}
+          WORKFLOW: ${{ inputs.ci-workflow }}
+        run: gh workflow run "$WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"

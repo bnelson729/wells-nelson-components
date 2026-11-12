@@ -1,0 +1,18 @@
+# Template (@wells-nelson/build-tools): copy to .github/workflows/ci.yml as is.
+
+name: CI
+
+# Type-check, unit tests and a production build on every pull request (the shared site-ci.yml).
+# Branch protection requires the check "ci / Check, test and build".
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@main

@@ -1,0 +1,22 @@
+# Template (@wells-nelson/build-tools): copy to .github/workflows/database.yml and replace __SCHEMA__ with the
+# site's Postgres schema; copy supabase-ops/ to supabase/ops/ too.
+
+name: Database
+
+# Nightly: encrypted backup with a test restore, keep-alive, security lint and client error digest
+# for the __SCHEMA__ schema (the shared site-database.yml, running supabase/ops/). Uses the
+# `database` environment; see CONTRIBUTING.md > Nightly Database workflow.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@main
+    with:
+      schema: __SCHEMA__

@@ -1,0 +1,21 @@
+# Template (@wells-nelson/build-tools): copy to .github/workflows/published-packages.yml as is.
+
+name: Use published packages
+
+# While a shared @wells-nelson package is tried out, package.json points at a local tarball. On a
+# pull request this swaps them for the published versions, commits the result to the branch and
+# runs CI again (the shared site-published-packages.yml).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+
+jobs:
+  packages:
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@main
+    permissions:
+      contents: write
+      actions: write

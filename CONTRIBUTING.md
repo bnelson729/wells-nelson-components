@@ -85,6 +85,17 @@ and add a new numbered file for every change, so when you change the generated S
 - say in the package README what changed, so an app can carry it over into its next migration;
 - prefer statements an app can re-run safely (`create or replace function`, `drop policy if exists`).
 
+### Changes to the reusable workflows
+
+Sites call `.github/workflows/site-*.yml` and `use-published-packages.yml` at `@main`, so a change merged here
+is in every site's next run. Before merging:
+
+- try it from a site's branch by pointing its caller at your branch (`…/site-deploy.yml@<your-branch>`), and
+  put the caller back to `@main` afterwards;
+- keep inputs backwards compatible (new inputs get defaults), and don't ask for permissions the callers don't
+  grant: a job that wants more than its caller gives fails before it starts, even if it wouldn't run;
+- update the caller templates in `src/npm/build-tools/templates/` and the README's "Reusable workflows" table.
+
 ### Trying a change in an app
 
 Pack the packages (`npm run pack:all`) and install the tarballs in the app

@@ -157,20 +157,21 @@ button {
 }
 
 /*
- * Touch screens: text can't be selected by accident (a long press selects instead of acting like
- * an app). Fields, and anything marked `.selectable` (reports, tables, logs), still can.
- * `Leaderboards` and `SortableTable` are selectable.
+ * Apps (`<html class="touch-app">`) on touch screens: text can't be selected by accident (a long
+ * press selects instead of acting on the control). Fields, and anything marked `.selectable`
+ * (reports, tables, logs), still can; `Leaderboards` and `SortableTable` are. Websites leave the
+ * class off and keep normal selection.
  */
 @media (hover: none) and (pointer: coarse) {
-	body {
+	.touch-app body {
 		-webkit-user-select: none;
 		user-select: none;
 		-webkit-touch-callout: none;
 	}
-	input,
-	textarea,
-	[contenteditable],
-	.selectable {
+	.touch-app input,
+	.touch-app textarea,
+	.touch-app [contenteditable],
+	.touch-app .selectable {
 		-webkit-user-select: text;
 		user-select: text;
 		-webkit-touch-callout: default;

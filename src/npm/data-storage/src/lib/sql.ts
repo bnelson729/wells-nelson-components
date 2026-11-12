@@ -181,15 +181,18 @@ as $$
 $$;
 
 -- False once the ${noun} is deleted: nobody can add members or new rows to it. (Members still
--- read and update its rows, so every device syncs the deletion.)
+-- read and update its rows, so every device syncs the deletion.) plpgsql, whose body is only
+-- checked when it runs: the ${container} table is created further down.
 create or replace function public.is_${noun}_live(p_${cf} text)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select not exists (select 1 from public.${container} c where c.id = p_${cf} and c._deleted);
+begin
+  return not exists (select 1 from public.${container} c where c.id = p_${cf} and c._deleted);
+end;
 $$;
 
 alter table public.${members} enable row level security;

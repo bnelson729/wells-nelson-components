@@ -50,6 +50,12 @@ export interface SyncedStoreConfig<D extends DocMap<D>, C extends CollectionName
 	 * Pass the deployed version (`version` from `$app/env`). Off when cloud sync isn't configured.
 	 */
 	reportErrors?: { version?: string };
+	/**
+	 * Ask the browser on start to keep this site's data for good (default true): right for apps that
+	 * keep data on the device. A website whose data lives in the cloud can turn it off, since some
+	 * browsers ask the user. `requestPersistence()` still works on demand.
+	 */
+	persistStorage?: boolean;
 }
 
 /**
@@ -144,7 +150,7 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 			await options.beforeReady?.(local).catch((err) => console.error('Startup hook failed', err));
 			app.local = local;
 			app.ready = true;
-			void requestPersistence();
+			if (config.persistStorage ?? true) void requestPersistence();
 			await cloud.init();
 		})().catch((err) => {
 			console.error(err);

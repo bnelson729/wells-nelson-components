@@ -70,6 +70,17 @@ on an origin its own `cachePrefix`: GitHub Pages project sites of one user all s
 
 ## Templates
 
-`templates/deploy-pages.yml` (replace `__REPO__`) and `templates/manifest.webmanifest`.
+Copy them from `node_modules/@wells-nelson/build-tools/templates/` into a new site (see ONBOARDING.md in
+the repository). The workflow templates are a few lines each: triggers, permissions and a call to one of
+the library's reusable workflows (see "Reusable workflows" in the repository README), where the steps live.
+
+- `deploy-pages.yml` → `.github/workflows/deploy.yml` (replace `__REPO__`): type-check, test, build, deploy to
+  Pages, with a version tag reserved before the build and a GitHub release after the deploy.
+- `ci.yml` and `published-packages.yml` → `.github/workflows/` as they are: the pull request check, and the
+  swap from local package tarballs to published versions.
+- `database.yml` → `.github/workflows/` and `supabase-ops/*.sql` → `supabase/ops/` (replace `__SCHEMA__`):
+  nightly encrypted backup with a test restore, keep-alive, security lint and client error digest. The SQL
+  stays in the site, so it can also be pasted into the Supabase SQL editor.
+- `manifest.webmanifest`: for PWAs.
 
 Try the icons, manifest, `basePath` and `postbuild` in the sandbox's Build tools page.

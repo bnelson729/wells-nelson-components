@@ -21,9 +21,9 @@ Tokens: `--bg`, `--surface`, `--surface-2`, `--surface-hover`, `--text`, `--mute
 drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
 
 Date and time inputs (`date`, `time`, `datetime-local`) match the text inputs, and on iOS keep a
-fixed size whatever their value. On touch screens text can't be selected (a long press acts like an
-app, not a page), except in fields and anything marked `.selectable`; `Leaderboards` and
-`SortableTable` are.
+fixed size whatever their value. Apps that put `class="touch-app"` on `<html>` get app-like touch
+screens: text can't be selected (a long press acts on the control), except in fields and anything
+marked `.selectable`; `Leaderboards` and `SortableTable` are. Websites leave it off.
 
 ## Icons
 

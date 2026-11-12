@@ -1,0 +1,163 @@
+name: Site database
+
+# Reusable nightly checks of a site's schema in its Supabase project:
+#   backup     pg_dump of the schema, restored into a scratch Postgres to prove it restores, then
+#              encrypted and kept as a workflow artifact for 30 days.
+#   checks     keeps the project awake (free projects pause after a week without traffic), fails
+#              if a table lacks row level security or anything is open to signed-out callers, and
+#              fails when the site reported errors in the last day (so GitHub emails you).
+#
+# Call it from the site's .github/workflows/database.yml (build-tools template `database.yml`):
+#
+#   on:
+#     schedule:
+#       - cron: '17 6 * * *'
+#     workflow_dispatch:
+#   jobs:
+#     database:
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@main
+#       with:
+#         schema: my_site
+#
+# Runs the site's own SQL from supabase/ops/ (build-tools templates `supabase-ops/`). Both jobs run in
+# the site repository's `database` environment (limited to main), which holds the variable
+# SUPABASE_DB_URL (the session pooler connection string, without the password) and the secret
+# SUPABASE_DB_PASSWORD (given to psql as PGPASSWORD; it also encrypts the backups). The keep-alive
+# reads the repository variables SUPABASE_URL and SUPABASE_ANON_KEY.
+
+on:
+  workflow_call:
+    inputs:
+      schema:
+        description: The site's Postgres schema
+        type: string
+        required: true
+      pg-major:
+        description: Postgres major version of the client tools and the scratch database (match Supabase's)
+        type: string
+        default: '17'
+
+permissions:
+  contents: read
+
+env:
+  SCHEMA: ${{ inputs.schema }}
+  PG_MAJOR: ${{ inputs.pg-major }}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: database
+    services:
+      scratch:
+        image: postgres:${{ inputs.pg-major }}
+        env:
+          POSTGRES_PASSWORD: scratch
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the Postgres client
+        run: &install-psql |
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q "postgresql-client-$PG_MAJOR"
+          echo "/usr/lib/postgresql/$PG_MAJOR/bin" >> "$GITHUB_PATH"
+
+      - name: Dump the schema
+        env:
+          SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          stamp=$(date -u +%Y-%m-%dT%H%MZ)
+          echo "FILE=$SCHEMA-$stamp.dump" >> "$GITHUB_ENV"
+          count() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -f supabase/ops/row-counts.sql | LC_ALL=C sort; }
+          # Row counts right before and after the dump: the restore must land in between.
+          count > counts-before.txt
+          pg_dump "$SUPABASE_DB_URL" --schema="$SCHEMA" --format=custom --no-owner --file="$SCHEMA-$stamp.dump"
+          count > counts-after.txt
+          cat counts-after.txt
+
+      - name: Restore it into a scratch database
+        env:
+          SCRATCH: postgres://postgres:scratch@localhost:5432/postgres
+        run: |
+          # The parts of a Supabase database the schema refers to (roles, auth, realtime).
+          psql "$SCRATCH" -v ON_ERROR_STOP=1 -qf supabase/ops/scratch-stub.sql
+          pg_restore --dbname="$SCRATCH" --no-owner --exit-on-error "$FILE"
+          psql "$SCRATCH" -v ON_ERROR_STOP=1 -At -f supabase/ops/row-counts.sql | LC_ALL=C sort > counts-restored.txt
+          # table before after restored, for every table counted before the dump.
+          LC_ALL=C join counts-before.txt counts-after.txt | LC_ALL=C join - counts-restored.txt > counts.txt
+          if [ "$(wc -l < counts.txt)" -ne "$(wc -l < counts-before.txt)" ]; then
+            echo "::error::Some tables are missing from the restored database."; cat counts-before.txt counts-restored.txt; exit 1
+          fi
+          awk '{ lo = ($2 < $3) ? $2 : $3; hi = ($2 > $3) ? $2 : $3;
+                 if ($4 < lo || $4 > hi) { printf "::error::%s: %s rows restored, expected %s to %s\n", $1, $4, lo, hi; bad = 1 } }
+               END { exit bad }' counts.txt
+          echo "Restore test: $(wc -l < counts.txt) tables, $(awk '{ n += $4 } END { print n }' counts.txt) rows restored." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Encrypt with the database password
+        env:
+          PASSPHRASE: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "$FILE.gpg" "$FILE"
+          rm "$FILE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SCHEMA }}-backup
+          path: ${{ env.FILE }}.gpg
+          retention-days: 30
+          if-no-files-found: error
+
+  checks:
+    runs-on: ubuntu-latest
+    environment: database
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Keep the project awake
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          curl --fail --silent --show-error --max-time 30 -o /dev/null \
+            -H "apikey: $SUPABASE_ANON_KEY" "$SUPABASE_URL/auth/v1/health"
+
+      - name: Install the Postgres client
+        run: *install-psql
+
+      - name: Security lint (row level security, signed-out access)
+        env:
+          SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          problems=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atf supabase/ops/security-lint.sql)
+          if [ -n "$problems" ]; then
+            echo "### Security lint failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "$problems" | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+            echo "$problems" | while read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          echo "Security lint passed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Errors the site reported in the last day
+        env:
+          SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          errors=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -F ' | ' -f supabase/ops/client-errors.sql)
+          if [ -n "$errors" ]; then
+            {
+              echo "### Client errors in the last 24 hours"
+              echo
+              echo "| Count | Kind | Version | Message |"
+              echo "| ---: | --- | --- | --- |"
+              echo "$errors" | sed 's/^/| /; s/$/ |/'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::The site reported errors in the last 24 hours (see the summary)."
+            exit 1
+          fi
+          echo "No client errors in the last 24 hours." >> "$GITHUB_STEP_SUMMARY"

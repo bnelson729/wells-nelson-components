@@ -1,52 +1,35 @@
-# GitHub Pages deploy for a SvelteKit adapter-static app.
-# Copy to .github/workflows/deploy.yml and replace __REPO__ with the repository name.
+# Template (@wells-nelson/build-tools): copy to .github/workflows/deploy.yml and replace __REPO__ with the
+# repository name (the GitHub Pages project path).
+
 name: Deploy to GitHub Pages
+
+# Every merge to main deploys and releases a new version (the shared site-deploy.yml). Run it by
+# hand to bump the minor or major version. Reads the repository variables SUPABASE_URL,
+# SUPABASE_ANON_KEY and, for a custom domain, BASE_PATH.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      increment:
+        description: Which part of the version to bump
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
+# One deploy at a time; a newer push waits for the running one instead of cancelling it halfway.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      # Nothing ships unless it type-checks and its tests pass.
-      - run: npm run check --if-present
-      - run: npm test --if-present
-      - run: npm run build
-        env:
-          # Repository variables (Settings > Secrets and variables > Actions > Variables).
-          # Leave the Supabase ones unset to deploy a local-only build.
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
-          # "/__REPO__" for <user>.github.io/__REPO__; set BASE_PATH to "/" for a custom domain.
-          BASE_PATH: ${{ vars.BASE_PATH || '/__REPO__' }}
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: build
-
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@main
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    with:
+      base-path: /__REPO__
+      increment: ${{ inputs.increment || 'patch' }}

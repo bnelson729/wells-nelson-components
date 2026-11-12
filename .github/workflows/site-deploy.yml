@@ -1,0 +1,127 @@
+name: Site deploy
+
+# Reusable GitHub Pages deploy for a site built on these packages. Every deploy is a release: the
+# next version comes from the latest v* tag (reecetech/version-increment: patch unless `increment`
+# says otherwise) and is tagged before anything is built, so a version is never handed out twice,
+# even when a run fails or is cancelled. The build gets it as APP_VERSION, and once the deploy
+# succeeds a GitHub release records it (creating it again is skipped, so re-running is safe).
+#
+# Call it from the site's .github/workflows/deploy.yml (build-tools template `deploy-pages.yml`):
+#
+#   on:
+#     push:
+#       branches: [main]
+#   concurrency:
+#     group: pages
+#     cancel-in-progress: false
+#   jobs:
+#     deploy:
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@main
+#       permissions:
+#         contents: write
+#         pages: write
+#         id-token: write
+#       with:
+#         base-path: /my-site
+#
+# It reads the site repository's variables: SUPABASE_URL and SUPABASE_ANON_KEY (unset: a build
+# without sign-in), and BASE_PATH, which overrides `base-path` (e.g. "/" for a custom domain).
+
+on:
+  workflow_call:
+    inputs:
+      base-path:
+        description: Path the site is served from on GitHub Pages, e.g. /my-site (the BASE_PATH variable overrides it)
+        type: string
+        required: true
+      increment:
+        description: Which part of the version to bump (patch, minor or major)
+        type: string
+        default: patch
+      node-version:
+        description: Node.js version
+        type: string
+        default: '24'
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.prefixed-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Tags, so the next version follows the latest release.
+          fetch-depth: 0
+      - id: version
+        uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6
+        with:
+          scheme: semver
+          increment: ${{ inputs.increment }}
+          tag_prefix: v
+      - name: Reserve the version
+        env:
+          TAG: ${{ steps.version.outputs.prefixed-version }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run check --if-present
+      - name: Test
+        run: npm test --if-present
+      - run: npm run build
+        env:
+          APP_VERSION: ${{ needs.version.outputs.version }}
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          BASE_PATH: ${{ vars.BASE_PATH || inputs.base-path }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  release:
+    needs: [version, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Record the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --generate-notes
+          fi

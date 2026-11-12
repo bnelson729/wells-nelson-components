@@ -1,0 +1,54 @@
+name: Site CI
+
+# Reusable pull request check for a site built on these packages: no local tarball dependencies,
+# then type-check, unit tests and a production build. Call it from the site's
+# .github/workflows/ci.yml (build-tools template `ci.yml`):
+#
+#   on:
+#     pull_request:
+#       branches: [main]
+#     workflow_dispatch:
+#   jobs:
+#     ci:
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@main
+#
+# Branch protection requires the check "ci / Check, test and build".
+#
+# A pull request that still installs @wells-nelson packages from local tarballs fails here: the
+# tarballs only exist on the machine that packed them. site-published-packages.yml swaps them for
+# the published versions and starts this check again on the new commit.
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version
+        type: string
+        default: '24'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Check, test and build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: site-ci-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: No local tarball dependencies
+        run: |
+          if grep -n '"file:[^"]*\.tgz"' package.json; then
+            echo "::error::package.json installs packages from local tarballs. The Use published packages workflow replaces them once they are published."
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check --if-present
+      - run: npm test --if-present
+      - run: npm run build

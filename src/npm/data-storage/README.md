@@ -66,8 +66,9 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
   them; pruned after a week.
 - `prefs`: `DevicePrefs` (default container, "already prompted", collapsed sections). Pass a
   subclass as `prefs` for app-specific ones and override `replaceContainer` to keep them in step.
-- `requestPersistence()`: asks the browser to keep the data (called on start; call it again from
-  a button). Sets `app.persisted`.
+- `requestPersistence()`: asks the browser to keep the data (called on start unless
+  `persistStorage: false`, e.g. for a website whose data lives in the cloud, since some browsers
+  ask the user; call it again from a button). Sets `app.persisted`.
 - `resetDevice()`: teardown for a dev wipe.
 
 Without roles everyone is an owner.
