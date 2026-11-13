@@ -1,0 +1,9 @@
+build/
+dist/
+.svelte-kit/
+node_modules/
+packs/
+package-lock.json
+*.md
+static/
+src/**/__snapshots__/

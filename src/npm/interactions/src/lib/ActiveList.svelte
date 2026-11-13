@@ -73,7 +73,12 @@
 			/>
 		{/if}
 		<span class="name">{label(item)}</span>
-		<IconButton icon="pencil" label={`${readOnly ? 'View' : 'Edit'} ${label(item)}`} size={18} onclick={() => onopen(item)} />
+		<IconButton
+			icon="pencil"
+			label={`${readOnly ? 'View' : 'Edit'} ${label(item)}`}
+			size={18}
+			onclick={() => onopen(item)}
+		/>
 	</li>
 {/snippet}
 
@@ -103,7 +108,12 @@
 			{#if columns}
 				<h2 class="muted-heading">Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span></h2>
 			{:else}
-				<button type="button" class="toggle" aria-expanded={inactiveOpen} onclick={() => (inactiveOpen = !inactiveOpen)}>
+				<button
+					type="button"
+					class="toggle"
+					aria-expanded={inactiveOpen}
+					onclick={() => (inactiveOpen = !inactiveOpen)}
+				>
 					<span class="chev" class:collapsed={!inactiveOpen}><Icon name="chevron" size={20} /></span>
 					Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span>
 				</button>

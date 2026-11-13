@@ -20,7 +20,9 @@ const { values } = parseArgs({
 
 const { name, 'short-name': shortName, background, theme } = values;
 if (!name || !shortName || !background || !theme) {
-	console.error('Usage: wn-manifest --name <name> --short-name <short> --background <#hex> --theme <#hex> [--description <text>] [--out <path>]');
+	console.error(
+		'Usage: wn-manifest --name <name> --short-name <short> --background <#hex> --theme <#hex> [--description <text>] [--out <path>]'
+	);
 	process.exit(1);
 }
 

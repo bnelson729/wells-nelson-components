@@ -92,7 +92,10 @@ describe('registerAppShellCache', () => {
 		let done: Promise<unknown> = Promise.resolve();
 		sw.listeners.get('install')!({ waitUntil: (p: Promise<unknown>) => (done = p) });
 		await done;
-		vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('offline'))));
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => Promise.reject(new TypeError('offline')))
+		);
 		const nav = new Request(`${SCOPE}project/1`);
 		Object.defineProperty(nav, 'mode', { value: 'navigate' });
 		const response = await dispatchFetch(sw, nav);
@@ -111,7 +114,10 @@ describe('registerAppShellCache', () => {
 	it('caches same-scope assets on first fetch', async () => {
 		const sw = fakeSw(SCOPE);
 		registerAppShellCache({ sw, version: '1', files: [] });
-		vi.stubGlobal('fetch', vi.fn(async () => new Response('fresh')));
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('fresh'))
+		);
 		const res = await dispatchFetch(sw, new Request(`${SCOPE}icons/icon-192.png`));
 		expect(await res!.text()).toBe('fresh');
 		expect(caches.stores.get('app-cache-1')!.has(`${SCOPE}icons/icon-192.png`)).toBe(true);

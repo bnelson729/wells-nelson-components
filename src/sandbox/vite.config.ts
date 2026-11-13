@@ -54,7 +54,10 @@ function buildToolsApi(): Plugin {
 						return send(200, 'application/json', JSON.stringify({ base: result }));
 					}
 					if (url.pathname === '/postbuild' && req.method === 'POST') {
-						const { files, forbid } = JSON.parse(await readBody(req)) as { files: Record<string, string>; forbid: string[] };
+						const { files, forbid } = JSON.parse(await readBody(req)) as {
+							files: Record<string, string>;
+							forbid: string[];
+						};
 						const dir = mkdtempSync(join(tmpdir(), 'wn-sandbox-build-'));
 						const log: string[] = [];
 						try {

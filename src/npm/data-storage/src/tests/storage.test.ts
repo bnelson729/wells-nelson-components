@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { lastWriteWins, openDatabase } from '../lib/database.js';
 import { envConfig } from '../lib/env.js';
 import { Persisted } from '../lib/persisted.svelte.js';
-import { DevicePrefs, defaultPrefsKeys } from '../lib/prefs.svelte.js';
+import { DevicePrefs, defaultContainerToOpen, defaultPrefsKeys } from '../lib/prefs.svelte.js';
 import { Tombstones } from '../lib/tombstones.svelte.js';
 import { containerIdOf, type DocMap } from '../lib/types.js';
 import { collections, eventually, makeStore, schemas, type Docs } from './fixture.js';
@@ -44,7 +44,10 @@ describe('Tombstones', () => {
 		t.unhide('cloud', ['1']);
 		expect(t.has('cloud', '1')).toBe(false);
 
-		localStorage.setItem('x:hidden', JSON.stringify({ 'local:old': Date.now() - 8 * 24 * 3600 * 1000, 'local:new': Date.now() }));
+		localStorage.setItem(
+			'x:hidden',
+			JSON.stringify({ 'local:old': Date.now() - 8 * 24 * 3600 * 1000, 'local:new': Date.now() })
+		);
 		const pruned = new Tombstones('x');
 		expect(pruned.has('local', 'old')).toBe(false);
 		expect(pruned.has('local', 'new')).toBe(true);
@@ -76,7 +79,10 @@ describe('DevicePrefs', () => {
 
 describe('lastWriteWins', () => {
 	const resolve = (a: number, b: number) =>
-		lastWriteWins.resolve({ newDocumentState: { updated_at: a, v: 'new' }, realMasterState: { updated_at: b, v: 'server' } } as any, 'test');
+		lastWriteWins.resolve(
+			{ newDocumentState: { updated_at: a, v: 'new' }, realMasterState: { updated_at: b, v: 'server' } } as any,
+			'test'
+		);
 
 	it('keeps the newer side and gives ties to the server', async () => {
 		expect(((await resolve(2, 1)) as any).v).toBe('new');
@@ -85,7 +91,9 @@ describe('lastWriteWins', () => {
 	});
 
 	it('ignores RxDB metadata when comparing', () => {
-		expect(lastWriteWins.isEqual({ updated_at: 1, _rev: 'a' } as any, { updated_at: 1, _rev: 'b' } as any, 'test')).toBe(true);
+		expect(
+			lastWriteWins.isEqual({ updated_at: 1, _rev: 'a' } as any, { updated_at: 1, _rev: 'b' } as any, 'test')
+		).toBe(true);
 		expect(lastWriteWins.isEqual({ updated_at: 1 } as any, { updated_at: 2 } as any, 'test')).toBe(false);
 	});
 });
@@ -116,7 +124,60 @@ describe('createSyncedStore', () => {
 		expect(seeded).toBe(true);
 		expect(store.cloud.configured).toBe(false);
 		expect(store.app.cloud).toBeNull();
+		// Nothing to restore without Supabase: start-up is done as soon as it's ready.
+		await eventually(() => store.app.restored);
 		await eventually(() => store.app.local);
 		await store.app.local!.db.remove();
+	});
+
+	it('writes many rows at once, waits for them, and marks nothing pending locally', async () => {
+		const store = makeStore();
+		await store.init();
+		const ds = store.app.local!;
+		const id = store.ops.createContainer(ds, { name: 'Plan' });
+		const task = (n: number) => ({
+			id: `t${n}`,
+			project_id: id,
+			title: `Task ${n}`,
+			external_ref: '',
+			done: false,
+			updated_at: 0
+		});
+		await store.ops.bulkWrite(ds, 'tasks', [task(1), task(2), task(3)], id);
+		const stored = await store.ops.docsWhere(ds, 'tasks', { id: { $in: ['t1', 't3'] } });
+		expect(stored.map((t) => t.id).sort()).toEqual(['t1', 't3']);
+		expect(stored.every((t) => t.updated_at > 0)).toBe(true);
+		await ds.db.remove();
+	});
+});
+
+describe('defaultContainerToOpen', () => {
+	const prefsWith = (id: string | null) => {
+		const prefs = new DevicePrefs(
+			defaultPrefsKeys(`d${Math.random().toString(36).slice(2)}`, { singular: 'list', plural: 'lists' })
+		);
+		prefs.setDefaultContainer(id);
+		return prefs;
+	};
+
+	it('opens the default container once, as soon as it exists', () => {
+		const prefs = prefsWith('l1');
+		expect(defaultContainerToOpen(prefs, { ready: false, restored: false, exists: () => true })).toBeNull();
+		expect(defaultContainerToOpen(prefs, { ready: true, restored: false, exists: () => true })).toBe('l1');
+		expect(defaultContainerToOpen(prefs, { ready: true, restored: true, exists: () => true })).toBeNull();
+	});
+
+	it('waits for the session before giving up on a default that may be in the cloud', () => {
+		const prefs = prefsWith('l1');
+		expect(defaultContainerToOpen(prefs, { ready: true, restored: false, exists: () => false })).toBeNull();
+		expect(prefs.defaultChecked).toBe(false);
+		expect(defaultContainerToOpen(prefs, { ready: true, restored: true, exists: () => false })).toBeNull();
+		expect(prefs.defaultChecked).toBe(true);
+	});
+
+	it('does nothing without a default', () => {
+		const prefs = prefsWith(null);
+		expect(defaultContainerToOpen(prefs, { ready: true, restored: false, exists: () => true })).toBeNull();
+		expect(prefs.defaultChecked).toBe(true);
 	});
 });

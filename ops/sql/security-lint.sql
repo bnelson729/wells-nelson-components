@@ -1,13 +1,13 @@
--- Template (@wells-nelson/build-tools): copy to supabase/ops/security-lint.sql and replace __SCHEMA__ with the app's schema.
--- Prints one line per problem in the __SCHEMA__ schema; no output means it passed. Runs in the
--- Supabase SQL editor or with psql -f.
--- Run by the Database workflow every night, and worth running after applying a migration.
+-- Prints one line per problem in a site's schema; no output means it passed.
+--   psql "$SUPABASE_DB_URL" -v schema=<schema> -f ops/sql/security-lint.sql
+-- Run by the shared Database workflow (site-database.yml) every night, and by hand from the site's
+-- Actions tab after applying a migration.
 
 -- Every table has row level security.
 select format('Table %I.%I has no row level security', n.nspname, c.relname)
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = '__SCHEMA__' and c.relkind in ('r', 'p') and not c.relrowsecurity
+where n.nspname = :'schema' and c.relkind in ('r', 'p') and not c.relrowsecurity
 
 union all
 
@@ -16,7 +16,7 @@ select format('anon has %s on table %I.%I', p.privilege, n.nspname, c.relname)
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE']) as p(privilege)
-where n.nspname = '__SCHEMA__' and c.relkind in ('r', 'p', 'v') and has_table_privilege('anon', c.oid, p.privilege)
+where n.nspname = :'schema' and c.relkind in ('r', 'p', 'v') and has_table_privilege('anon', c.oid, p.privilege)
 
 union all
 
@@ -24,7 +24,7 @@ union all
 select format('anon can execute %s', p.oid::regprocedure)
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = '__SCHEMA__'
+where n.nspname = :'schema'
   and p.prorettype <> 'trigger'::regtype
   and p.proname <> 'report_client_error'
   and has_function_privilege('anon', p.oid, 'EXECUTE')
@@ -35,6 +35,6 @@ union all
 select format('Security definer function %s has no search_path', p.oid::regprocedure)
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = '__SCHEMA__'
+where n.nspname = :'schema'
   and p.prosecdef
   and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) as c(setting) where c.setting like 'search_path=%');

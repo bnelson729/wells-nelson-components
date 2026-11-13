@@ -1,6 +1,6 @@
 # Custom files
 docs/todo.md
-docs/review.md
+docs/*-review.md
 
 # Logs
 logs

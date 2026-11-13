@@ -43,32 +43,32 @@
 <svelte:head><title>{page.label} · Sandbox</title></svelte:head>
 
 {#if !showTabBar}
-<AppHeader
-	brandHref="#/displays"
-	brandLabel="Sandbox home"
-	profileHref="#/account"
-	profileActive={route === 'account'}
-	avatarUrl={shell.avatar ? AVATAR : null}
-	unsynced={shell.unsynced}
-	hideOnScroll={shell.hideOnScroll}
-	width={shell.wide ? '64rem' : undefined}
-	labels={shell.labels === 'active' ? 'active' : 'always'}
-	profileShowLabel={shell.profileLabel}
-	profileLabel="Account"
->
-	{#snippet brand()}WN{/snippet}
-	{#snippet nav()}
-		{#each pages.filter((p) => p.id !== 'account') as p (p.id)}
-			<IconButton
-				icon={p.icon}
-				label={p.label.split(' ')[0]}
-				href={`#/${p.id}`}
-				active={route === p.id}
-				showLabel={shell.labels !== 'none'}
-			/>
-		{/each}
-	{/snippet}
-</AppHeader>
+	<AppHeader
+		brandHref="#/displays"
+		brandLabel="Sandbox home"
+		profileHref="#/account"
+		profileActive={route === 'account'}
+		avatarUrl={shell.avatar ? AVATAR : null}
+		unsynced={shell.unsynced}
+		hideOnScroll={shell.hideOnScroll}
+		width={shell.wide ? '64rem' : undefined}
+		labels={shell.labels === 'active' ? 'active' : 'always'}
+		profileShowLabel={shell.profileLabel}
+		profileLabel="Account"
+	>
+		{#snippet brand()}WN{/snippet}
+		{#snippet nav()}
+			{#each pages.filter((p) => p.id !== 'account') as p (p.id)}
+				<IconButton
+					icon={p.icon}
+					label={p.label.split(' ')[0]}
+					href={`#/${p.id}`}
+					active={route === p.id}
+					showLabel={shell.labels !== 'none'}
+				/>
+			{/each}
+		{/snippet}
+	</AppHeader>
 {:else}
 	<TabBar
 		items={pages.map((p) => ({

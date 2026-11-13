@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { compareVersions, latestVersion, preparePackageJson, siblingRange } from '../../scripts/release/lib.mjs';
+import {
+	compareVersions,
+	incrementFromMessages,
+	latestVersion,
+	preparePackageJson,
+	siblingRange
+} from '../../scripts/release/lib.mjs';
 
 describe('latestVersion', () => {
 	const tags = [
@@ -54,6 +60,22 @@ describe('preparePackageJson', () => {
 	});
 
 	it('refuses non-release versions', () => {
-		assert.throws(() => preparePackageJson(pkg, '0.0.1-pre.abc', { '@wells-nelson/displays': '0.0.1' }), /Not a release/);
+		assert.throws(
+			() => preparePackageJson(pkg, '0.0.1-pre.abc', { '@wells-nelson/displays': '0.0.1' }),
+			/Not a release/
+		);
+	});
+});
+
+describe('incrementFromMessages', () => {
+	it('is a patch unless a commit asks for more', () => {
+		assert.equal(incrementFromMessages([]), 'patch');
+		assert.equal(incrementFromMessages(['Fix the header\n\nNo release line here.']), 'patch');
+	});
+
+	it('takes the biggest Release: line, in any case and anywhere in the body', () => {
+		assert.equal(incrementFromMessages(['Add showLabel\n\nRelease: minor']), 'minor');
+		assert.equal(incrementFromMessages(['a\n\nrelease: MINOR', 'b\n\nRelease: major\nmore text', 'c']), 'major');
+		assert.equal(incrementFromMessages(['Mention "release: major" mid-line doesn\'t count']), 'patch');
 	});
 });

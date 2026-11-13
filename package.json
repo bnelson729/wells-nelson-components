@@ -1,41 +1,51 @@
 {
-  "name": "wells-nelson-components",
-  "private": true,
-  "type": "module",
-  "description": "Shared components for Wells Nelson projects (npm workspaces under src/npm).",
-  "workspaces": [
-    "src/npm/displays",
-    "src/npm/interactions",
-    "src/npm/data-storage",
-    "src/npm/build-tools",
-    "src/sandbox"
-  ],
-  "scripts": {
-    "sandbox": "npm run dev -w src/sandbox",
-    "build": "npm run build --workspaces --if-present",
-    "check": "npm run check --workspaces --if-present && npm run check:compat",
-    "check:compat": "tsc -p tests/compat/tsconfig.json",
-    "test": "npm run test --workspaces --if-present && npm run test:release",
-    "test:release": "node --test \"tests/release/*.test.mjs\"",
-    "lint:package": "npm run lint:package --workspaces --if-present",
-    "pack:all": "node -e \"require('fs').mkdirSync('packs',{recursive:true})\" && npm pack -w src/npm/displays -w src/npm/interactions -w src/npm/data-storage -w src/npm/build-tools --pack-destination packs"
-  },
-  "devDependencies": {
-    "@sveltejs/package": "^3.0.2",
-    "@sveltejs/vite-plugin-svelte": "^7.3.1",
-    "jsdom": "^29.1.1",
-    "publint": "^0.3.25",
-    "rxdb": "^17.6.0",
-    "svelte": "^5.57.3",
-    "svelte-check": "^4.7.8",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.6",
-    "vitest": "^5.1.0"
-  },
-  "overrides": {
-    "rxdb": "$rxdb"
-  },
-  "engines": {
-    "node": ">=24"
-  }
+	"name": "wells-nelson-components",
+	"private": true,
+	"type": "module",
+	"description": "Shared components for Wells Nelson projects (npm workspaces under src/npm).",
+	"workspaces": [
+		"src/npm/displays",
+		"src/npm/interactions",
+		"src/npm/data-storage",
+		"src/npm/build-tools",
+		"src/sandbox"
+	],
+	"scripts": {
+		"sandbox": "npm run dev -w src/sandbox",
+		"build": "npm run build --workspaces --if-present",
+		"check": "npm run check --workspaces --if-present && npm run check:compat",
+		"check:compat": "tsc -p tests/compat/tsconfig.json",
+		"test": "npm run test --workspaces --if-present && npm run test:release",
+		"test:release": "node --test \"tests/release/*.test.mjs\"",
+		"lint:package": "npm run lint:package --workspaces --if-present",
+		"pack:all": "node -e \"require('fs').mkdirSync('packs',{recursive:true})\" && npm pack -w src/npm/displays -w src/npm/interactions -w src/npm/data-storage -w src/npm/build-tools --pack-destination packs",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"try": "node scripts/try.mjs"
+	},
+	"devDependencies": {
+		"@sveltejs/package": "^3.0.2",
+		"@sveltejs/vite-plugin-svelte": "^7.3.1",
+		"eslint": "^9.39.5",
+		"eslint-plugin-svelte": "^3.24.1",
+		"jsdom": "^29.1.1",
+		"prettier": "^3.10.1",
+		"prettier-plugin-svelte": "^3.5.2",
+		"publint": "^0.3.25",
+		"rxdb": "^17.6.0",
+		"svelte": "^5.57.3",
+		"svelte-check": "^4.7.8",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.72.2",
+		"vite": "^8.3.6",
+		"vitest": "^5.1.0"
+	},
+	"overrides": {
+		"rxdb": "$rxdb"
+	},
+	"engines": {
+		"node": ">=24"
+	},
+	"prettier": "@wells-nelson/build-tools/prettier"
 }

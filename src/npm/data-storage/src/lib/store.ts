@@ -15,8 +15,10 @@ import type { CollectionName, DocMap, Nouns, StoreSchema } from './types.js';
  * `C` is the container collection; pass it (`createSyncedStore<Docs, 'projects'>`) so container
  * rows are typed as that document rather than a union of every document.
  */
-export interface SyncedStoreConfig<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>>
-	extends StoreSchema<D, C> {
+export interface SyncedStoreConfig<
+	D extends DocMap<D>,
+	C extends CollectionName<D> = CollectionName<D>
+> extends StoreSchema<D, C> {
 	/** Prefix for database names and localStorage keys, e.g. 'demo' → `demo_local`, `demo:hidden`. */
 	appKey: string;
 	nouns: Nouns;
@@ -26,6 +28,12 @@ export interface SyncedStoreConfig<D extends DocMap<D>, C extends CollectionName
 	storage: StorageFactory;
 	/** viewer / editor / owner roles (needs the roles variant of the SQL migration). */
 	roles?: boolean;
+	/**
+	 * `members` (default): containers are shared by email through the members table. `user`: one
+	 * container per signed-in user, whose id is the user's id; no sharing, no membership checks.
+	 * Must match the SQL (`generateMigration({ ownership })`).
+	 */
+	ownership?: 'members' | 'user';
 	/**
 	 * Postgres schema for the app's tables and functions (default 'public'). A custom schema must be
 	 * exposed in the Supabase project's Data API settings; generate its SQL with the same `schema`.
@@ -56,6 +64,8 @@ export interface SyncedStoreConfig<D extends DocMap<D>, C extends CollectionName
 	 * browsers ask the user. `requestPersistence()` still works on demand.
 	 */
 	persistStorage?: boolean;
+	/** Longest start-up waits for the session before `app.restored` turns true anyway (default 5000 ms). */
+	restoreTimeoutMs?: number;
 }
 
 /**
@@ -88,6 +98,7 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 		app,
 		supabase,
 		roles,
+		ownership: config.ownership,
 		storage: config.storage
 	});
 	const ops = createContainerOps<D, C>({
@@ -98,6 +109,7 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 		prefs,
 		supabase,
 		roles,
+		ownership: config.ownership,
 		refs: config.refs,
 		remap: config.remap,
 		appKey: config.appKey
@@ -142,7 +154,8 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 	 * database). Safe to call more than once. A failure ends up in `app.fatal`.
 	 */
 	function init(options: { beforeReady?: (local: DataSet<D>) => Promise<void> } = {}): Promise<void> {
-		started ??= (async () => {
+		if (started) return started;
+		started = (async () => {
 			startErrorReporting();
 			setStorageFactory(config.storage);
 			const db = await openDatabase<D>(`${config.appKey}_local`, config, { storage: config.storage });
@@ -157,6 +170,8 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 			reportError('fatal', err);
 			app.fatal = err instanceof Error ? err.message : String(err);
 		});
+		const timeout = new Promise((r) => setTimeout(r, config.restoreTimeoutMs ?? 5000));
+		void Promise.race([started, timeout]).then(() => (app.restored = true));
 		return started;
 	}
 

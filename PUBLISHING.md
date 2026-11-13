@@ -11,8 +11,12 @@ public npm registry with its own version.
   changed since its latest tag. Changes only to its tests or Markdown don't count. Packages
   that were never released are released.
 - [reecetech/version-increment](https://github.com/reecetech/version-increment) computes the next
-  version from that package's latest tag: a **patch** bump by default. A package with no tag yet
-  starts from 0.0.0, so its first automatic release is 0.0.1.
+  version from that package's latest tag. The bump comes from the package's commits since that tag
+  ([scripts/release/plan.mjs](scripts/release/plan.mjs)): a line `Release: minor` or `Release: major`
+  in any of them asks for that bump, the biggest wins, and it's a **patch** otherwise. A package with no
+  tag yet starts from 0.0.0, so its first automatic release is 0.0.1.
+- Each package's `CHANGELOG.md` collects changes under **Unreleased**; when releasing, move them under the
+  new version's heading.
 - The workflow writes the version into `package.json` only for the publish (in the repo it stays
   `0.0.0`), publishes, then pushes the tag.
 - Packages publish one at a time in dependency order (`displays` before `interactions`).
@@ -26,9 +30,7 @@ Manual releases: **Actions → Packages → Run workflow** (on `main`). Choose:
 
 - **packages:** comma-separated names (`displays, interactions, data-storage, build-tools`),
   `all`, or empty for "changed since last release".
-- **increment:** `patch`, `minor` or `major`.
-
-Use this for minor and major bumps.
+- **increment:** `auto` (from the commits' `Release:` lines, the default), `patch`, `minor` or `major`.
 
 ## One-time setup
 

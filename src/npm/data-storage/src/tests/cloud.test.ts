@@ -51,7 +51,8 @@ function signedInCloud() {
 }
 
 const push = (name: string, doc: object) => replications.get(name)!.options.push.modifier(doc);
-const settled = async <T>(p: Promise<T>) => Promise.race([p.then(() => 'done'), new Promise((r) => setTimeout(() => r('waiting'), 20))]);
+const settled = async <T>(p: Promise<T>) =>
+	Promise.race([p.then(() => 'done'), new Promise((r) => setTimeout(() => r('waiting'), 20))]);
 
 describe('pushing a new cloud container', () => {
 	afterEach(() => {
@@ -74,7 +75,9 @@ describe('pushing a new cloud container', () => {
 		replications.get('projects')!.sent.next({ id: 'p1' });
 		expect(await pending).toEqual(task);
 		// Once sent, later rows don't wait.
-		expect(await settled(push('notes', { id: 'n1', project_id: 'p1', seq: 1, mentions: '', updated_at: 1 }))).toBe('done');
+		expect(await settled(push('notes', { id: 'n1', project_id: 'p1', seq: 1, mentions: '', updated_at: 1 }))).toBe(
+			'done'
+		);
 	});
 
 	it('stops waiting after a while, so a refused container row never blocks the rest', async () => {

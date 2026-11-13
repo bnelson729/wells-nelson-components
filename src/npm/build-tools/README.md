@@ -1,6 +1,42 @@
 # @wells-nelson/build-tools
 
-Build and deployment tooling for SvelteKit PWAs deployed to GitHub Pages.
+Build and deployment tooling for SvelteKit sites (apps and websites) deployed to GitHub Pages, including the
+configs every site shares.
+
+## A site's configs
+
+```js
+// vite.config.js
+import { sveltekit } from '@sveltejs/kit/vite';
+import { siteKit } from '@wells-nelson/build-tools/kit';
+import { optimizeDeps } from '@wells-nelson/build-tools/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig(({ mode }) => ({
+	server: { port: 5176 },
+	plugins: [sveltekit(siteKit({ mode, base: '/my-site', pollUpdates: true }))],
+	optimizeDeps: optimizeDeps()
+}));
+```
+
+`siteKit` returns the SvelteKit options every site shares: adapter-static with a `404.html` fallback,
+`paths.base` from `BASE_PATH` (else `base`; `/` in development), the Content Security Policy for
+`VITE_SUPABASE_URL` (`connect` / `img` add sources), runes, and the version (`APP_VERSION` from the deploy,
+else `<package.json version>-local`). `pollUpdates` checks for a new deploy every 5 minutes (apps).
+
+```js
+// vitest.config.js: Svelte without the SvelteKit plugin; $app/env stands in with version 'test'
+import { siteVitest } from '@wells-nelson/build-tools/vitest';
+export default siteVitest();
+
+// eslint.config.js: no-floating-promises and no-unused-vars, type-aware, over src/
+import { siteEslint } from '@wells-nelson/build-tools/eslint';
+export default siteEslint();
+```
+
+In package.json, `"prettier": "@wells-nelson/build-tools/prettier"` (tabs, single quotes, 120 columns, Svelte).
+The site installs the tools these use: `@sveltejs/adapter-static`, `@sveltejs/vite-plugin-svelte`, `vitest`,
+`eslint`, `typescript-eslint`, `eslint-plugin-svelte`, `prettier`, `prettier-plugin-svelte`.
 
 ## CLIs
 
@@ -78,9 +114,9 @@ the library's reusable workflows (see "Reusable workflows" in the repository REA
   Pages, with a version tag reserved before the build and a GitHub release after the deploy.
 - `ci.yml` and `published-packages.yml` → `.github/workflows/` as they are: the pull request check, and the
   swap from local package tarballs to published versions.
-- `database.yml` → `.github/workflows/` and `supabase-ops/*.sql` → `supabase/ops/` (replace `__SCHEMA__`):
-  nightly encrypted backup with a test restore, keep-alive, security lint and client error digest. The SQL
-  stays in the site, so it can also be pasted into the Supabase SQL editor.
+- `database.yml` → `.github/workflows/` (replace `__SCHEMA__`): nightly encrypted backup with a test restore,
+  keep-alive, security lint and client error digest. The SQL it runs lives in the repository's `ops/sql`, so the
+  site keeps none.
 - `manifest.webmanifest`: for PWAs.
 
 Try the icons, manifest, `basePath` and `postbuild` in the sandbox's Build tools page.

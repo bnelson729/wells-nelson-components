@@ -69,6 +69,37 @@ export function gitTags() {
 	return execFileSync('git', ['tag', '--list'], { encoding: 'utf8' }).split('\n').filter(Boolean);
 }
 
+const INCREMENTS = ['patch', 'minor', 'major'];
+
+/**
+ * The version part to bump, from commit messages: a line `Release: minor` or `Release: major`
+ * (any case) in any of them asks for that bump; the biggest one wins; patch otherwise.
+ */
+export function incrementFromMessages(messages) {
+	let level = 0;
+	for (const message of messages) {
+		for (const m of message.matchAll(/^\s*release:\s*(patch|minor|major)\b/gim)) {
+			level = Math.max(level, INCREMENTS.indexOf(m[1].toLowerCase()));
+		}
+	}
+	return INCREMENTS[level];
+}
+
+/** Full messages of the commits since `tag` (or all) that touched the package's shipped files. */
+export function commitMessagesSince(pkg, tag) {
+	const dir = packageDir(pkg).replaceAll('\\', '/');
+	const range = tag ? [`${tag}..HEAD`] : ['HEAD'];
+	const out = execFileSync(
+		'git',
+		['log', '--format=%B%x00', ...range, '--', dir, `:(exclude)${dir}/src/tests`, `:(exclude,glob)${dir}/**/*.md`],
+		{ encoding: 'utf8' }
+	);
+	return out
+		.split('\0')
+		.map((s) => s.trim())
+		.filter(Boolean);
+}
+
 /** True when the package's shipped files changed since `tag` (tests and Markdown don't count). */
 export function changedSince(pkg, tag) {
 	const dir = packageDir(pkg).replaceAll('\\', '/');

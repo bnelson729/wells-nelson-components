@@ -1,7 +1,7 @@
 name: Site CI
 
 # Reusable pull request check for a site built on these packages: no local tarball dependencies,
-# then type-check, unit tests and a production build. Call it from the site's
+# then type-check, lint, formatting, unit tests and a production build. Call it from the site's
 # .github/workflows/ci.yml (build-tools template `ci.yml`):
 #
 #   on:
@@ -10,7 +10,7 @@ name: Site CI
 #     workflow_dispatch:
 #   jobs:
 #     ci:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@main
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v1
 #
 # Branch protection requires the check "ci / Check, test and build".
 #
@@ -50,5 +50,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check --if-present
+      - run: npm run lint --if-present
+      - run: npm run format:check --if-present
       - run: npm test --if-present
       - run: npm run build

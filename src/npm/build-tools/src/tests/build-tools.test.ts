@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SUPPORTED_LETTERS, markPaths, parseHex, renderPng, renderSvg, writeIcons } from '../icons.js';
 import { renderManifest } from '../manifest.js';
 import { collectStrings, postbuild } from '../postbuild.js';
-import { WELLS_NELSON_ENTRIES, basePath, contentSecurityPolicy, devJsonModule, installedEntries, optimizeDeps } from '../vite.js';
+import {
+	WELLS_NELSON_ENTRIES,
+	basePath,
+	contentSecurityPolicy,
+	devJsonModule,
+	installedEntries,
+	optimizeDeps
+} from '../vite.js';
 
 const dirs: string[] = [];
 const tempDir = () => {
@@ -102,12 +109,17 @@ describe('postbuild', () => {
 
 	it('fails when forbidden content leaked into the build', () => {
 		const dir = build({ '404.html': 'x', '_app/chunk.js': 'const p = "Jordan Smith";' });
-		expect(() => postbuild({ dir, forbid: ['Jordan Smith'], log: () => {} })).toThrow(/forbidden content found in .*chunk\.js/);
+		expect(() => postbuild({ dir, forbid: ['Jordan Smith'], log: () => {} })).toThrow(
+			/forbidden content found in .*chunk\.js/
+		);
 		expect(() => postbuild({ dir, forbid: ['Someone Else'], log: () => {} })).not.toThrow();
 	});
 
 	it('collects strings along a path through arrays', () => {
-		const seed = { people: [{ name: 'Jordan Smith' }, { name: 'Al' }, { name: 'Casey Lee' }], groups: [{ name: 'Launch' }] };
+		const seed = {
+			people: [{ name: 'Jordan Smith' }, { name: 'Al' }, { name: 'Casey Lee' }],
+			groups: [{ name: 'Launch' }]
+		};
 		expect(collectStrings(seed, 'people.name')).toEqual(['Jordan Smith', 'Casey Lee']);
 		expect(collectStrings(seed, 'missing.name')).toEqual([]);
 	});
@@ -141,9 +153,16 @@ describe('vite helpers', () => {
 		);
 		writeFileSync(join(pkg, 'dist', 'index.js'), '');
 		writeFileSync(join(pkg, 'dist', 'account', 'index.js'), '');
-		expect(installedEntries(WELLS_NELSON_ENTRIES, app)).toEqual(['@wells-nelson/interactions', '@wells-nelson/interactions/account']);
+		expect(installedEntries(WELLS_NELSON_ENTRIES, app)).toEqual([
+			'@wells-nelson/interactions',
+			'@wells-nelson/interactions/account'
+		]);
 		const { include } = optimizeDeps(['fuse.js'], app);
-		expect(include.slice(0, 3)).toEqual(['fuse.js', '@wells-nelson/interactions', '@wells-nelson/interactions/account']);
+		expect(include.slice(0, 3)).toEqual([
+			'fuse.js',
+			'@wells-nelson/interactions',
+			'@wells-nelson/interactions/account'
+		]);
 	});
 
 	it('serves the JSON in dev only', () => {
@@ -165,7 +184,13 @@ describe('vite helpers', () => {
 describe('renderManifest', () => {
 	it('uses relative scope and the generated icons', () => {
 		const m = JSON.parse(
-			renderManifest({ name: 'My App', shortName: 'MA', description: 'd', backgroundColor: '#f3f5f8', themeColor: '#1f5fa8' })
+			renderManifest({
+				name: 'My App',
+				shortName: 'MA',
+				description: 'd',
+				backgroundColor: '#f3f5f8',
+				themeColor: '#1f5fa8'
+			})
 		);
 		expect(m.start_url).toBe('./');
 		expect(m.theme_color).toBe('#1f5fa8');
@@ -184,7 +209,12 @@ describe('contentSecurityPolicy', () => {
 
 	it('falls back to any Supabase project, and takes extra sources', () => {
 		const csp = contentSecurityPolicy({ connect: ['https://api.example.com'], img: ['https://img.example.com'] });
-		expect(csp.directives['connect-src']).toEqual(['self', 'https://*.supabase.co', 'wss://*.supabase.co', 'https://api.example.com']);
+		expect(csp.directives['connect-src']).toEqual([
+			'self',
+			'https://*.supabase.co',
+			'wss://*.supabase.co',
+			'https://api.example.com'
+		]);
 		expect(csp.directives['img-src']).toContain('https://img.example.com');
 	});
 });

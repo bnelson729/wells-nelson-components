@@ -11,7 +11,13 @@ import { preventZoom } from '../lib/zoom.js';
 import { button, render, resize, settle } from './setup.js';
 
 function pointer(type: string, init: { x?: number; y?: number; id?: number } = {}) {
-	return new PointerEvent(type, { bubbles: true, clientX: init.x ?? 0, clientY: init.y ?? 0, pointerId: init.id ?? 1, button: 0 });
+	return new PointerEvent(type, {
+		bubbles: true,
+		clientX: init.x ?? 0,
+		clientY: init.y ?? 0,
+		pointerId: init.id ?? 1,
+		button: 0
+	});
 }
 
 describe('AppVersion', () => {
@@ -119,9 +125,13 @@ describe('longpress', () => {
 describe('appearance', () => {
 	const rows = createRawSnippet(() => ({ render: () => '<li>Row</li>' }));
 	const section = (props: Record<string, unknown>) =>
-		render(CollapsibleSection, { title: 'To do', count: 1, ontogglecollapse: () => {}, children: rows, ...props }).querySelector(
-			'section'
-		)!;
+		render(CollapsibleSection, {
+			title: 'To do',
+			count: 1,
+			ontogglecollapse: () => {},
+			children: rows,
+			...props
+		}).querySelector('section')!;
 
 	it('renders CollapsibleSection as a card by default, marking it collapsed', () => {
 		const open = section({ collapsed: false });
@@ -141,7 +151,13 @@ describe('appearance', () => {
 			{ id: '1', name: 'Ann', active: true },
 			{ id: '2', name: 'Bo', active: false }
 		];
-		const props = { items, noun: 'Members', label: (i: { name: string }) => i.name, onopen: () => {}, ontoggle: () => {} };
+		const props = {
+			items,
+			noun: 'Members',
+			label: (i: { name: string }) => i.name,
+			onopen: () => {},
+			ontoggle: () => {}
+		};
 		const cards = [...render(ActiveList, props).querySelectorAll('section')];
 		expect(cards.every((s) => s.classList.contains('card'))).toBe(true);
 		const lines = [...render(ActiveList, { ...props, appearance: 'lines' }).querySelectorAll('section')];
@@ -158,7 +174,13 @@ describe('ActiveList', () => {
 
 	it('lists active rows and toggles the inactive section', () => {
 		const ontoggle = vi.fn();
-		const el = render(ActiveList, { items, noun: 'Members', label: (i: { name: string }) => i.name, onopen: () => {}, ontoggle });
+		const el = render(ActiveList, {
+			items,
+			noun: 'Members',
+			label: (i: { name: string }) => i.name,
+			onopen: () => {},
+			ontoggle
+		});
 		expect(el.textContent).toContain('Active members');
 		expect(el.textContent).toContain('Ann');
 		expect(el.textContent).not.toContain('Bo');
@@ -173,7 +195,13 @@ describe('ActiveList', () => {
 		expect(ontoggle).toHaveBeenCalledWith(items[0], false);
 	});
 
-	const props = { items, noun: 'Members', label: (i: { name: string }) => i.name, onopen: () => {}, ontoggle: () => {} };
+	const props = {
+		items,
+		noun: 'Members',
+		label: (i: { name: string }) => i.name,
+		onopen: () => {},
+		ontoggle: () => {}
+	};
 
 	it('collapses the active section on request, starting expanded every time', () => {
 		const el = render(ActiveList, { ...props, collapsibleActive: true });
@@ -243,5 +271,19 @@ describe('Combobox in a scrolling container', () => {
 		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		flushSync();
 		expect(scroller.querySelector('.reserve')).toBeNull();
+	});
+});
+
+describe('SyncBanners', () => {
+	it('shows each error until it is dismissed', async () => {
+		const { default: SyncBanners } = await import('../lib/SyncBanners.svelte');
+		const app = { writeError: 'Quota exceeded' as string | null };
+		const cloud = { rejectedWrite: null as string | null };
+		const el = render(SyncBanners, { app, cloud });
+		expect(el.textContent).toContain("A change couldn't be saved on this device. Quota exceeded.");
+		expect(el.textContent).not.toContain('cloud');
+		el.querySelector<HTMLButtonElement>('button[aria-label="Dismiss"]')!.click();
+		flushSync();
+		expect(app.writeError).toBeNull();
 	});
 });

@@ -23,7 +23,8 @@ drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
 Date and time inputs (`date`, `time`, `datetime-local`) match the text inputs, and on iOS keep a
 fixed size whatever their value. Apps that put `class="touch-app"` on `<html>` get app-like touch
 screens: text can't be selected (a long press acts on the control), except in fields and anything
-marked `.selectable`; `Leaderboards` and `SortableTable` are. Websites leave it off.
+marked `.selectable`; `Leaderboards` and `SortableTable` are; and touch feedback: a pressed link or
+button dims and fades back (iOS also needs `touchFeedback()` from interactions). Websites leave it off.
 
 ## Icons
 

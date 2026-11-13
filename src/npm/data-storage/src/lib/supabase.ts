@@ -76,7 +76,10 @@ export interface SupabaseApi {
  * PostgREST refuses a schema that isn't exposed in the project's Data API settings (PGRST106,
  * "Invalid schema: …"). Returns the fix to show instead, or null for other errors.
  */
-export function schemaNotExposed(error: { message?: string; code?: string } | undefined, schema: string): string | null {
+export function schemaNotExposed(
+	error: { message?: string; code?: string } | undefined,
+	schema: string
+): string | null {
 	if (!error) return null;
 	if (error.code !== 'PGRST106' && !/invalid schema|schema must be one of/i.test(error.message ?? '')) return null;
 	return `Expose the ${schema} schema in Supabase (Project Settings → Data API).`;
@@ -161,7 +164,9 @@ export function createSupabaseApi(env: EnvConfig, members: MembersConfig, option
 		}
 		if (typeof location === 'undefined') return false;
 		const params = new URLSearchParams(location.search);
-		return params.has('code') || params.has('error_description') || /access_token|error_description/.test(location.hash);
+		return (
+			params.has('code') || params.has('error_description') || /access_token|error_description/.test(location.hash)
+		);
 	}
 
 	async function requireClient() {
@@ -207,7 +212,9 @@ export function createSupabaseApi(env: EnvConfig, members: MembersConfig, option
 		},
 
 		async leave(containerId, email) {
-			const { error } = await (await requireClient())
+			const { error } = await (
+				await requireClient()
+			)
 				.from(table)
 				.delete()
 				.eq(containerField, containerId)
@@ -217,7 +224,12 @@ export function createSupabaseApi(env: EnvConfig, members: MembersConfig, option
 
 		async fetchMyMemberships(email) {
 			const columns = roles ? `${containerField}, role` : containerField;
-			const { data, error } = await (await requireClient()).from(table).select(columns).eq('email', email.toLowerCase());
+			const { data, error } = await (
+				await requireClient()
+			)
+				.from(table)
+				.select(columns)
+				.eq('email', email.toLowerCase());
 			fail(error);
 			const rows = (data ?? []) as unknown as Record<string, string>[];
 			return new Map(rows.map((r) => [r[containerField], roles ? (r.role as Role) : null]));

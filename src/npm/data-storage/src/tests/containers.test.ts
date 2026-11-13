@@ -20,7 +20,9 @@ async function started() {
 
 /** A second data set posing as "cloud" so copies can be exercised without Supabase. */
 async function fakeCloud(store: Store) {
-	const db = await openDatabase<Docs>(`${store.config.appKey}_fakecloud`, store.config, { storage: getRxStorageMemory });
+	const db = await openDatabase<Docs>(`${store.config.appKey}_fakecloud`, store.config, {
+		storage: getRxStorageMemory
+	});
 	cleanup.push(() => db.remove());
 	return createDataSet<Docs>('cloud', db, store.config);
 }

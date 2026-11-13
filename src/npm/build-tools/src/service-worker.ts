@@ -137,7 +137,9 @@ export function registerAppShellCache({
 				const cached = await cache.match(request);
 				if (cached) return cached;
 				const response = await fetch(request);
-				if (response.ok && url.pathname.startsWith(scope.pathname)) cache.put(request, response.clone());
+				// A full cache (quota) only costs the offline copy of this file.
+				if (response.ok && url.pathname.startsWith(scope.pathname))
+					cache.put(request, response.clone()).catch(() => {});
 				return response;
 			})()
 		);

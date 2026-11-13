@@ -33,7 +33,13 @@ const GLYPHS: Record<string, Path[]> = {
 		[[-9, 23], [-3.5, 23], ...arc(-3.5, 36.5, 13.5, 13.5, -90, 90), [-9, 50]]
 	],
 	C: [arc(0, 25, 10.5, 25, -45, -315)],
-	D: [[[-9, 0], [-9, 50]], [[-9, 0], ...arc(-9, 25, 19.5, 25, -90, 90)]],
+	D: [
+		[
+			[-9, 0],
+			[-9, 50]
+		],
+		[[-9, 0], ...arc(-9, 25, 19.5, 25, -90, 90)]
+	],
 	E: [P([10, 0], [-9, 0], [-9, 50], [10, 50]), P([-9, 25], [6, 25])],
 	F: [P([10, 0], [-9, 0], [-9, 50]), P([-9, 25], [6, 25])],
 	G: [[...arc(0, 25, 10.5, 25, -45, -360), [2, 25]]],
@@ -114,7 +120,11 @@ export interface IconOptions {
 }
 
 /** Render the mark as a PNG. Maskable icons are full-bleed with the mark inside the safe zone. */
-export function renderPng(size: number, { letters, background, foreground = '#ffffff' }: IconOptions, { maskable = false } = {}) {
+export function renderPng(
+	size: number,
+	{ letters, background, foreground = '#ffffff' }: IconOptions,
+	{ maskable = false } = {}
+) {
 	const paths = markPaths(letters);
 	const BG = parseHex(background);
 	const FG = parseHex(foreground);

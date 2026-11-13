@@ -16,7 +16,7 @@ name: Site deploy
 #     cancel-in-progress: false
 #   jobs:
 #     deploy:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@main
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v1
 #       permissions:
 #         contents: write
 #         pages: write
@@ -84,6 +84,8 @@ jobs:
       - run: npm ci
       - name: Type-check
         run: npm run check --if-present
+      - name: Lint
+        run: npm run lint --if-present
       - name: Test
         run: npm test --if-present
       - run: npm run build

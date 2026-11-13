@@ -36,6 +36,13 @@ export interface MigrationConfig {
 	/** All replicated tables, parents first. */
 	tables: MigrationTable[];
 	roles?: boolean;
+	/**
+	 * `members` (default): containers are shared through a members table, by email. `user`: each
+	 * container belongs to one signed-in user and its id is that user's id (`auth.uid()`); every
+	 * other row's container field is the user's id too. No members table, no sharing, one container
+	 * per user (e.g. a profile). Pass the same `ownership` to the store.
+	 */
+	ownership?: 'members' | 'user';
 	membersTable?: string;
 	membersRpc?: string;
 	/**
@@ -64,7 +71,10 @@ alter default privileges in schema ${schema} grant all on sequences to authentic
 	return sql
 		.replaceAll('public.', `${schema}.`)
 		.replaceAll('set search_path = public', `set search_path = ${schema}`)
-		.replace('-- ---------------------------------------------------------------- helpers', `${setup}-- ---------------------------------------------------------------- helpers`);
+		.replace(
+			'-- ---------------------------------------------------------------- helpers',
+			`${setup}-- ---------------------------------------------------------------- helpers`
+		);
 }
 
 const SQL_TYPES: Record<ColumnType, string> = { text: 'text', number: 'double precision', boolean: 'boolean' };
@@ -83,7 +93,11 @@ function columnSql(name: string, spec: ColumnType | ColumnSpec) {
 export function tablesFromSchemas(
 	collections: readonly string[],
 	schemas: Record<string, { properties: Record<string, { type?: unknown }> }>,
-	options: { containerField: string; refs?: Record<string, readonly string[] | undefined>; defaults?: Record<string, Record<string, string>> }
+	options: {
+		containerField: string;
+		refs?: Record<string, readonly string[] | undefined>;
+		defaults?: Record<string, Record<string, string>>;
+	}
 ): MigrationTable[] {
 	return collections.map((name) => {
 		const columns: Record<string, ColumnSpec> = {};
@@ -98,9 +112,60 @@ export function tablesFromSchemas(
 	});
 }
 
+/** The write-only error log every schema gets (identical in both ownership modes). */
+const CLIENT_ERRORS = `-- ---------------------------------------------------------------- client errors
+
+-- Errors the app reports (failed local writes, sync errors, crashes), written only through
+-- report_client_error. No policies: nobody reads them through the API; use the dashboard or the
+-- service role.
+create table public.client_errors (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  app text not null,
+  version text not null,
+  kind text not null,
+  message text not null,
+  detail text not null,
+  path text not null,
+  user_id uuid
+);
+create index client_errors_created_idx on public.client_errors (created_at);
+alter table public.client_errors enable row level security;
+revoke all on public.client_errors from anon, authenticated;
+
+create or replace function public.report_client_error(
+  p_app text, p_version text, p_kind text, p_message text, p_detail text, p_path text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- At most 300 reports an hour from everyone together, so a loop or abuse can't fill the
+  -- database; reports are kept for 30 days.
+  if (select count(*) from public.client_errors where created_at > now() - interval '1 hour') >= 300 then
+    return;
+  end if;
+  delete from public.client_errors where created_at < now() - interval '30 days';
+  insert into public.client_errors (app, version, kind, message, detail, path, user_id)
+  values (
+    left(coalesce(p_app, ''), 40), left(coalesce(p_version, ''), 40), left(coalesce(p_kind, ''), 40),
+    left(coalesce(p_message, ''), 500), left(coalesce(p_detail, ''), 4000), left(coalesce(p_path, ''), 200),
+    auth.uid()
+  );
+end;
+$$;
+
+`;
+
 export function generateMigration(config: MigrationConfig): string {
 	const { container, containerField: cf, noun, roles = false, schema = 'public' } = config;
 	if (!/^[a-z_][a-z0-9_]*$/.test(schema)) throw new Error(`Not a valid schema name: "${schema}".`);
+	if (config.ownership === 'user') {
+		const sql = userOwnedMigration(config);
+		return schema === 'public' ? sql : inSchema(sql, schema);
+	}
 	const members = config.membersTable ?? `${noun}_members`;
 	const rpc = config.membersRpc ?? `get_${noun}_members`;
 	const isMember = `is_${noun}_member`;
@@ -376,51 +441,11 @@ as $$
   order by ${roles ? 'm.role desc, ' : ''}m.created_at;
 $$;
 
--- ---------------------------------------------------------------- client errors
+${CLIENT_ERRORS}-- ---------------------------------------------------------------- function privileges
 
--- Errors the app reports (failed local writes, sync errors, crashes), written only through
--- report_client_error. No policies: nobody reads them through the API; use the dashboard or the
--- service role.
-create table public.client_errors (
-  id bigint generated always as identity primary key,
-  created_at timestamptz not null default now(),
-  app text not null,
-  version text not null,
-  kind text not null,
-  message text not null,
-  detail text not null,
-  path text not null,
-  user_id uuid
-);
-create index client_errors_created_idx on public.client_errors (created_at);
-alter table public.client_errors enable row level security;
-revoke all on public.client_errors from anon, authenticated;
-
-create or replace function public.report_client_error(
-  p_app text, p_version text, p_kind text, p_message text, p_detail text, p_path text
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  -- At most 300 reports an hour from everyone together, so a loop or abuse can't fill the
-  -- database; reports are kept for 30 days.
-  if (select count(*) from public.client_errors where created_at > now() - interval '1 hour') >= 300 then
-    return;
-  end if;
-  delete from public.client_errors where created_at < now() - interval '30 days';
-  insert into public.client_errors (app, version, kind, message, detail, path, user_id)
-  values (
-    left(coalesce(p_app, ''), 40), left(coalesce(p_version, ''), 40), left(coalesce(p_kind, ''), 40),
-    left(coalesce(p_message, ''), 500), left(coalesce(p_detail, ''), 4000), left(coalesce(p_path, ''), 200),
-    auth.uid()
-  );
-end;
-$$;
-
--- ---------------------------------------------------------------- function privileges
+-- Signed-out callers get no table access, even where the schema's defaults grant it (Supabase's
+-- public schema does). Row level security still decides what signed-in users see.
+revoke all on ${[members, ...all].map((n) => `public.${n}`).join(', ')} from anon;
 
 -- Postgres lets everyone (public) execute new functions. Only signed-in users may call these,
 -- and signed-out callers only report errors.
@@ -443,4 +468,164 @@ alter publication supabase_realtime
 
 	const sql = out.join('');
 	return schema === 'public' ? sql : inSchema(sql, schema);
+}
+
+/** `ownership: 'user'`: one container per user, id = auth.uid(); nobody else reads or writes it. */
+function userOwnedMigration(config: MigrationConfig): string {
+	const { container, containerField: cf, noun } = config;
+	const all = config.tables.map((t) => t.name);
+	if (!all.includes(container)) throw new Error(`The container table "${container}" must be in tables.`);
+	if (config.roles) throw new Error("Roles need ownership 'members'.");
+	const children = config.tables.filter((t) => t.name !== container);
+	const list = (names: string[]) => names.map((n) => `'${n}'`).join(',');
+	const tables = config.tables
+		.map((table) => {
+			const cols = ['  id text primary key', ...Object.entries(table.columns).map(([n, s]) => columnSql(n, s))];
+			cols.push('  _deleted boolean not null default false', '  _modified timestamptz not null default now()');
+			return `\ncreate table public.${table.name} (\n${cols.join(',\n')}\n);\n`;
+		})
+		.join('');
+	const own = '(select auth.uid())::text';
+	return `-- ${config.title ?? 'Schema for RxDB <-> Supabase replication.'}
+--
+-- Every replicated table mirrors an RxDB collection 1:1 (same snake_case column names) plus:
+--   _deleted   soft-delete flag (rows are never hard-deleted by the app)
+--   _modified  server timestamp used as the replication checkpoint (set by trigger)
+-- Each ${noun} belongs to one signed-in user: its id is the user's id${children.length ? `, and so is every other row's ${cf}` : ''}.
+-- Nobody else can read or change it; there's no sharing.
+
+-- ---------------------------------------------------------------- helpers
+
+create or replace function public.set_modified()
+returns trigger
+language plpgsql
+as $$
+begin
+  new._modified := clock_timestamp();
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------- replicated tables
+${tables}
+do $$
+declare t text;
+begin
+  foreach t in array array[${list(all)}] loop
+    execute format('create index %1$s_modified_idx on public.%1$s (_modified, id)', t);
+    execute format(
+      'create trigger %1$s_set_modified before insert or update on public.%1$s
+         for each row execute function public.set_modified()', t);
+    execute format('alter table public.%1$s enable row level security', t);
+  end loop;
+${
+	children.length === 0
+		? ''
+		: `
+  foreach t in array array[${list(children.map((c) => c.name))}] loop
+    execute format('create index %1$s_${noun}_idx on public.%1$s (${cf})', t);
+    execute format(
+      'create policy "owner only" on public.%1$s for all to authenticated
+         using (${cf} = ${own}) with check (${cf} = ${own})', t);
+  end loop;
+`
+}end;
+$$;
+
+-- A ${noun}'s id is its owner's user id: nobody can create one under someone else's id.
+create policy "owner only" on public.${container}
+  for all to authenticated
+  using (id = ${own})
+  with check (id = ${own});
+
+${CLIENT_ERRORS}-- ---------------------------------------------------------------- function privileges
+
+-- Signed-out callers get no table access, even where the schema's defaults grant it (Supabase's
+-- public schema does).
+revoke all on ${all.map((n) => `public.${n}`).join(', ')} from anon;
+
+-- Postgres lets everyone (public) execute new functions. Signed-out callers only report errors.
+revoke all on function public.report_client_error(text, text, text, text, text, text) from public;
+grant execute on function public.report_client_error(text, text, text, text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------- realtime
+
+alter publication supabase_realtime
+  add table ${all.map((n) => `public.${n}`).join(', ')};
+`;
+}
+
+const SQL_TO_RXDB: [RegExp, string][] = [
+	[/^(text|uuid|varchar|character varying)\b/i, 'string'],
+	[/^(double precision|real|numeric|integer|bigint|smallint|float8|int)\b/i, 'number'],
+	[/^bool(ean)?\b/i, 'boolean']
+];
+
+/**
+ * Each table's columns after applying the migrations in order, as RxDB types: reads
+ * `create table <schema>.<name> (...)`, `alter table <schema>.<name> add column [if not exists]` and
+ * `drop column [if exists]`. Server-only replication columns (`_deleted`, `_modified`) are left out.
+ */
+export function migrationColumns(
+	sqlFiles: readonly string[],
+	schema = 'public'
+): Record<string, Record<string, string>> {
+	const tables: Record<string, Record<string, string>> = {};
+	const typeOf = (sql: string) => SQL_TO_RXDB.find(([re]) => re.test(sql.trim()))?.[1] ?? sql.trim();
+	const name = String.raw`${schema}\.(\w+)`;
+	const created = new RegExp(String.raw`create table (?:if not exists )?${name} \(\n([\s\S]*?)\n\);`, 'gi');
+	const added = new RegExp(String.raw`alter table ${name}\s+add column (?:if not exists )?(\w+) ([^,;\n]+)`, 'gi');
+	const dropped = new RegExp(String.raw`alter table ${name}\s+drop column (?:if exists )?(\w+)`, 'gi');
+	for (const raw of sqlFiles) {
+		const sql = raw.replace(/\r\n/g, '\n');
+		for (const [, table, body] of sql.matchAll(created)) {
+			tables[table] = {};
+			for (const line of body.split('\n')) {
+				const m = line.trim().match(/^(\w+) (.+?),?$/);
+				if (m && !/^(unique|primary|check|constraint|foreign)$/i.test(m[1])) tables[table][m[1]] = typeOf(m[2]);
+			}
+		}
+		for (const [, table, column, type] of sql.matchAll(added)) {
+			(tables[table] ??= {})[column] = typeOf(type);
+		}
+		for (const [, table, column] of sql.matchAll(dropped)) {
+			delete tables[table]?.[column];
+		}
+	}
+	for (const cols of Object.values(tables)) {
+		delete cols._deleted;
+		delete cols._modified;
+	}
+	return tables;
+}
+
+/**
+ * Where the RxDB schemas and the migrations disagree, one line each (empty when they match): a
+ * collection with no table, a field with no column (or the reverse), or different types. Use it in
+ * a unit test, reading every file in `supabase/migrations/` in order.
+ */
+export function schemaMismatches(
+	collections: readonly string[],
+	schemas: Record<string, { properties: Record<string, { type?: unknown }> }>,
+	sqlFiles: readonly string[],
+	schema = 'public'
+): string[] {
+	const tables = migrationColumns(sqlFiles, schema);
+	const problems: string[] = [];
+	for (const name of collections) {
+		const columns = tables[name];
+		if (!columns) {
+			problems.push(`${name}: no ${schema}.${name} table in the migrations`);
+			continue;
+		}
+		const fields = Object.fromEntries(Object.entries(schemas[name].properties).map(([f, p]) => [f, String(p.type)]));
+		for (const [field, type] of Object.entries(fields)) {
+			if (!(field in columns)) problems.push(`${name}.${field}: no column in the migrations`);
+			else if (columns[field] !== type) problems.push(`${name}.${field}: ${type} in RxDB, ${columns[field]} in SQL`);
+		}
+		for (const column of Object.keys(columns)) {
+			if (!(column in fields)) problems.push(`${name}.${column}: column in SQL, no field in RxDB`);
+		}
+	}
+	return problems;
 }

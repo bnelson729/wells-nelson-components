@@ -9,6 +9,7 @@
 		Combobox,
 		DevWipeButton,
 		SearchBar,
+		SyncBanners,
 		Segmented,
 		TextField,
 		Toggle,
@@ -22,7 +23,14 @@
 		type ComboChoice,
 		type DragData
 	} from '@wells-nelson/interactions';
-	import { people as mockPeople, statuses as mockStatuses, tags, tasks as mockTasks, type Status, type Task } from '../mock';
+	import {
+		people as mockPeople,
+		statuses as mockStatuses,
+		tags,
+		tasks as mockTasks,
+		type Status,
+		type Task
+	} from '../mock';
 	import Panel from '../Panel.svelte';
 
 	// ------------------------------------------------ inputs
@@ -92,6 +100,8 @@
 	let comboModal = $state(false);
 	let modalTag = $state<ComboChoice>(null);
 	let noZoom = $state(false);
+	const syncApp = $state({ writeError: null as string | null });
+	const syncCloud = $state({ rejectedWrite: null as string | null });
 	$effect(() => {
 		if (noZoom) return preventZoom();
 	});
@@ -147,37 +157,42 @@
 			ondrop: (d, index) => (statusOrder = reorder(statusOrder, d.id, index) as Status[])
 		}}
 	>
-	{#each statusOrder as status (status)}
-		{@const rows = visible.filter((t) => t.status === status)}
-		<CollapsibleSection
-			title={statusName(status)}
-			count={rows.length}
-			countLabel={(n) => `${n} tasks`}
-			collapsed={!!collapsed[status] || dragging === 'section'}
-			ontogglecollapse={() => (collapsed[status] = !collapsed[status])}
-			onadd={() => addTask(status)}
-			addLabel={`Add to ${statusName(status)}`}
-			onedit={() => alert(`Settings for “${statusName(status)}”`)}
-			variant={status === 'done' ? 'subtle' : 'default'}
-			{appearance}
-			dragData={{ type: 'section', id: status }}
-			ondragstart={() => (dragging = 'section')}
-			ondragend={() => (dragging = null)}
-			drop={{
-				accepts: (d) => d.type === 'task',
-				ordered: true,
-				ondrop: (d, index) => moveTask(d, status, index)
-			}}
-		>
-			{#each rows as task (task.id)}
-				<li class="task" data-dnd-item>
-					<Checkbox label={`${task.title} done`} hideLabel checked={task.status === 'done'} onchange={() => toggleDone(task)} />
-					<span class="title" class:done={task.status === 'done'}>{task.title}</span>
-					<Badge>{personName(task.assignee).split(' ')[0]}</Badge>
-				</li>
-			{/each}
-		</CollapsibleSection>
-	{/each}
+		{#each statusOrder as status (status)}
+			{@const rows = visible.filter((t) => t.status === status)}
+			<CollapsibleSection
+				title={statusName(status)}
+				count={rows.length}
+				countLabel={(n) => `${n} tasks`}
+				collapsed={!!collapsed[status] || dragging === 'section'}
+				ontogglecollapse={() => (collapsed[status] = !collapsed[status])}
+				onadd={() => addTask(status)}
+				addLabel={`Add to ${statusName(status)}`}
+				onedit={() => alert(`Settings for “${statusName(status)}”`)}
+				variant={status === 'done' ? 'subtle' : 'default'}
+				{appearance}
+				dragData={{ type: 'section', id: status }}
+				ondragstart={() => (dragging = 'section')}
+				ondragend={() => (dragging = null)}
+				drop={{
+					accepts: (d) => d.type === 'task',
+					ordered: true,
+					ondrop: (d, index) => moveTask(d, status, index)
+				}}
+			>
+				{#each rows as task (task.id)}
+					<li class="task" data-dnd-item>
+						<Checkbox
+							label={`${task.title} done`}
+							hideLabel
+							checked={task.status === 'done'}
+							onchange={() => toggleDone(task)}
+						/>
+						<span class="title" class:done={task.status === 'done'}>{task.title}</span>
+						<Badge>{personName(task.assignee).split(' ')[0]}</Badge>
+					</li>
+				{/each}
+			</CollapsibleSection>
+		{/each}
 	</div>
 	<p class="muted">Section order: {statusOrder.map(statusName).join(' → ')}</p>
 </Panel>
@@ -199,7 +214,10 @@
 	<p class="muted">Inactive open: {inactiveOpen} · last opened: {opened ?? '—'}</p>
 </Panel>
 
-<Panel title="AppVersion" note="The running version; Update appears once a newer deploy is out. The check here finds one every other time.">
+<Panel
+	title="AppVersion"
+	note="The running version; Update appears once a newer deploy is out. The check here finds one every other time."
+>
 	<Toggle label="Update available" bind:checked={updateAvailable} />
 	{#key updateAvailable}
 		<AppVersion
@@ -208,10 +226,22 @@
 			onupdate={() => alert('The app would reload here.')}
 			oncheck={async () => {
 				await new Promise((r) => setTimeout(r, 600));
-				return (checks++ % 2) === 1;
+				return checks++ % 2 === 1;
 			}}
 		/>
 	{/key}
+</Panel>
+
+<Panel title="SyncBanners" note="The store's failed-write banners. Each dismiss clears the error.">
+	<div class="row">
+		<Button onclick={() => (syncApp.writeError = 'QuotaExceededError: the device is out of storage')}
+			>Fail a local write</Button
+		>
+		<Button onclick={() => (syncCloud.rejectedWrite = 'new row violates row-level security policy for table "tasks"')}>
+			Reject a cloud write
+		</Button>
+	</div>
+	<SyncBanners app={syncApp} cloud={syncCloud} />
 </Panel>
 
 <Panel title="preventZoom" note="Stops pinch and double-tap zoom on this page (try it on a phone or tablet).">
@@ -227,17 +257,26 @@
 </Modal>
 
 <Panel title="AddRow">
-	<AddRow placeholder="Add a person" label="Add person" onadd={(n) => (people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }])} />
+	<AddRow
+		placeholder="Add a person"
+		label="Add person"
+		onadd={(n) => (people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }])}
+	/>
 </Panel>
 
 <Panel title="longpress" note="Hold the button still for half a second. The click after a long press is swallowed.">
 	<div class="row">
-		<button type="button" class="press" use:longpress={() => presses++} onclick={() => clicks++}>Press or hold me</button>
+		<button type="button" class="press" use:longpress={() => presses++} onclick={() => clicks++}
+			>Press or hold me</button
+		>
 		<span class="muted">Clicks: {clicks} · long presses: {presses}</span>
 	</div>
 </Panel>
 
-<Panel title="DevWipeButton" note="Deletes this origin's IndexedDB and storage (including the Data storage page's database), then reloads.">
+<Panel
+	title="DevWipeButton"
+	note="Deletes this origin's IndexedDB and storage (including the Data storage page's database), then reloads."
+>
 	<div class="row">
 		<DevWipeButton onconfirm={() => wipeAllData({ redirectTo: location.pathname })} />
 		<IconButton icon="refresh" label="Reload" onclick={() => location.reload()} />

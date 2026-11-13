@@ -1,7 +1,7 @@
 # wells-nelson-components
 
 Shared components for Wells Nelson projects: Svelte 5 UI, an offline-first storage and sync
-layer, and build tooling for SvelteKit PWAs.
+layer, and build tooling for SvelteKit sites (apps and websites).
 
 The packages live under [src/npm](src/npm) as npm workspaces. Each one builds, tests and ships
 on its own:
@@ -9,19 +9,21 @@ on its own:
 | Package | What's in it |
 | --- | --- |
 | [`@wells-nelson/displays`](src/npm/displays) | `Button`, `IconButton`, `Icon` (+ `registerIcons`), `Modal`, `ConfirmDialog`, `Badge`, `AppHeader`, `SortableTable`, `Leaderboards`, `Splash`, `FatalError`, `theme.css` and palettes |
-| [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `Checkbox`, `Toggle`, `Combobox`, `AddRow`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `longpress`, drag and drop, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
-| [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations, export / import, persistent storage, error reporting), `Persisted`, `flatSchema`, `envConfig`; SQL migration generator under `/sql` |
-| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and templates (deploy, CI, nightly database workflow and its SQL, manifest) |
+| [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `Checkbox`, `Toggle`, `Combobox`, `AddRow`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `SyncBanners`, `longpress`, drag and drop, start-up helpers (`checkForUpdatesOnStart`, `touchFeedback`, `preventZoom`), `errorText`, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
+| [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations, export / import, persistent storage, error reporting), `Persisted`, `flatSchema`, `envConfig`, `defaultContainerToOpen`; SQL migration generator and `schemaMismatches` under `/sql` |
+| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, a site's shared configs (`/kit` SvelteKit options, `/vitest`, `/eslint`, `/prettier`), Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and workflow templates |
 
 Dependencies between them: `interactions` depends on `displays`. Nothing else depends on another
 package. The account components in `interactions/account` describe what they need from the sync
 layer as plain interfaces (`CloudStatus`, `AccountActions`, `MembersApi`); `data-storage`'s
 `CloudSync` and members API satisfy them, which [tests/compat](tests/compat) checks.
 
-## Starting a new site
+## Starting and running a site
 
-[ONBOARDING.md](ONBOARDING.md) is the recipe for a new app or website on these packages: the decisions to make,
-the files to create, the database, CI and deploys, and the traps that have bitten before.
+- [ONBOARDING.md](ONBOARDING.md) is the recipe for a new app or website on these packages: the decisions to make,
+  the files to create, the database, CI and deploys, and the traps that have bitten before.
+- [OPERATIONS.md](OPERATIONS.md) is the runbook every site shares: repository settings, migrations, the nightly
+  Database workflow, backups and restores, client errors, deploys. Its SQL is in [ops/sql](ops/sql).
 
 ## Contributing
 
@@ -30,8 +32,8 @@ Setup, the sandbox, checks, how changes reach `main` and how packages are releas
 
 ## Trying unreleased changes in an app
 
-Pack the packages (`npm run pack:all`) and install the tarballs in the app
-(`npm install ../wells-nelson-components/packs/wells-nelson-displays-0.0.0.tgz`). Once the change is
+`npm run try -- ../my-site ../my-other-site` builds and packs every package and installs the tarballs into
+each site: the packages it already uses, each in the same section of its package.json. Once the change is
 published, the app's **Use published packages** workflow (below) puts it back on npm: on the app's pull
 request it replaces each `file:…tgz` dependency with the latest published version, reinstalls, runs the
 app's checks, commits package.json and package-lock.json to the branch and runs the app's CI again.
@@ -39,14 +41,15 @@ app's checks, commits package.json and package-lock.json to the branch and runs 
 ## Reusable workflows
 
 Sites built on these packages keep almost nothing in their own workflows: each one calls a reusable
-workflow here, at `@main`, so a fix reaches every site at once. The callers are the build-tools
+workflow here, at the moving tag `@v1`, so a fix reaches every site at once once `v1` is moved to it (see
+CONTRIBUTING.md > Changes to the reusable workflows). The callers are the build-tools
 [templates](src/npm/build-tools/README.md#templates); a site only fills in its repository name or schema.
 
 | Workflow | What it does | The site's caller |
 | --- | --- | --- |
-| [site-ci.yml](.github/workflows/site-ci.yml) | Pull requests: fails on local tarball dependencies, then type-check, tests, build. The required check is **ci / Check, test and build**. | `ci.yml` (`pull_request`, `workflow_dispatch`) |
+| [site-ci.yml](.github/workflows/site-ci.yml) | Pull requests: fails on local tarball dependencies, then type-check, lint, format check, tests, build. The required check is **ci / Check, test and build**. | `ci.yml` (`pull_request`, `workflow_dispatch`) |
 | [site-deploy.yml](.github/workflows/site-deploy.yml) | `main`: reserves the next `v*` tag, builds with the site's `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BASE_PATH` variables, deploys to Pages, records a GitHub release. Inputs: `base-path`, `increment`. | `deploy.yml` (grants `contents`, `pages` and `id-token` write) |
-| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, using the site's `supabase/ops/` and its `database` environment. Input: `schema`. | `database.yml` (`schedule`) |
+| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, running this repository's [ops/sql](ops/sql) (at the same commit) in the site's `database` environment. Input: `schema`. | `database.yml` (`schedule`) |
 | [site-published-packages.yml](.github/workflows/site-published-packages.yml) | Pull requests that change package files: swaps local tarballs for published versions (`use-published-packages.yml`), then starts the site's CI on the new commit. | `published-packages.yml` (grants `contents` and `actions` write) |
 | [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own. Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
 

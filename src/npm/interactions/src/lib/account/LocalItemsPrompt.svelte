@@ -48,16 +48,13 @@
 
 <Modal bind:open title={`Sync your local ${nouns.plural}?`} onclose={skip}>
 	<p class="intro">
-		These {nouns.plural} are only on this device. Check any you want cloud-enabled so they sync across your devices and
-		can be shared.
+		These {nouns.plural} are only on this device. Check any you want cloud-enabled so they sync across your devices and can
+		be shared.
 	</p>
 	<div class="items">
 		{#each items as item (item.id)}
 			<!-- Unchecked rows have no entry; bind:checked can't take undefined for a prop with a fallback. -->
-			<Checkbox
-				label={item.name}
-				bind:checked={() => selected[item.id] ?? false, (on) => (selected[item.id] = on)}
-			/>
+			<Checkbox label={item.name} bind:checked={() => selected[item.id] ?? false, (on) => (selected[item.id] = on)} />
 		{/each}
 	</div>
 	{#if error}<p class="error">{error}</p>{/if}

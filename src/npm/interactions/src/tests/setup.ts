@@ -39,14 +39,15 @@ if (!('ResizeObserver' in globalThis)) {
 export function resize(el: Element, width: number) {
 	Object.defineProperty(el, 'clientWidth', { configurable: true, value: width });
 	for (const o of observers) {
-		if (o.targets.has(el)) o.callback([{ target: el, contentRect: { width } } as unknown as ResizeObserverEntry], o.observer);
+		if (o.targets.has(el))
+			o.callback([{ target: el, contentRect: { width } } as unknown as ResizeObserverEntry], o.observer);
 	}
 	flushSync();
 }
 
 let mounted: ReturnType<typeof mount>[] = [];
 afterEach(() => {
-	for (const m of mounted) unmount(m);
+	for (const m of mounted) void unmount(m);
 	mounted = [];
 	document.body.innerHTML = '';
 });
@@ -69,6 +70,9 @@ export async function settle() {
 
 export function button(root: ParentNode, text: string): HTMLButtonElement {
 	const found = [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === text);
-	if (!found) throw new Error(`No button "${text}" in: ${[...root.querySelectorAll('button')].map((b) => b.textContent?.trim()).join(' | ')}`);
+	if (!found)
+		throw new Error(
+			`No button "${text}" in: ${[...root.querySelectorAll('button')].map((b) => b.textContent?.trim()).join(' | ')}`
+		);
 	return found;
 }

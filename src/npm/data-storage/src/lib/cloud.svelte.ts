@@ -42,7 +42,11 @@ export function isRejection(err: unknown): boolean {
  */
 export function errorMessage(err: unknown, schema?: string): string {
 	if (err && typeof err === 'object') {
-		const e = err as { message?: string; code?: string; parameters?: { errors?: { message?: string; code?: string }[] } };
+		const e = err as {
+			message?: string;
+			code?: string;
+			parameters?: { errors?: { message?: string; code?: string }[] };
+		};
 		const inner = e.parameters?.errors?.[0];
 		const unexposed = schema ? (schemaNotExposed(inner, schema) ?? schemaNotExposed(e, schema)) : null;
 		return unexposed ?? inner?.message ?? e.message ?? String(err);
@@ -58,6 +62,12 @@ export interface CloudSyncOptions<D extends DocMap<D>> {
 	supabase: SupabaseApi;
 	/** Containers have viewer / editor / owner roles. Without roles everyone is an owner. */
 	roles?: boolean;
+	/**
+	 * `members` (default): containers are shared by email through the members table. `user`: one
+	 * container per signed-in user, whose id is the user's id; no sharing, no membership checks.
+	 * Must match the SQL (`generateMigration({ ownership })`).
+	 */
+	ownership?: 'members' | 'user';
 	storage?: StorageFactory;
 }
 
@@ -85,6 +95,7 @@ export class CloudSync<D extends DocMap<D>> {
 	#app: AppState<D>;
 	#sb: SupabaseApi;
 	#roles: boolean;
+	#ownership: 'members' | 'user';
 	#storage: StorageFactory | undefined;
 	#state: Persisted<UserSyncState>;
 	#replications: RxSupabaseReplicationState<any>[] = [];
@@ -108,6 +119,7 @@ export class CloudSync<D extends DocMap<D>> {
 		this.#app = options.app;
 		this.#sb = options.supabase;
 		this.#roles = options.roles ?? false;
+		this.#ownership = options.ownership ?? 'members';
 		this.#storage = options.storage;
 		this.configured = options.supabase.configured;
 		this.#state = new Persisted<UserSyncState>(this.#stateKey('anonymous'), emptyState());
@@ -289,7 +301,12 @@ export class CloudSync<D extends DocMap<D>> {
 					this.error = errorMessage(err, this.#sb.schema);
 					if (isRejection(err)) this.rejectedWrite = this.error;
 					// Offline failures are expected; anything else is worth knowing about.
-					if (isRejection(err) || this.online) reportError('sync', this.error, `${name} ${(err as { parameters?: { direction?: string } }).parameters?.direction ?? ''}`);
+					if (isRejection(err) || this.online)
+						reportError(
+							'sync',
+							this.error,
+							`${name} ${(err as { parameters?: { direction?: string } }).parameters?.direction ?? ''}`
+						);
 				}),
 				rep.active$.subscribe((isActive) => {
 					if (isActive) this.#activeReps.add(index);
@@ -394,7 +411,8 @@ export class CloudSync<D extends DocMap<D>> {
 	/** Detect cloud containers this user no longer has access to (someone unshared them). */
 	async checkMemberships(force = false) {
 		const ds = this.#app.cloud;
-		if (!ds || !this.online || !this.email) return;
+		// Nobody else can add or remove us from a container we own outright.
+		if (this.#ownership === 'user' || !ds || !this.online || !this.email) return;
 		if (!force && Date.now() - this.#lastMembershipCheck < MEMBERSHIP_CHECK_INTERVAL) return;
 		this.#lastMembershipCheck = Date.now();
 		try {

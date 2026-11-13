@@ -65,7 +65,15 @@ describe('ShareModal', () => {
 			{ id: 'm2', email: 'editor@x.com', active: true, role: 'editor' }
 		]);
 		const cloud = fakeCloud();
-		render(ShareModal, { ...base, location: 'cloud', roles: true, role: 'owner', cloud, members: api, onmakecloud: vi.fn() });
+		render(ShareModal, {
+			...base,
+			location: 'cloud',
+			roles: true,
+			role: 'owner',
+			cloud,
+			members: api,
+			onmakecloud: vi.fn()
+		});
 		await settle();
 		const selects = [...document.querySelectorAll('select')];
 		expect(selects).toHaveLength(2);
@@ -84,7 +92,13 @@ describe('ShareModal', () => {
 	});
 
 	it('asks to sign in first', () => {
-		render(ShareModal, { ...base, location: 'local', cloud: fakeCloud({ user: null, email: '' }), members: fakeApi([]), onmakecloud: vi.fn() });
+		render(ShareModal, {
+			...base,
+			location: 'local',
+			cloud: fakeCloud({ user: null, email: '' }),
+			members: fakeApi([]),
+			onmakecloud: vi.fn()
+		});
 		expect(document.querySelector('a[href="/profile"]')).not.toBeNull();
 	});
 });
@@ -163,7 +177,15 @@ describe('ContainerEditModal', () => {
 			{ id: 'm1', email: 'me@x.com', active: true, role: 'owner' },
 			{ id: 'm2', email: 'fan@x.com', active: true, role: 'viewer' }
 		]);
-		render(ContainerEditModal, { ...base, ...handlers(), roles: true, role: 'owner', location: 'cloud', cloud: fakeCloud(), members: api });
+		render(ContainerEditModal, {
+			...base,
+			...handlers(),
+			roles: true,
+			role: 'owner',
+			location: 'cloud',
+			cloud: fakeCloud(),
+			members: api
+		});
 		await settle();
 		expect(button(document, 'Delete project')).toBeTruthy();
 	});
@@ -224,7 +246,15 @@ describe('ShareModal without member status', () => {
 			{ id: 'm2', email: 'owner@x.com', active: null, role: 'owner' }
 		]);
 		const cloud = fakeCloud();
-		render(ShareModal, { ...base, location: 'cloud', cloud, members: api, roles: true, role: 'viewer', onmakecloud: vi.fn() });
+		render(ShareModal, {
+			...base,
+			location: 'cloud',
+			cloud,
+			members: api,
+			roles: true,
+			role: 'viewer',
+			onmakecloud: vi.fn()
+		});
 		await settle();
 		const dialog = document.querySelector('dialog')!;
 		expect(dialog.textContent).toContain('owner@x.com');
@@ -243,7 +273,15 @@ describe('DeviceDataCard', () => {
 		const onexport = vi.fn(async () => ({ format: 'x' }));
 		URL.createObjectURL = vi.fn(() => 'blob:x');
 		URL.revokeObjectURL = vi.fn();
-		const root = render(DeviceDataCard, { nouns, items, persisted: false, onpersist, onexport, onimport: vi.fn(), filename: 'demo' });
+		const root = render(DeviceDataCard, {
+			nouns,
+			items,
+			persisted: false,
+			onpersist,
+			onexport,
+			onimport: vi.fn(),
+			filename: 'demo'
+		});
 		expect(root.textContent).toContain('The browser may clear it');
 		button(root, 'Keep data on this device').click();
 		await settle();
@@ -259,7 +297,14 @@ describe('DeviceDataCard', () => {
 
 	it('imports a file and says what was added, or why not', async () => {
 		const onimport = vi.fn(async () => ['n1', 'n2']);
-		const root = render(DeviceDataCard, { nouns, items, persisted: true, onexport: vi.fn(), onimport, filename: 'demo' });
+		const root = render(DeviceDataCard, {
+			nouns,
+			items,
+			persisted: true,
+			onexport: vi.fn(),
+			onimport,
+			filename: 'demo'
+		});
 		expect(root.textContent).toContain('Stored permanently');
 		const input = root.querySelector<HTMLInputElement>('input[type=file]')!;
 		const pick = (text: string) => {

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Icon } from '@wells-nelson/displays';
 
-	let { placeholder, label, onadd }: { placeholder: string; label: string; onadd: (name: string) => void } =
-		$props();
+	let { placeholder, label, onadd }: { placeholder: string; label: string; onadd: (name: string) => void } = $props();
 
 	let value = $state('');
 	let input: HTMLInputElement | undefined = $state();

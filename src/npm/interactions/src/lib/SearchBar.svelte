@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { Icon, IconButton } from '@wells-nelson/displays';
 
-	let { value = $bindable(''), placeholder = 'Search', clearLabel = 'Clear search' }: { value?: string; placeholder?: string; clearLabel?: string } =
-		$props();
+	let {
+		value = $bindable(''),
+		placeholder = 'Search',
+		clearLabel = 'Clear search'
+	}: { value?: string; placeholder?: string; clearLabel?: string } = $props();
 </script>
 
 <div class="search-bar">

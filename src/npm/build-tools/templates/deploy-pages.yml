@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   deploy:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@main
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v1
     permissions:
       contents: write
       pages: write

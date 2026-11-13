@@ -45,7 +45,12 @@ const listsConfig: MigrationConfig = {
 		{ name: 'lists', columns: { name: 'text', created_at: 'number', updated_at: 'number' } },
 		{
 			name: 'entries',
-			columns: { list_id: { type: 'text', default: null }, name: 'text', checked: { type: 'boolean', default: 'true' }, updated_at: 'number' }
+			columns: {
+				list_id: { type: 'text', default: null },
+				name: 'text',
+				checked: { type: 'boolean', default: 'true' },
+				updated_at: 'number'
+			}
 		}
 	]
 };
@@ -64,7 +69,9 @@ describe('generateMigration', () => {
 		expect(sql).toContain(`'create policy "editors insert" on public.%1$s`);
 		expect(sql).toContain('create or replace function public.get_project_members(p_project_id text)');
 		expect(sql).toContain('returns table (id uuid, email text, role public.project_role, active boolean)');
-		expect(sql).toContain('    update public.task_links set _modified = clock_timestamp() where project_id = new.project_id;');
+		expect(sql).toContain(
+			'    update public.task_links set _modified = clock_timestamp() where project_id = new.project_id;'
+		);
 		expect(sql).toContain('  add table public.projects, public.tasks, public.task_links;');
 		// Sections are separated by blank lines.
 		expect(sql).toContain('$$;\n\n-- ---------------------------------------------------------------- membership');
@@ -77,11 +84,17 @@ describe('generateMigration', () => {
 		// Two owners demoting each other at once: the second waits for the first.
 		expect(sql).toContain('perform 1 from public.projects where id = old.project_id for update;');
 		// Nothing new goes into a deleted project.
-		expect(sql).toContain("with check (public.is_project_member(project_id, 'owner') and public.is_project_live(project_id));");
-		expect(sql).toContain('with check (public.is_project_member(project_id, %2$L) and public.is_project_live(project_id))');
+		expect(sql).toContain(
+			"with check (public.is_project_member(project_id, 'owner') and public.is_project_live(project_id));"
+		);
+		expect(sql).toContain(
+			'with check (public.is_project_member(project_id, %2$L) and public.is_project_live(project_id))'
+		);
 		expect(sql).toContain("with check (auth.uid() is not null and public.current_email() <> '');");
 		// "active" only for owners, and only "signed in since invited".
-		expect(sql).toContain("case when public.is_project_member(p_project_id, 'owner') or m.email = public.current_email() then");
+		expect(sql).toContain(
+			"case when public.is_project_member(p_project_id, 'owner') or m.email = public.current_email() then"
+		);
 		expect(sql).toContain('u.last_sign_in_at >= m.created_at');
 		expect(sql).toContain("or (role = 'owner' and public.is_project_member(project_id))");
 	});
@@ -89,7 +102,9 @@ describe('generateMigration', () => {
 	it('gives signed-out callers nothing but error reporting', () => {
 		const sql = generateMigration(projectsConfig);
 		expect(sql).toContain('create table public.client_errors (');
-		expect(sql).toContain('revoke all on function public.is_project_member(text, public.project_role) from public, anon;');
+		expect(sql).toContain(
+			'revoke all on function public.is_project_member(text, public.project_role) from public, anon;'
+		);
 		expect(sql).toContain('revoke all on function public.current_email() from public, anon;');
 		expect(sql).toContain(
 			'grant execute on function public.report_client_error(text, text, text, text, text, text) to anon, authenticated;'
@@ -111,7 +126,9 @@ describe('generateMigration', () => {
 		const sql = generateMigration({ ...listsConfig, schema: 'demo_lists' });
 		expect(sql).toContain('create schema if not exists demo_lists;');
 		expect(sql).toContain('grant usage on schema demo_lists to anon, authenticated, service_role;');
-		expect(sql).toContain('alter default privileges in schema demo_lists grant all on tables to authenticated, service_role;');
+		expect(sql).toContain(
+			'alter default privileges in schema demo_lists grant all on tables to authenticated, service_role;'
+		);
 		expect(sql).not.toMatch(/default privileges.*anon/);
 		// Default privileges are set before the first table exists.
 		expect(sql.indexOf('alter default privileges')).toBeLessThan(sql.indexOf('create table'));
@@ -119,7 +136,9 @@ describe('generateMigration', () => {
 		expect(sql).toContain('create or replace function demo_lists.current_email()');
 		expect(sql).toContain('set search_path = demo_lists\n');
 		expect(sql).toContain('set search_path = demo_lists, auth\n');
-		expect(sql).toContain('select 1 from auth.users u where lower(u.email) = m.email and u.last_sign_in_at >= m.created_at');
+		expect(sql).toContain(
+			'select 1 from auth.users u where lower(u.email) = m.email and u.last_sign_in_at >= m.created_at'
+		);
 		expect(sql).toContain('revoke all on function demo_lists.get_list_collaborators(text) from public, anon;');
 		expect(sql).toContain('  add table demo_lists.lists, demo_lists.entries;');
 		expect(sql).not.toMatch(/public\./);

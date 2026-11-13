@@ -40,7 +40,12 @@ export type Docs = { projects: ProjectDoc; tasks: TaskDoc; task_links: TaskLinkD
 export const collections = ['projects', 'tasks', 'task_links', 'notes'] as const;
 
 export const schemas = {
-	projects: flatSchema<ProjectDoc>({ id: field.id, name: field.string, created_at: field.number, updated_at: field.number }),
+	projects: flatSchema<ProjectDoc>({
+		id: field.id,
+		name: field.string,
+		created_at: field.number,
+		updated_at: field.number
+	}),
 	tasks: flatSchema<TaskDoc>({
 		id: field.id,
 		project_id: field.string,

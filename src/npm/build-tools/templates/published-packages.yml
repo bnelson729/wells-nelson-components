@@ -15,7 +15,7 @@ on:
 
 jobs:
   packages:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@main
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@v1
     permissions:
       contents: write
       actions: write

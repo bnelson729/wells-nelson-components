@@ -15,11 +15,12 @@ name: Site database
 #     workflow_dispatch:
 #   jobs:
 #     database:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@main
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@v1
 #       with:
 #         schema: my_site
 #
-# Runs the site's own SQL from supabase/ops/ (build-tools templates `supabase-ops/`). Both jobs run in
+# Runs the library's SQL from ops/sql/ (at the same commit as this workflow), for the given schema;
+# the site keeps none of it. Both jobs run in
 # the site repository's `database` environment (limited to main), which holds the variable
 # SUPABASE_DB_URL (the session pooler connection string, without the password) and the secret
 # SUPABASE_DB_PASSWORD (given to psql as PGPASSWORD; it also encrypts the backups). The keep-alive
@@ -57,7 +58,14 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the shared SQL
+        uses: actions/checkout@v4
+        with:
+          repository: bnelson729/wells-nelson-components
+          # The commit this reusable workflow runs from, so the SQL matches it.
+          ref: ${{ github.job_workflow_sha || 'main' }}
+          path: .wn
+          sparse-checkout: ops/sql
       - name: Install the Postgres client
         run: &install-psql |
           sudo apt-get install -y -q postgresql-common
@@ -72,7 +80,7 @@ jobs:
         run: |
           stamp=$(date -u +%Y-%m-%dT%H%MZ)
           echo "FILE=$SCHEMA-$stamp.dump" >> "$GITHUB_ENV"
-          count() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -f supabase/ops/row-counts.sql | LC_ALL=C sort; }
+          count() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -v schema="$SCHEMA" -f .wn/ops/sql/row-counts.sql | LC_ALL=C sort; }
           # Row counts right before and after the dump: the restore must land in between.
           count > counts-before.txt
           pg_dump "$SUPABASE_DB_URL" --schema="$SCHEMA" --format=custom --no-owner --file="$SCHEMA-$stamp.dump"
@@ -84,9 +92,9 @@ jobs:
           SCRATCH: postgres://postgres:scratch@localhost:5432/postgres
         run: |
           # The parts of a Supabase database the schema refers to (roles, auth, realtime).
-          psql "$SCRATCH" -v ON_ERROR_STOP=1 -qf supabase/ops/scratch-stub.sql
+          psql "$SCRATCH" -v ON_ERROR_STOP=1 -qf .wn/ops/sql/scratch-stub.sql
           pg_restore --dbname="$SCRATCH" --no-owner --exit-on-error "$FILE"
-          psql "$SCRATCH" -v ON_ERROR_STOP=1 -At -f supabase/ops/row-counts.sql | LC_ALL=C sort > counts-restored.txt
+          psql "$SCRATCH" -v ON_ERROR_STOP=1 -At -v schema="$SCHEMA" -f .wn/ops/sql/row-counts.sql | LC_ALL=C sort > counts-restored.txt
           # table before after restored, for every table counted before the dump.
           LC_ALL=C join counts-before.txt counts-after.txt | LC_ALL=C join - counts-restored.txt > counts.txt
           if [ "$(wc -l < counts.txt)" -ne "$(wc -l < counts-before.txt)" ]; then
@@ -116,7 +124,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: database
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the shared SQL
+        uses: actions/checkout@v4
+        with:
+          repository: bnelson729/wells-nelson-components
+          # The commit this reusable workflow runs from, so the SQL matches it.
+          ref: ${{ github.job_workflow_sha || 'main' }}
+          path: .wn
+          sparse-checkout: ops/sql
 
       - name: Keep the project awake
         env:
@@ -134,7 +149,7 @@ jobs:
           SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          problems=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atf supabase/ops/security-lint.sql)
+          problems=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -v schema="$SCHEMA" -f .wn/ops/sql/security-lint.sql)
           if [ -n "$problems" ]; then
             echo "### Security lint failed" >> "$GITHUB_STEP_SUMMARY"
             echo "$problems" | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
@@ -148,7 +163,7 @@ jobs:
           SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          errors=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -F ' | ' -f supabase/ops/client-errors.sql)
+          errors=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -F ' | ' -v schema="$SCHEMA" -f .wn/ops/sql/client-errors.sql)
           if [ -n "$errors" ]; then
             {
               echo "### Client errors in the last 24 hours"

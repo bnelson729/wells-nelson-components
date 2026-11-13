@@ -1,19 +1,19 @@
 {
-  "name": "@wells-nelson/sandbox",
-  "private": true,
-  "version": "0.0.0",
-  "description": "Dev sandbox: every package's components and helpers against mock data, built from source.",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "bundle": "vite build",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
-  },
-  "devDependencies": {
-    "@supabase/supabase-js": "^2.119.0",
-    "@tanstack/db": "^1.0.0-rc.1.4",
-    "@tanstack/rxdb-db-collection": "^1.0.0-rc.1.4",
-    "rxdb": "^17.6.0",
-    "rxjs": "^7.8.2"
-  }
+	"name": "@wells-nelson/sandbox",
+	"private": true,
+	"version": "0.0.0",
+	"description": "Dev sandbox: every package's components and helpers against mock data, built from source.",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"bundle": "vite build",
+		"check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+	},
+	"devDependencies": {
+		"@supabase/supabase-js": "^2.119.0",
+		"@tanstack/db": "^1.0.0-rc.1.4",
+		"@tanstack/rxdb-db-collection": "^1.0.0-rc.1.4",
+		"rxdb": "^17.6.0",
+		"rxjs": "^7.8.2"
+	}
 }

@@ -86,7 +86,10 @@ export class MockCloud implements CloudStatus, AccountActions, MembersApi {
 	inviteMember(containerId: string, email: string, role?: Role) {
 		return this.#call(`inviteMember(${containerId}, ${email}, ${role})`, () => {
 			if (this.members.some((m) => m.email === email.toLowerCase())) throw new Error('That email already has access.');
-			this.members = [...this.members, { id: crypto.randomUUID(), email: email.toLowerCase(), active: false, role: role ?? null }];
+			this.members = [
+				...this.members,
+				{ id: crypto.randomUUID(), email: email.toLowerCase(), active: false, role: role ?? null }
+			];
 		});
 	}
 	removeMember(memberId: string) {

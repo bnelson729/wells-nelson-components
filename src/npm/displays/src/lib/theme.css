@@ -178,6 +178,25 @@ button {
 	}
 }
 
+/*
+ * Touch feedback for apps (`touch-app`), like a native button: a pressed control dims right away and
+ * fades back when released. Touch screens only; the mouse has hover states instead. iOS needs a
+ * touch listener for `:active` to apply (`touchFeedback()` from @wells-nelson/interactions).
+ */
+@media (hover: none) {
+	.touch-app a,
+	.touch-app button,
+	.touch-app label {
+		transition: opacity 0.25s ease-out;
+	}
+	.touch-app a:active,
+	.touch-app button:active:not(:disabled),
+	.touch-app label:active {
+		opacity: 0.45;
+		transition: opacity 0.05s linear;
+	}
+}
+
 .visually-hidden {
 	position: absolute !important;
 	width: 1px;

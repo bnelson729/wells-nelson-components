@@ -15,4 +15,4 @@ permissions:
 
 jobs:
   ci:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@main
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v1

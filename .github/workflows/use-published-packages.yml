@@ -14,7 +14,7 @@ name: Use published packages
 #     contents: write
 #   jobs:
 #     packages:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
+#       uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@v1
 #       with:
 #         verify: npm run check && npm run build
 #

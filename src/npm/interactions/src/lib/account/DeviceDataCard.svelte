@@ -42,7 +42,12 @@
 		typeof navigator !== 'undefined' && (navigator as Navigator & { standalone?: boolean }).standalone === false;
 
 	function slug(name: string) {
-		return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || nouns.singular;
+		return (
+			name
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, '-')
+				.replace(/^-|-$/g, '') || nouns.singular
+		);
 	}
 
 	async function download(which: typeof items, label: string) {

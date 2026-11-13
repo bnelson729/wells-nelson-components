@@ -104,11 +104,12 @@
 	$effect(() => {
 		if (!isCloud || !signedIn || !cloud.online) return;
 		// Only the conditions above should re-run this, not state the API happens to read.
-		untrack(() =>
-			api
-				.fetchMembers(containerId)
-				.then((m) => (list = m))
-				.catch(() => (list = null))
+		untrack(
+			() =>
+				void api
+					.fetchMembers(containerId)
+					.then((m) => (list = m))
+					.catch(() => (list = null))
 		);
 	});
 

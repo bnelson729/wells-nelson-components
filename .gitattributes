@@ -1,0 +1,5 @@
+# LF everywhere, whatever the OS or editor: diffs and scripted edits stay clean.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.tgz binary

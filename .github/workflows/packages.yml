@@ -5,7 +5,8 @@ name: Packages
 # Pushes to main (and manual runs) then publish to npm. Each package has its own semver,
 # tracked by git tags named after the package, e.g. `@wells-nelson/displays@1.4.2`. A package
 # is released when its shipped files changed since its last tag; its next version comes from
-# reecetech/version-increment (patch by default; a manual run can bump minor or major).
+# reecetech/version-increment. The bump is a patch unless a commit since the package's last release
+# has a line `Release: minor` or `Release: major` (the biggest wins); a manual run can choose one.
 # Setup (npm org, auth, GitHub settings): see PUBLISHING.md.
 
 on:
@@ -19,10 +20,10 @@ on:
         type: string
         default: ''
       increment:
-        description: Version part to increment
+        description: "Version part to increment (auto: from the commits' Release: lines, else patch)"
         type: choice
-        options: [patch, minor, major]
-        default: patch
+        options: [auto, patch, minor, major]
+        default: auto
 
 permissions:
   contents: read
@@ -95,6 +96,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # The same small lint rule set and formatting the sites use.
+      - run: npm run lint
+      - run: npm run format:check
       # data-storage's CloudSync / members API must satisfy the interfaces the account UI in
       # interactions expects (they don't depend on each other at runtime).
       - run: npm run check:compat
@@ -113,6 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.plan.outputs.packages }}
+      increments: ${{ steps.plan.outputs.increments }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -124,6 +129,7 @@ jobs:
       - id: plan
         env:
           PACKAGES: ${{ inputs.packages }}
+          INCREMENT: ${{ inputs.increment != 'auto' && inputs.increment || '' }}
         run: node scripts/release/plan.mjs
 
   publish:
@@ -166,7 +172,7 @@ jobs:
         uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6
         with:
           scheme: semver
-          increment: ${{ inputs.increment || 'patch' }}
+          increment: ${{ fromJSON(needs.plan.outputs.increments)[matrix.package] }}
           tag_prefix: ${{ steps.meta.outputs.name }}@
 
       # If an earlier run published this version but failed before pushing its tag, tag the
@@ -189,7 +195,7 @@ jobs:
         uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6
         with:
           scheme: semver
-          increment: ${{ inputs.increment || 'patch' }}
+          increment: ${{ fromJSON(needs.plan.outputs.increments)[matrix.package] }}
           tag_prefix: ${{ steps.meta.outputs.name }}@
 
       - id: version

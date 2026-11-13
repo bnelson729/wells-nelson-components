@@ -28,7 +28,9 @@
 	let emailLink = $state(true);
 	let isDefault = $state(false);
 	let sample = $state(false);
-	const localOnlyReason = $derived(sample ? 'This is the built-in sample project. It stays on this device.' : undefined);
+	const localOnlyReason = $derived(
+		sample ? 'This is the built-in sample project. It stays on this device.' : undefined
+	);
 	let modal = $state<'share' | 'edit' | 'prompt' | null>(null);
 	let containerName = $state('Website refresh');
 
@@ -55,7 +57,10 @@
 	}
 </script>
 
-<Panel title="Mock sync state" note="Every switch feeds the components below through the same interfaces data-storage implements.">
+<Panel
+	title="Mock sync state"
+	note="Every switch feeds the components below through the same interfaces data-storage implements."
+>
 	<div class="grid">
 		<Toggle label="Cloud configured" bind:checked={cloud.configured} />
 		<Toggle label="Signed in" bind:checked={cloud.signedIn} />
@@ -81,7 +86,10 @@
 	<AccountPanel {cloud} account={cloud} {nouns} appName="Demo" {returnUrl} pendingName={nameOf} {emailLink} />
 </Panel>
 
-<Panel title="DeviceDataCard" note="Storage status and backups on the profile. Export downloads a mock file; import it again (Fail the next call makes the import fail).">
+<Panel
+	title="DeviceDataCard"
+	note="Storage status and backups on the profile. Export downloads a mock file; import it again (Fail the next call makes the import fail)."
+>
 	<Segmented
 		label="Browser keeps the data"
 		bind:value={keeps}
@@ -129,7 +137,9 @@
 		/>
 	{/if}
 	<p class="muted small">
-		Members: {cloud.members.map((m) => `${m.email} (${roles ? m.role : 'member'}${m.active ? '' : ', pending'})`).join(', ')}
+		Members: {cloud.members
+			.map((m) => `${m.email} (${roles ? m.role : 'member'}${m.active ? '' : ', pending'})`)
+			.join(', ')}
 	</p>
 	<div class="row">
 		<Button icon="share" onclick={() => (modal = 'share')}>ShareModal</Button>

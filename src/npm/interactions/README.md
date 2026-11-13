@@ -52,12 +52,25 @@ needs an opaque background: set `--section-header-bg` to whatever it sits on (de
   for ordered zones and the scroll position restored after the drop. Both actions use the same
   press detection (`watchPress`).
 
-## Zoom
+## App shell and start-up
 
-`preventZoom()` stops pinch and double-tap zoom (iPad and iPhone Safari, the home-screen app and
-Android) for app-like screens; call it once on the client, e.g. in the root layout's `onMount`. It
-returns a function that undoes it. People who rely on zooming lose it, so keep text and controls
-big enough without.
+```svelte
+<main class="main">
+	<SyncBanners {app} {cloud} />  <!-- rejected and failed writes; titles and hint are props -->
+	{@render children()}
+</main>
+```
+
+For apps, in the root layout's `onMount` (each returns a function that undoes it):
+
+- `checkForUpdatesOnStart({ dev })`: asks the browser for a new service worker now and whenever the app
+  returns to the foreground; `AppVersion` offers the reload.
+- `touchFeedback()`: the empty touch listener iOS needs before the theme's touch feedback (`touch-app`)
+  applies.
+- `preventZoom()`: stops pinch and double-tap zoom (iPad and iPhone Safari, the home-screen app and
+  Android). People who rely on zooming lose it, so keep text and controls big enough without.
+
+`errorText(err)` turns an error into one line for the UI: show it where an awaited action failed.
 
 ## Undo
 

@@ -50,10 +50,18 @@ describe('replicationClient', () => {
 });
 
 describe('createSupabaseApi', () => {
-	const members = { table: 'list_members', containerField: 'list_id', membersRpc: 'get_list_members', roles: false, noun: 'list' };
+	const members = {
+		table: 'list_members',
+		containerField: 'list_id',
+		membersRpc: 'get_list_members',
+		roles: false,
+		noun: 'list'
+	};
 
 	it('defaults to the public schema', () => {
-		expect(createSupabaseApi({ supabaseUrl: '', supabaseAnonKey: '', cloudConfigured: false }, members).schema).toBe('public');
+		expect(createSupabaseApi({ supabaseUrl: '', supabaseAnonKey: '', cloudConfigured: false }, members).schema).toBe(
+			'public'
+		);
 	});
 
 	it('uses the configured schema for the client', async () => {
@@ -74,14 +82,26 @@ describe('unexposed schema errors', () => {
 
 	it('turns the API error into the setting to change', () => {
 		expect(schemaNotExposed({ code: 'PGRST106', message: 'Invalid schema: demo_lists' }, 'demo_lists')).toBe(hint);
-		expect(schemaNotExposed({ message: 'The schema must be one of the following: public, graphql_public' }, 'demo_lists')).toBe(hint);
+		expect(
+			schemaNotExposed({ message: 'The schema must be one of the following: public, graphql_public' }, 'demo_lists')
+		).toBe(hint);
 		expect(schemaNotExposed({ code: '42501', message: 'permission denied' }, 'demo_lists')).toBeNull();
-		expect(friendlyError({ code: 'PGRST106', message: 'Invalid schema: demo_lists' }, 'list', 'demo_lists').message).toBe(hint);
+		expect(
+			friendlyError({ code: 'PGRST106', message: 'Invalid schema: demo_lists' }, 'list', 'demo_lists').message
+		).toBe(hint);
 	});
 
 	it('explains replication errors too', () => {
-		const replicationError = { message: 'RC_PULL', parameters: { direction: 'pull', errors: [{ code: 'PGRST106', message: 'Invalid schema: demo_lists' }] } };
+		const replicationError = {
+			message: 'RC_PULL',
+			parameters: { direction: 'pull', errors: [{ code: 'PGRST106', message: 'Invalid schema: demo_lists' }] }
+		};
 		expect(errorMessage(replicationError, 'demo_lists')).toBe(hint);
-		expect(errorMessage({ message: 'RC_PULL', parameters: { errors: [{ code: '08006', message: 'Failed to fetch' }] } }, 'demo_lists')).toBe('Failed to fetch');
+		expect(
+			errorMessage(
+				{ message: 'RC_PULL', parameters: { errors: [{ code: '08006', message: 'Failed to fetch' }] } },
+				'demo_lists'
+			)
+		).toBe('Failed to fetch');
 	});
 });

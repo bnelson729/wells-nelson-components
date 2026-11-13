@@ -17,6 +17,6 @@ permissions:
 
 jobs:
   database:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@main
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@v1
     with:
       schema: __SCHEMA__

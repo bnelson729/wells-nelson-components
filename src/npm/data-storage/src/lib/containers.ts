@@ -30,6 +30,12 @@ export interface ContainerOpsOptions<D extends DocMap<D>, C extends CollectionNa
 	prefs: DevicePrefs;
 	supabase: SupabaseApi;
 	roles?: boolean;
+	/**
+	 * `members` (default): containers are shared by email through the members table. `user`: one
+	 * container per signed-in user, whose id is the user's id; no sharing, no membership checks.
+	 * Must match the SQL (`generateMigration({ ownership })`).
+	 */
+	ownership?: 'members' | 'user';
 	/** Fields per collection holding ids of other rows in the same container, e.g. `{ items: ['category_id'] }`. */
 	refs?: { [N in CollectionName<D>]?: (keyof D[N] & string)[] };
 	remap?: RemapHook<D>;
@@ -63,6 +69,8 @@ export interface ContainerExport {
 	containers: Record<string, Record<string, unknown>[]>[];
 }
 
+type Scalar = string | number | boolean;
+
 export const now = () => Date.now();
 export const uid = () => crypto.randomUUID();
 
@@ -80,6 +88,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	const { schema, app, cloud, tombstones, prefs, supabase, remap } = options;
 	const refs = (options.refs ?? {}) as Record<string, string[] | undefined>;
 	const roles = options.roles ?? false;
+	const userOwned = options.ownership === 'user';
 	const { container, containerField, collections } = schema;
 
 	function rx<N extends CollectionName<D>>(ds: DataSet<D>, name: N) {
@@ -91,28 +100,54 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		if (ds.location === 'cloud') cloud.markPending(containerId);
 	}
 
-	/** Delete documents. `updated_at` is bumped first so the deletion wins last-write-wins conflicts. */
+	/**
+	 * Delete documents. `updated_at` is bumped first so the deletion wins last-write-wins conflicts.
+	 * Never rejects: like `insertDoc` and `patch`, a failed local write is reported and shown
+	 * (`app.writeError`), so callers `await` it only to order their steps.
+	 */
 	async function removeDocs<N extends CollectionName<D>>(ds: DataSet<D>, name: N, ids: string[]) {
 		if (ids.length === 0) return;
 		// Gone from the UI right away, and stays gone if a sync briefly brings an old copy back.
 		tombstones.hide(ds.location, ids);
-		const coll = rx(ds, name);
-		const found = await coll.findByIds(ids).exec();
-		if (found.size === 0) return;
-		const t = now();
-		await coll.bulkUpsert([...found.values()].map((d) => ({ ...d.toMutableJSON(), updated_at: t }) as any));
-		await coll.bulkRemove([...found.keys()]);
+		try {
+			const coll = rx(ds, name);
+			const found = await coll.findByIds(ids).exec();
+			if (found.size === 0) return;
+			const t = now();
+			await coll.bulkUpsert([...found.values()].map((d) => ({ ...d.toMutableJSON(), updated_at: t }) as any));
+			await coll.bulkRemove([...found.keys()]);
+		} catch (err) {
+			writeFailed(err);
+		}
 	}
 
+	/** Rows matching every field: a value, or `{ $in: [...] }` for any of several. */
 	async function docsWhere<N extends CollectionName<D>>(
 		ds: DataSet<D>,
 		name: N,
-		selector: Partial<Record<keyof D[N] & string, string | number | boolean>>
+		selector: Partial<Record<keyof D[N] & string, Scalar | { $in: Scalar[] }>>
 	): Promise<D[N][]> {
 		const docs = await rx(ds, name)
 			.find({ selector: selector as any })
 			.exec();
 		return docs.map((d) => d.toMutableJSON() as D[N]);
+	}
+
+	/**
+	 * Write many rows of one container at once and wait until they're stored: inserted or replaced
+	 * whole, each with a fresh `updated_at`, and the container marked changed. Throws when any
+	 * row couldn't be written (nothing is reported for you: the caller shows the error and can
+	 * retry, since the same rows can be written again). For single rows that never need awaiting,
+	 * use `insertDoc` / `patch`.
+	 */
+	async function bulkWrite<N extends CollectionName<D>>(ds: DataSet<D>, name: N, docs: D[N][], containerId: string) {
+		if (docs.length === 0) return;
+		const t = now();
+		const result = await rx(ds, name).bulkUpsert(docs.map((d) => ({ ...d, updated_at: t })) as never[]);
+		touch(ds, containerId);
+		if (result.error.length) {
+			throw new Error(`${result.error.length} of ${docs.length} ${name} rows couldn't be saved.`);
+		}
 	}
 
 	/** Insert one row through TanStack DB (optimistic) and mark its container changed. */
@@ -146,7 +181,11 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 
 	/** Create a container (`id`, `updated_at` and, when the schema has it, `created_at` are filled in). */
 	function createContainer(ds: DataSet<D>, fields: Omit<D[C], 'id' | 'updated_at' | 'created_at'>): string {
-		const id = uid();
+		// User-owned: the signed-in user's own container, so its id is theirs.
+		if (userOwned && !(ds.location === 'cloud' && cloud.user)) {
+			throw new Error('A user-owned container is created in the cloud data set, while signed in.');
+		}
+		const id = userOwned ? cloud.user!.id : uid();
 		const t = now();
 		const hasCreatedAt = 'created_at' in ((schema.schemas[container] as { properties: object }).properties ?? {});
 		const doc = { ...fields, id, updated_at: t, ...(hasCreatedAt ? { created_at: t } : {}) } as unknown as D[C];
@@ -214,7 +253,11 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		for (const name of collections) {
 			const refFields = refs[name] ?? [];
 			(rows as Record<string, unknown[]>)[name] = docs[name].map((d) => {
-				const row: Record<string, unknown> = { ...(d as object), id: name === container ? cid : map(d.id), updated_at: t };
+				const row: Record<string, unknown> = {
+					...(d as object),
+					id: name === container ? cid : map(d.id),
+					updated_at: t
+				};
 				if (name !== container) row[containerField] = cid;
 				for (const f of refFields) row[f] = map(row[f] as string);
 				return remap ? remap(name, row as unknown as D[typeof name], map) : row;
@@ -231,7 +274,11 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 			cloud.expectNewContainer(cid);
 		}
 		// Rows deliberately written again (e.g. a container moved back here) must not stay hidden.
-		for (const name of collections) tombstones.unhide(to.location, rows[name].map((r) => r.id));
+		for (const name of collections)
+			tombstones.unhide(
+				to.location,
+				rows[name].map((r) => r.id)
+			);
 		await insertContainerDocs(to, rows);
 		return cid;
 	}
@@ -282,7 +329,8 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		if (!file || file.format !== 'wells-nelson-containers' || !Array.isArray(file.containers)) {
 			throw new Error('This file is not a backup of this app.');
 		}
-		if (file.version !== 1) throw new Error('This backup was made by a newer version of the app. Update the app first.');
+		if (file.version !== 1)
+			throw new Error('This backup was made by a newer version of the app. Update the app first.');
 		if (options.appKey && file.app !== options.appKey) throw new Error('This backup is from a different app.');
 		// Check everything before writing anything.
 		const parsed = file.containers.map((entry) => {
@@ -319,6 +367,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	}
 
 	async function otherMembers(containerId: string): Promise<Member[]> {
+		if (userOwned) return [];
 		requireOnline();
 		const members = await supabase.fetchMembers(containerId);
 		return members.filter((m) => m.email !== cloud.email);
@@ -328,6 +377,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 
 	/** local-only -> cloud-enabled. Same ids; uploads (or queues the upload when offline). */
 	async function makeCloud(containerId: string) {
+		if (userOwned) throw new Error('User-owned containers only exist in the cloud.');
 		const local = app.dataSet('local');
 		await copyContainer(local, app.dataSet('cloud'), containerId, false);
 		await removeContainerDocs(local, containerId);
@@ -433,6 +483,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		touch,
 		removeDocs,
 		docsWhere,
+		bulkWrite,
 		insertDoc,
 		patch,
 		createContainer,

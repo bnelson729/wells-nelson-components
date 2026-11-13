@@ -48,8 +48,10 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
 `store` holds:
 
 - `app`: `local` / `cloud` data sets (`DataSet`: the RxDB database plus a TanStack DB
-  collection per RxDB collection), `ready`, `fatal`, `writeError` (a local write that failed;
-  show it until dismissed) and `persisted` (whether the browser keeps the data for good).
+  collection per RxDB collection), `ready`, `restored` (start-up has also restored any session, or
+  `restoreTimeoutMs`, default 5 s, passed), `fatal`, `writeError` (a local write that failed; show it
+  until dismissed, e.g. with `SyncBanners` from interactions) and `persisted` (whether the browser keeps
+  the data for good).
 - `cloud`: `CloudSync`: session (Google, email link), replication, `pendingIds`, `hasPending`,
   `lastSync`, `online`, `active`, `error`, `rejectedWrite`, `roleOf`, `revokedIds`,
   `forceResync`, `signOut`. Each collection replicates on its own; a container created in or moved to
@@ -57,14 +59,19 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
   Supabase (`expectNewContainer`, at most 20 s), so row level security doesn't refuse them.
 - `ops`: container operations (`createContainer`, `renameContainer`, `makeCloud`, `makeLocal`,
   `deleteContainer`, `leaveContainer`, `keepRevokedCopy`, `removeRevoked`, `entries`,
-  `exportContainers`, `importContainers`) and the row
-  helpers they're built from (`insertDoc`, `patch`, `removeDocs`, `docsWhere`, `touch`…).
+  `exportContainers`, `importContainers`) and the row helpers they're built from: `insertDoc` and
+  `patch` (instant, never throw), `removeDocs` (never rejects), `bulkWrite` (many rows of one container,
+  awaited; throws when a row couldn't be written), `docsWhere` (equality or `{ $in: [...] }`), `touch`.
+  Failed writes that don't throw are reported and shown through `app.writeError`. Prefer these to the
+  raw RxDB collections (`rx`): they keep `updated_at`, tombstones and pending-sync tracking right.
 - `supabase`: PKCE client (`loadClient()`; supabase-js is only downloaded when a session may exist or
   the user signs in) and members API (`fetchMembers`, `inviteMember`, `setMemberRole`,
   `removeMember`, `leave`, `fetchMyMemberships`) with friendly error messages.
 - `tombstones`: hides deleted rows at once and keeps hiding them if a sync briefly restores
   them; pruned after a week.
-- `prefs`: `DevicePrefs` (default container, "already prompted", collapsed sections). Pass a
+- `prefs`: `DevicePrefs` (default container, "already prompted", collapsed sections). The cold-start
+  redirect to the default container is `defaultContainerToOpen(prefs, { ready, restored, exists })`,
+  called from an effect on the page that lists the containers. Pass a
   subclass as `prefs` for app-specific ones and override `replaceContainer` to keep them in step.
 - `requestPersistence()`: asks the browser to keep the data (called on start unless
   `persistStorage: false`, e.g. for a website whose data lives in the cloud, since some browsers
@@ -125,7 +132,12 @@ const sql = generateMigration({
 });
 ```
 
-What it sets up besides the tables:
+`ownership: 'user'` (pass the same to `createSyncedStore`) is for one container per signed-in user, e.g. a
+profile: the container's id is the user's id (`createContainer` uses it), every other row's container field
+is too, and only that user can read or write them. No members table, no sharing, no membership checks;
+`makeCloud` isn't available.
+
+With the default `ownership: 'members'`, what it sets up besides the tables:
 
 - `current_email()` returns the signed-in user's email only once it's confirmed (read from
   `auth.users`), so an unverified sign-up can't claim invites made to that email.
@@ -138,6 +150,13 @@ What it sets up besides the tables:
 - The members RPC's `active` means "signed in since being invited" (only owners see it, with roles),
   so it never reveals whether an email has an account.
 - `client_errors` and `report_client_error(...)`: write-only error reports, capped at 300 an hour and
-  kept 30 days.
+  kept 30 days (in both modes).
+- `anon` loses table access even where the schema's defaults grant it (Supabase's `public` schema).
+
+Check a site's migrations against its RxDB schemas in a unit test: `schemaMismatches(collections, schemas,
+sqlFiles, schema)` lists every difference (a missing table, a field without a column or the reverse,
+different types), reading `create table`, `add column` and `drop column` in order; `[]` means they match.
+The generated SQL is applied to a real Postgres (PGlite) and checked with the library's
+[security lint](../../../ops/sql/security-lint.sql) in this package's tests.
 
 The sandbox's Data storage page runs this store in the browser and shows the migration.

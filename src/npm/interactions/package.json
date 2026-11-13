@@ -1,51 +1,51 @@
 {
-  "name": "@wells-nelson/interactions",
-  "version": "0.0.0",
-  "description": "Svelte 5 inputs, actions (long-press, drag and drop), undo, and account/sharing UI shared by Wells Nelson apps.",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bnelson729/wells-nelson-components.git",
-    "directory": "src/npm/interactions"
-  },
-  "homepage": "https://github.com/bnelson729/wells-nelson-components/tree/main/src/npm/interactions#readme",
-  "bugs": {
-    "url": "https://github.com/bnelson729/wells-nelson-components/issues"
-  },
-  "type": "module",
-  "svelte": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "svelte": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./account": {
-      "types": "./dist/account/index.d.ts",
-      "svelte": "./dist/account/index.js",
-      "default": "./dist/account/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "build": "svelte-package -i src/lib -o dist",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "test": "vitest run",
-    "lint:package": "publint"
-  },
-  "peerDependencies": {
-    "@wells-nelson/displays": "*",
-    "svelte": "^5.40.0"
-  },
-  "devDependencies": {
-    "@wells-nelson/displays": "*"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  }
+	"name": "@wells-nelson/interactions",
+	"version": "0.0.0",
+	"description": "Svelte 5 inputs, actions (long-press, drag and drop), undo, and account/sharing UI shared by Wells Nelson apps.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bnelson729/wells-nelson-components.git",
+		"directory": "src/npm/interactions"
+	},
+	"homepage": "https://github.com/bnelson729/wells-nelson-components/tree/main/src/npm/interactions#readme",
+	"bugs": {
+		"url": "https://github.com/bnelson729/wells-nelson-components/issues"
+	},
+	"type": "module",
+	"svelte": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./account": {
+			"types": "./dist/account/index.d.ts",
+			"svelte": "./dist/account/index.js",
+			"default": "./dist/account/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"scripts": {
+		"build": "svelte-package -i src/lib -o dist",
+		"check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+		"test": "vitest run",
+		"lint:package": "publint"
+	},
+	"peerDependencies": {
+		"@wells-nelson/displays": "*",
+		"svelte": "^5.40.0"
+	},
+	"devDependencies": {
+		"@wells-nelson/displays": "*"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	}
 }

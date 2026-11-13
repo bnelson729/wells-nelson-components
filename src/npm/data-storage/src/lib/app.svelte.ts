@@ -9,6 +9,12 @@ export class AppState<D extends DocMap<D>> {
 	local = $state.raw<DataSet<D> | null>(null);
 	cloud = $state.raw<DataSet<D> | null>(null);
 	ready = $state(false);
+	/**
+	 * True once start-up has opened the local data and restored any signed-in session (so cloud
+	 * containers are loaded too), or once that took longer than the store's `restoreTimeoutMs`
+	 * (e.g. offline with an expired session). Pages that decide from "all containers" wait for it.
+	 */
+	restored = $state(false);
 	fatal = $state<string | null>(null);
 	/** A local write that failed (e.g. storage full). Show it until dismissed. */
 	writeError = $state<string | null>(null);

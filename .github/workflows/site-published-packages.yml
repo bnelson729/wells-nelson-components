@@ -14,7 +14,7 @@ name: Site published packages
 #       paths: [package.json, package-lock.json]
 #   jobs:
 #     packages:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@main
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-published-packages.yml@v1
 #       permissions:
 #         contents: write
 #         actions: write
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   packages:
-    uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@main
+    uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@v1
     permissions:
       contents: write
     with:

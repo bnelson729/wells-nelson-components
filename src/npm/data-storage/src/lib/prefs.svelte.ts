@@ -22,6 +22,27 @@ export function defaultPrefsKeys(prefix: string, nouns: Nouns): DevicePrefsKeys 
 }
 
 /**
+ * The cold-start redirect to the default container. Call it from an effect on the page that lists
+ * the containers; it returns the id to open, once, or null. It waits while the containers load
+ * and, for a default that isn't there yet (it may be a cloud container), until the session is
+ * restored; after that it gives up for this page load (`defaultChecked`). Pages other than the
+ * list should set `prefs.defaultChecked = true` themselves, so deep links never redirect.
+ */
+export function defaultContainerToOpen(
+	prefs: DevicePrefs,
+	state: { ready: boolean; restored: boolean; exists: (id: string) => boolean }
+): string | null {
+	if (prefs.defaultChecked || !state.ready) return null;
+	const id = prefs.defaultContainerId;
+	if (id && state.exists(id)) {
+		prefs.defaultChecked = true;
+		return id;
+	}
+	if (!id || state.restored) prefs.defaultChecked = true;
+	return null;
+}
+
+/**
  * Per-device preferences that never sync: the default container (cold-start redirect), which
  * local-only containers were already offered for cloud sync, and collapsed sections.
  * Subclass it for app-specific prefs; override `replaceContainer` to keep them in step when a

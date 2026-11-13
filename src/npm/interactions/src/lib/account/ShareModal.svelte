@@ -169,7 +169,9 @@
 					{#if roles}
 						<Segmented label="Role for the invite" bind:value={inviteRole} options={ROLE_OPTIONS} />
 					{/if}
-					<Button variant="primary" type="submit" icon="share" disabled={!emailValid || busy || !cloud.online}>Share</Button>
+					<Button variant="primary" type="submit" icon="share" disabled={!emailValid || busy || !cloud.online}
+						>Share</Button
+					>
 				</form>
 			{/if}
 		{:else}
@@ -197,7 +199,8 @@
 								title={isLastOwner(m)
 									? `A ${nouns.singular} needs at least one owner. Make someone else an owner first.`
 									: undefined}
-								onchange={(e) => act(() => api.setMemberRole!(m.id, (e.currentTarget as HTMLSelectElement).value as Role))}
+								onchange={(e) =>
+									act(() => api.setMemberRole!(m.id, (e.currentTarget as HTMLSelectElement).value as Role))}
 							>
 								{#each ROLE_OPTIONS as r (r.value)}<option value={r.value}>{r.label}</option>{/each}
 							</select>
@@ -220,8 +223,8 @@
 			{/if}
 			{#if shown.some((m) => m.active === false)}
 				<p class="muted small">
-					Pending means they haven't signed in to {appName} since you shared it; they get the {nouns.singular} the
-					first time they do.
+					Pending means they haven't signed in to {appName} since you shared it; they get the {nouns.singular} the first time
+					they do.
 				</p>
 			{/if}
 		{:else if list}

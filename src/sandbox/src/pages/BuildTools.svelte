@@ -9,14 +9,22 @@
 	let letters = $state('WN');
 	let background = $state('#1f5fa8');
 	let foreground = $state('#ffffff');
-	const valid = $derived(/^[A-Za-z]{1,3}$/.test(letters) && /^#[0-9a-f]{6}$/i.test(background) && /^#[0-9a-f]{6}$/i.test(foreground));
+	const valid = $derived(
+		/^[A-Za-z]{1,3}$/.test(letters) && /^#[0-9a-f]{6}$/i.test(background) && /^#[0-9a-f]{6}$/i.test(foreground)
+	);
 	const iconQuery = $derived(new URLSearchParams({ letters, bg: background, fg: foreground }).toString());
 
 	// ------------------------------------------------ manifest (pure, runs here)
 	let appName = $state('Demo — Projects');
 	let shortName = $state('Demo');
 	const manifest = $derived(
-		renderManifest({ name: appName, shortName, description: 'A demo app.', backgroundColor: '#f3f5f8', themeColor: background })
+		renderManifest({
+			name: appName,
+			shortName,
+			description: 'A demo app.',
+			backgroundColor: '#f3f5f8',
+			themeColor: background
+		})
 	);
 
 	// ------------------------------------------------ base path
@@ -60,10 +68,22 @@
 	</div>
 	{#if valid}
 		<div class="icons">
-			<figure><img src={`/__wn/icon.png?${iconQuery}&size=192`} alt="" width="96" height="96" /><figcaption>icon-192.png</figcaption></figure>
-			<figure><img src={`/__wn/icon.png?${iconQuery}&size=512&maskable=1`} alt="" width="96" height="96" /><figcaption>maskable (full bleed)</figcaption></figure>
-			<figure><img src={`/__wn/favicon.svg?${iconQuery}`} alt="" width="96" height="96" /><figcaption>favicon.svg</figcaption></figure>
-			<figure><img src={`/__wn/favicon.svg?${iconQuery}`} alt="" width="16" height="16" /><figcaption>favicon at 16px</figcaption></figure>
+			<figure>
+				<img src={`/__wn/icon.png?${iconQuery}&size=192`} alt="" width="96" height="96" />
+				<figcaption>icon-192.png</figcaption>
+			</figure>
+			<figure>
+				<img src={`/__wn/icon.png?${iconQuery}&size=512&maskable=1`} alt="" width="96" height="96" />
+				<figcaption>maskable (full bleed)</figcaption>
+			</figure>
+			<figure>
+				<img src={`/__wn/favicon.svg?${iconQuery}`} alt="" width="96" height="96" />
+				<figcaption>favicon.svg</figcaption>
+			</figure>
+			<figure>
+				<img src={`/__wn/favicon.svg?${iconQuery}`} alt="" width="16" height="16" />
+				<figcaption>favicon at 16px</figcaption>
+			</figure>
 		</div>
 	{:else}
 		<p class="error">Use 1–3 letters and #rrggbb colors.</p>
@@ -105,7 +125,10 @@
 	{/if}
 </Panel>
 
-<Panel title="Service worker and templates" note="Not interactive here: see the package README for registerAppShellCache and templates/.">
+<Panel
+	title="Service worker and templates"
+	note="Not interactive here: see the package README for registerAppShellCache and templates/."
+>
 	<p class="muted">The service worker needs a SvelteKit build to run; its behavior is covered by the package tests.</p>
 </Panel>
 

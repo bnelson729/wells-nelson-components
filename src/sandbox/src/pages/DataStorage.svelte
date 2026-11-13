@@ -6,7 +6,17 @@
 	import { AccountPanel } from '@wells-nelson/interactions/account';
 	import seed from 'virtual:seed';
 	import { onMount } from 'svelte';
-	import { collections, refs, schemas, store, type Docs, type NoteDoc, type ProjectDoc, type TaskDoc, type TaskLinkDoc } from '../demo-store';
+	import {
+		collections,
+		refs,
+		schemas,
+		store,
+		type Docs,
+		type NoteDoc,
+		type ProjectDoc,
+		type TaskDoc,
+		type TaskLinkDoc
+	} from '../demo-store';
 	import Panel from '../Panel.svelte';
 
 	const { app, cloud, ops, prefs, tombstones } = store;
@@ -73,9 +83,25 @@
 				tasks: rows,
 				task_links:
 					rows.length > 1
-						? [{ id: `${rows[0].id}:${rows[1].id}`, project_id: projectId, from_id: rows[0].id, to_id: rows[1].id, updated_at: t }]
+						? [
+								{
+									id: `${rows[0].id}:${rows[1].id}`,
+									project_id: projectId,
+									from_id: rows[0].id,
+									to_id: rows[1].id,
+									updated_at: t
+								}
+							]
 						: [],
-				notes: [{ id: crypto.randomUUID(), project_id: projectId, text: p.note, mentions: rows.map((r) => r.id).join(','), updated_at: t }]
+				notes: [
+					{
+						id: crypto.randomUUID(),
+						project_id: projectId,
+						text: p.note,
+						mentions: rows.map((r) => r.id).join(','),
+						updated_at: t
+					}
+				]
 			});
 		}
 	}
@@ -92,7 +118,12 @@
 		const entry = selected!;
 		const ds = app.dataSet(entry.location);
 		const id = crypto.randomUUID();
-		ops.insertDoc(ds, 'tasks', { id, project_id: entry.container.id, title, external_ref: '', done: false, updated_at: Date.now() }, entry.container.id);
+		ops.insertDoc(
+			ds,
+			'tasks',
+			{ id, project_id: entry.container.id, title, external_ref: '', done: false, updated_at: Date.now() },
+			entry.container.id
+		);
 	}
 
 	function setDone(task: TaskDoc, done: boolean) {
@@ -130,18 +161,31 @@
 		{:else if !app.ready}
 			Opening…
 		{:else}
-			Ready · local data set <code>sandbox_local</code> · cloud {cloud.configured ? (app.cloud ? 'connected' : 'signed out') : 'not configured'}
+			Ready · local data set <code>sandbox_local</code> · cloud {cloud.configured
+				? app.cloud
+					? 'connected'
+					: 'signed out'
+				: 'not configured'}
 		{/if}
 	</p>
 	<div class="row">
-		<Button variant="primary" icon="plus" onclick={() => run(seedProjects)} disabled={!app.ready}>Add mock projects</Button>
+		<Button variant="primary" icon="plus" onclick={() => run(seedProjects)} disabled={!app.ready}
+			>Add mock projects</Button
+		>
 		{#if !seed}<span class="muted">The mock seed is only served by the dev server.</span>{/if}
 	</div>
-	<AddRow placeholder="New project" label="Add project" onadd={(name) => run(() => (selectedId = ops.createContainer(app.dataSet('local'), { name })))} />
+	<AddRow
+		placeholder="New project"
+		label="Add project"
+		onadd={(name) => run(() => (selectedId = ops.createContainer(app.dataSet('local'), { name })))}
+	/>
 	{#if error}<p class="error">{error}</p>{/if}
 </Panel>
 
-<Panel title="Projects" note="ops.entries merges local and cloud and skips tombstoned ones. Duplicate copies with new ids; delete hides at once.">
+<Panel
+	title="Projects"
+	note="ops.entries merges local and cloud and skips tombstoned ones. Duplicate copies with new ids; delete hides at once."
+>
 	{#if entries.length === 0}
 		<p class="muted">No projects yet.</p>
 	{/if}
@@ -155,16 +199,28 @@
 					icon="check"
 					label="Make default"
 					active={prefs.defaultContainerId === e.container.id}
-					onclick={() => (prefs.setDefaultContainer(prefs.defaultContainerId === e.container.id ? null : e.container.id), storageTick++)}
+					onclick={() => (
+						prefs.setDefaultContainer(prefs.defaultContainerId === e.container.id ? null : e.container.id),
+						storageTick++
+					)}
 				/>
-				<IconButton icon="copy" label="Duplicate with new ids" onclick={() => run(() => duplicate(e.container.id, e.location))} />
+				<IconButton
+					icon="copy"
+					label="Duplicate with new ids"
+					onclick={() => run(() => duplicate(e.container.id, e.location))}
+				/>
 				{#if app.cloud && e.location === 'local'}
-					<IconButton icon="cloud" label="Make cloud-enabled" onclick={() => run(() => ops.makeCloud(e.container.id))} />
+					<IconButton
+						icon="cloud"
+						label="Make cloud-enabled"
+						onclick={() => run(() => ops.makeCloud(e.container.id))}
+					/>
 				{/if}
 				<IconButton
 					icon="trash"
 					label="Delete"
-					onclick={() => run(() => ops.deleteContainer(app.dataSet(e.location), e.container.id).then(() => storageTick++))}
+					onclick={() =>
+						run(() => ops.deleteContainer(app.dataSet(e.location), e.container.id).then(() => storageTick++))}
 				/>
 			</li>
 		{/each}
@@ -172,7 +228,10 @@
 </Panel>
 
 {#if selected}
-	<Panel title={`“${selected.container.name}”`} note="Tasks are patched through TanStack DB; links and notes show the ids a duplicate rewrites. External refs are kept.">
+	<Panel
+		title={`“${selected.container.name}”`}
+		note="Tasks are patched through TanStack DB; links and notes show the ids a duplicate rewrites. External refs are kept."
+	>
 		<ul class="list">
 			{#each tasks as task (task.id)}
 				<li>
@@ -185,12 +244,18 @@
 		</ul>
 		<AddRow placeholder="New task" label="Add task" onadd={addTask} />
 		{#each links as link (link.id)}
-			<p class="small">Link <code>{short(link.from_id)}:{short(link.to_id)}</code>: {taskTitle(link.from_id)} → {taskTitle(link.to_id)}</p>
+			<p class="small">
+				Link <code>{short(link.from_id)}:{short(link.to_id)}</code>: {taskTitle(link.from_id)} → {taskTitle(link.to_id)}
+			</p>
 		{/each}
 		{#each notes as note (note.id)}
-			<p class="small">Note “{note.text}” mentions {note.mentions.split(',').filter(Boolean).map(taskTitle).join(', ')}</p>
+			<p class="small">
+				Note “{note.text}” mentions {note.mentions.split(',').filter(Boolean).map(taskTitle).join(', ')}
+			</p>
 		{/each}
-		<p class="muted small">Tombstoned here: {tombstones.has(selected.location, selected.container.id) ? 'yes' : 'no'}</p>
+		<p class="muted small">
+			Tombstoned here: {tombstones.has(selected.location, selected.container.id) ? 'yes' : 'no'}
+		</p>
 	</Panel>
 {/if}
 

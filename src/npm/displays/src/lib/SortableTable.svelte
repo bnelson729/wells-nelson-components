@@ -58,10 +58,7 @@
 					<tr>
 						<th scope="col" class="name">{labelHeader}</th>
 						{#each columns as col (col.key)}
-							<th
-								scope="col"
-								aria-sort={col.key === activeKey ? (descending ? 'descending' : 'ascending') : undefined}
-							>
+							<th scope="col" aria-sort={col.key === activeKey ? (descending ? 'descending' : 'ascending') : undefined}>
 								<button type="button" onclick={() => sortBy(col.key)} title={`Sort by ${col.full ?? col.title}`}>
 									{col.title}
 									{#if col.key === activeKey}<span aria-hidden="true">{descending ? '▼' : '▲'}</span>{/if}

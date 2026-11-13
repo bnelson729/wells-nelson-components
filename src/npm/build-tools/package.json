@@ -1,63 +1,105 @@
 {
-  "name": "@wells-nelson/build-tools",
-  "version": "0.0.0",
-  "description": "Build and deployment tooling for Wells Nelson SvelteKit PWAs: postbuild, PWA icon generator, Vite config pieces, service worker, and templates.",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bnelson729/wells-nelson-components.git",
-    "directory": "src/npm/build-tools"
-  },
-  "homepage": "https://github.com/bnelson729/wells-nelson-components/tree/main/src/npm/build-tools#readme",
-  "bugs": {
-    "url": "https://github.com/bnelson729/wells-nelson-components/issues"
-  },
-  "type": "module",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./vite": {
-      "types": "./dist/vite.d.ts",
-      "default": "./dist/vite.js"
-    },
-    "./service-worker": {
-      "types": "./dist/service-worker.d.ts",
-      "default": "./dist/service-worker.js"
-    },
-    "./templates/*": "./templates/*"
-  },
-  "bin": {
-    "wn-postbuild": "./dist/cli/postbuild.js",
-    "wn-icons": "./dist/cli/icons.js",
-    "wn-manifest": "./dist/cli/manifest.js"
-  },
-  "files": [
-    "dist",
-    "templates"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "check": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "lint:package": "publint"
-  },
-  "peerDependencies": {
-    "vite": ">=6"
-  },
-  "peerDependenciesMeta": {
-    "vite": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  }
+	"name": "@wells-nelson/build-tools",
+	"version": "0.0.0",
+	"description": "Build and deployment tooling for Wells Nelson SvelteKit sites: shared SvelteKit, Vitest, Prettier and ESLint configs, postbuild, icon generator, Vite config pieces, service worker, and templates.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bnelson729/wells-nelson-components.git",
+		"directory": "src/npm/build-tools"
+	},
+	"homepage": "https://github.com/bnelson729/wells-nelson-components/tree/main/src/npm/build-tools#readme",
+	"bugs": {
+		"url": "https://github.com/bnelson729/wells-nelson-components/issues"
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./vite": {
+			"types": "./dist/vite.d.ts",
+			"default": "./dist/vite.js"
+		},
+		"./kit": {
+			"types": "./dist/kit.d.ts",
+			"default": "./dist/kit.js"
+		},
+		"./vitest": {
+			"types": "./dist/vitest.d.ts",
+			"default": "./dist/vitest.js"
+		},
+		"./eslint": {
+			"types": "./dist/eslint.d.ts",
+			"default": "./dist/eslint.js"
+		},
+		"./prettier": "./prettier.json",
+		"./service-worker": {
+			"types": "./dist/service-worker.d.ts",
+			"default": "./dist/service-worker.js"
+		},
+		"./templates/*": "./templates/*"
+	},
+	"bin": {
+		"wn-postbuild": "./dist/cli/postbuild.js",
+		"wn-icons": "./dist/cli/icons.js",
+		"wn-manifest": "./dist/cli/manifest.js"
+	},
+	"files": [
+		"dist",
+		"templates",
+		"prettier.json"
+	],
+	"sideEffects": false,
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check": "tsc -p tsconfig.json",
+		"test": "vitest run",
+		"lint:package": "publint"
+	},
+	"peerDependencies": {
+		"@sveltejs/adapter-static": ">=3",
+		"@sveltejs/vite-plugin-svelte": ">=5",
+		"eslint": ">=9",
+		"eslint-plugin-svelte": ">=3",
+		"prettier-plugin-svelte": ">=3",
+		"typescript-eslint": ">=8",
+		"vite": ">=6"
+	},
+	"peerDependenciesMeta": {
+		"vite": {
+			"optional": true
+		},
+		"@sveltejs/adapter-static": {
+			"optional": true
+		},
+		"@sveltejs/vite-plugin-svelte": {
+			"optional": true
+		},
+		"eslint": {
+			"optional": true
+		},
+		"eslint-plugin-svelte": {
+			"optional": true
+		},
+		"typescript-eslint": {
+			"optional": true
+		},
+		"prettier-plugin-svelte": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-static": "^4.0.1",
+		"@types/node": "^24.0.0",
+		"eslint": "^9.39.5",
+		"eslint-plugin-svelte": "^3.24.1",
+		"typescript-eslint": "^8.72.2"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	}
 }

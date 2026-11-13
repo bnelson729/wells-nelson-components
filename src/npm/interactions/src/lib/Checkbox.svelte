@@ -6,8 +6,7 @@
 		label,
 		hideLabel = false,
 		onchange
-	}: { checked?: boolean; label: string; hideLabel?: boolean; onchange?: (checked: boolean) => void } =
-		$props();
+	}: { checked?: boolean; label: string; hideLabel?: boolean; onchange?: (checked: boolean) => void } = $props();
 </script>
 
 <label class="checkbox" class:bare={hideLabel}>

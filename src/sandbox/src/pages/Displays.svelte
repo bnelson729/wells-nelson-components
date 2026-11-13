@@ -30,9 +30,21 @@
 	const columns: SortableColumn<MemberStats>[] = [
 		{ key: 'assigned', title: 'Tasks', full: 'Tasks assigned', value: (s) => s.assigned },
 		{ key: 'done', title: 'Done', full: 'Tasks done', value: (s) => s.done },
-		{ key: 'donePct', title: 'Done %', full: 'Share of tasks done', value: (s) => s.donePct, display: (s) => (s.donePct == null ? '' : `${s.donePct}%`) },
+		{
+			key: 'donePct',
+			title: 'Done %',
+			full: 'Share of tasks done',
+			value: (s) => s.donePct,
+			display: (s) => (s.donePct == null ? '' : `${s.donePct}%`)
+		},
 		{ key: 'overdue', title: 'Late', full: 'Overdue tasks', value: (s) => s.overdue },
-		{ key: 'avgDays', title: 'Avg days', full: 'Average days to finish', value: (s) => s.avgDays, display: (s) => s.avgDays?.toFixed(1) ?? '' }
+		{
+			key: 'avgDays',
+			title: 'Avg days',
+			full: 'Average days to finish',
+			value: (s) => s.avgDays,
+			display: (s) => s.avgDays?.toFixed(1) ?? ''
+		}
 	];
 	let sortKey = $state('assigned');
 	let descending = $state(true);
@@ -71,8 +83,8 @@
 		<input type="datetime-local" value="2026-06-07T10:00" step="300" />
 	</label>
 	<p class="muted">
-		On a touch screen this text can't be selected; fields and <code>.selectable</code> content (the tables
-		and leaderboards below) can.
+		On a touch screen this text can't be selected; fields and <code>.selectable</code> content (the tables and leaderboards
+		below) can.
 	</p>
 	<div class="card empty">An <code>.empty</code> state inside a <code>.card</code>.</div>
 </Panel>

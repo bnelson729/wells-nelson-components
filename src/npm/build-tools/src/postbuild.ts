@@ -23,7 +23,12 @@ const TEXT_FILE = /\.(js|html|json|css|webmanifest|txt|xml|svg)$/;
  * - write .nojekyll so Pages' Jekyll doesn't hide the _app directory;
  * - optionally check that forbidden strings (e.g. dev seed data) didn't leak into the build.
  */
-export function postbuild({ dir = 'build', shell = '404.html', forbid = [], log = console.log }: PostbuildOptions = {}) {
+export function postbuild({
+	dir = 'build',
+	shell = '404.html',
+	forbid = [],
+	log = console.log
+}: PostbuildOptions = {}) {
 	const shellPath = join(dir, shell);
 	if (!existsSync(shellPath)) throw new Error(`${shellPath} not found; did the build run?`);
 	copyFileSync(shellPath, join(dir, 'index.html'));

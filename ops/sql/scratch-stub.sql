@@ -1,4 +1,3 @@
--- Template (@wells-nelson/build-tools): copy to supabase/ops/scratch-stub.sql and replace __SCHEMA__ with the app's schema.
 -- The parts of a Supabase database that the app's schema refers to, so its backup can be
 -- restored into a plain Postgres (the Database workflow's restore test, or a local check).
 -- Not for a Supabase project: those have all of this already.

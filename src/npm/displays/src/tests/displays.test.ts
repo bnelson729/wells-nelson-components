@@ -30,7 +30,27 @@ function render<P extends Record<string, unknown>>(component: any, props: P) {
 
 describe('icons', () => {
 	it('ships the base set', () => {
-		for (const name of ['plus', 'x', 'check', 'pencil', 'trash', 'share', 'chevron', 'alert', 'cloud', 'wifi-off', 'user', 'gear', 'undo', 'refresh', 'mail', 'search', 'home', 'download', 'upload']) {
+		for (const name of [
+			'plus',
+			'x',
+			'check',
+			'pencil',
+			'trash',
+			'share',
+			'chevron',
+			'alert',
+			'cloud',
+			'wifi-off',
+			'user',
+			'gear',
+			'undo',
+			'refresh',
+			'mail',
+			'search',
+			'home',
+			'download',
+			'upload'
+		]) {
 			expect(iconMarkup(name), name).not.toBe('');
 		}
 	});
@@ -74,7 +94,7 @@ describe('TabBar', () => {
 		expect(document.documentElement.style.getPropertyValue('--footer-offset')).toContain('--tabbar-h');
 		// It replaces the header, so pages start at the top.
 		expect(document.documentElement.style.getPropertyValue('--header-h')).toBe('0px');
-		unmount(instance);
+		void unmount(instance);
 		expect(document.documentElement.style.getPropertyValue('--footer-offset')).toBe('');
 		expect(document.documentElement.style.getPropertyValue('--header-h')).toBe('');
 	});
@@ -92,7 +112,9 @@ describe('IconButton labels', () => {
 		expect(plain.textContent?.trim()).toBe('');
 		expect(plain.getAttribute('title')).toBe('Lists');
 
-		const labeled = render(IconButton, { icon: 'home', label: 'Lists', href: '/', showLabel: true }).querySelector('a')!;
+		const labeled = render(IconButton, { icon: 'home', label: 'Lists', href: '/', showLabel: true }).querySelector(
+			'a'
+		)!;
 		expect(labeled.textContent?.trim()).toBe('Lists');
 		expect(labeled.classList.contains('labeled')).toBe(true);
 		expect(labeled.getAttribute('aria-label')).toBe('Lists');
@@ -120,11 +142,25 @@ describe('sortRows', () => {
 	];
 
 	it('sorts descending with ties by label and missing values last', () => {
-		expect(sortRows(rows, (r) => r.n, (r) => r.name, true).map((r) => r.name)).toEqual(['c', 'a', 'b', 'none']);
+		expect(
+			sortRows(
+				rows,
+				(r) => r.n,
+				(r) => r.name,
+				true
+			).map((r) => r.name)
+		).toEqual(['c', 'a', 'b', 'none']);
 	});
 
 	it('keeps missing values last when ascending', () => {
-		expect(sortRows(rows, (r) => r.n, (r) => r.name, false).map((r) => r.name)).toEqual(['a', 'b', 'c', 'none']);
+		expect(
+			sortRows(
+				rows,
+				(r) => r.n,
+				(r) => r.name,
+				false
+			).map((r) => r.name)
+		).toEqual(['a', 'b', 'c', 'none']);
 	});
 });
 
@@ -155,7 +191,13 @@ describe('SortableTable', () => {
 	const names = (el: HTMLElement) => [...el.querySelectorAll('tbody th')].map((th) => th.textContent);
 
 	it('sorts by the first column, then by a tapped header, and flips on a second tap', () => {
-		const el = render(SortableTable<Row>, { title: 'Members', rows, columns, rowKey: (r: Row) => r.id, rowLabel: (r: Row) => r.name });
+		const el = render(SortableTable<Row>, {
+			title: 'Members',
+			rows,
+			columns,
+			rowKey: (r: Row) => r.id,
+			rowLabel: (r: Row) => r.name
+		});
 		expect(names(el)).toEqual(['Bo', 'Cy', 'Ann']);
 
 		const doneButton = el.querySelectorAll<HTMLButtonElement>('thead button')[1];
@@ -171,7 +213,13 @@ describe('SortableTable', () => {
 	});
 
 	it('shows the empty text without rows', () => {
-		const el = render(SortableTable<Row>, { rows: [], columns, rowKey: (r: Row) => r.id, rowLabel: (r: Row) => r.name, emptyText: 'Nada' });
+		const el = render(SortableTable<Row>, {
+			rows: [],
+			columns,
+			rowKey: (r: Row) => r.id,
+			rowLabel: (r: Row) => r.name,
+			emptyText: 'Nada'
+		});
 		expect(el.textContent).toContain('Nada');
 		expect(el.querySelector('table')).toBeNull();
 	});
