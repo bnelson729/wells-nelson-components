@@ -69,6 +69,12 @@ export interface CloudSyncOptions<D extends DocMap<D>> {
 	 */
 	ownership?: 'members' | 'user';
 	storage?: StorageFactory;
+	/**
+	 * Longest start-up waits for Supabase to confirm the stored session (default 300 ms). It may
+	 * need the network, to refresh an expired token; past this, the cloud data already on this
+	 * device opens for the stored user and syncs once the session is confirmed.
+	 */
+	sessionWaitMs?: number;
 }
 
 /**
@@ -97,6 +103,7 @@ export class CloudSync<D extends DocMap<D>> {
 	#roles: boolean;
 	#ownership: 'members' | 'user';
 	#storage: StorageFactory | undefined;
+	#sessionWaitMs: number;
 	#state: Persisted<UserSyncState>;
 	#replications: RxSupabaseReplicationState<any>[] = [];
 	#subscriptions: Subscription[] = [];
@@ -121,6 +128,7 @@ export class CloudSync<D extends DocMap<D>> {
 		this.#roles = options.roles ?? false;
 		this.#ownership = options.ownership ?? 'members';
 		this.#storage = options.storage;
+		this.#sessionWaitMs = options.sessionWaitMs ?? 300;
 		this.configured = options.supabase.configured;
 		this.#state = new Persisted<UserSyncState>(this.#stateKey('anonymous'), emptyState());
 	}
@@ -194,8 +202,26 @@ export class CloudSync<D extends DocMap<D>> {
 		const sb = await this.#sb.loadClient();
 		if (!sb) return;
 
-		const { data } = await sb.auth.getSession();
-		if (data.session) await this.#serial(() => this.#startFor(data.session!.user));
+		// Confirming the session may wait on the network (an expired token is refreshed first).
+		// Past sessionWaitMs, open the cloud data already on this device for the stored user, and
+		// carry on once Supabase answers (replication waits for the token by itself).
+		const session = sb.auth.getSession().then(
+			({ data }) => data.session,
+			() => null
+		);
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const slow = new Promise<'slow'>((r) => (timer = setTimeout(() => r('slow'), this.#sessionWaitMs)));
+		const first = await Promise.race([session, slow]);
+		clearTimeout(timer);
+		if (first !== 'slow') {
+			if (first) await this.#serial(() => this.#startFor(first.user));
+		} else {
+			const stored = this.#sb.storedUser();
+			if (stored) await this.#serial(() => this.#startFor(stored));
+			void session.then((s) => {
+				if (s) void this.#serial(() => this.#startFor(s.user));
+			});
+		}
 
 		sb.auth.onAuthStateChange((event, session) => {
 			// Supabase recommends not awaiting other calls inside this callback.

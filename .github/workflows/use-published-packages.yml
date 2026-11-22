@@ -14,7 +14,7 @@ name: Use published packages
 #     contents: write
 #   jobs:
 #     packages:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@v1
+#       uses: bnelson729/wells-nelson-components/.github/workflows/use-published-packages.yml@v2
 #       with:
 #         verify: npm run check && npm run build
 #
@@ -84,58 +84,26 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      # Every tarball spec is rewritten before anything is installed: an install sees the whole
-      # tree, so a tarball left for later (its path only exists on the machine that packed it)
-      # would fail it.
+      - name: Get the swap script
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: bnelson729/wells-nelson-components
+          # The commit this reusable workflow runs from, so the script matches it.
+          ref: ${{ github.job_workflow_sha || 'main' }}
+          path: .wn
+          sparse-checkout: ops/scripts
+
+      # The script (shared with site-ci.yml) rewrites every tarball spec before anything is
+      # installed: an install sees the whole tree.
       - name: Point tarball dependencies at their published versions
         id: find
         env:
           SCOPE: ${{ inputs.scope }}
           DIST_TAG: ${{ inputs.dist-tag }}
+          SCRIPT: ${{ github.workspace }}/.wn/ops/scripts/use-published-packages.cjs
         run: |
-          node <<'EOF'
-          const { execFileSync } = require('node:child_process');
-          const { appendFileSync, existsSync, readFileSync, writeFileSync } = require('node:fs');
-          // Keep the file's own indentation and final newline.
-          const save = (file, text, data) => {
-            const indent = text.match(/^[ \t]+(?=")/m)?.[0] ?? '  ';
-            writeFileSync(file, JSON.stringify(data, null, indent) + (text.endsWith('\n') ? '\n' : ''));
-          };
-          const pkgText = readFileSync('package.json', 'utf8');
-          const pkg = JSON.parse(pkgText);
-          const replaced = [];
-          for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
-            for (const [name, spec] of Object.entries(pkg[section] ?? {})) {
-              if (!name.startsWith(process.env.SCOPE) || !/^file:.*\.tgz$/.test(spec)) continue;
-              const version = execFileSync('npm', ['view', `${name}@${process.env.DIST_TAG}`, 'version'], { encoding: 'utf8' }).trim();
-              if (!version) throw new Error(`${name} has no published version tagged ${process.env.DIST_TAG}`);
-              console.log(`${section}: ${name} ${spec} -> ^${version}`);
-              // Same section, new range: the package stays a dependency or dev dependency.
-              pkg[section][name] = `^${version}`;
-              replaced.push(`${name}@^${version}`);
-            }
-          }
-          if (replaced.length === 0) console.log('No local tarball dependencies.');
-          else {
-            save('package.json', pkgText, pkg);
-            // Drop the lock's entries for those packages (they point at the tarballs), so npm
-            // resolves them from the registry. Everything else stays locked.
-            if (existsSync('package-lock.json')) {
-              const lockText = readFileSync('package-lock.json', 'utf8');
-              const lock = JSON.parse(lockText);
-              const names = replaced.map((r) => r.slice(0, r.lastIndexOf('@')));
-              for (const key of Object.keys(lock.packages ?? {})) {
-                if (names.some((n) => key === `node_modules/${n}` || key.startsWith(`node_modules/${n}/`))) delete lock.packages[key];
-              }
-              const root = lock.packages?.[''];
-              if (root) for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
-                for (const name of names) if (root[section]?.[name] !== undefined) root[section][name] = pkg[section][name];
-              }
-              save('package-lock.json', lockText, lock);
-            }
-          }
-          appendFileSync(process.env.GITHUB_OUTPUT, `replaced=${replaced.join(' ')}\n`);
-          EOF
+          node "$SCRIPT"
+          rm -rf "$GITHUB_WORKSPACE/.wn"
 
       - name: Install the published versions
         if: steps.find.outputs.replaced != ''
@@ -166,7 +134,7 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
-          git commit -m "$MESSAGE" -m "Published versions: $REPLACED"
+          git commit -m "$MESSAGE" -m "Published-packages: $REPLACED"
           git push origin "HEAD:${GITHUB_HEAD_REF}"
           echo "### Switched to published packages" >> "$GITHUB_STEP_SUMMARY"
           for p in $REPLACED; do echo "- \`$p\`" >> "$GITHUB_STEP_SUMMARY"; done

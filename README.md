@@ -34,24 +34,23 @@ Setup, the sandbox, checks, how changes reach `main` and how packages are releas
 
 `npm run try -- ../my-site ../my-other-site` builds and packs every package and installs the tarballs into
 each site: the packages it already uses, each in the same section of its package.json. Once the change is
-published, the app's **Use published packages** workflow (below) puts it back on npm: on the app's pull
-request it replaces each `file:…tgz` dependency with the latest published version, reinstalls, runs the
-app's checks, commits package.json and package-lock.json to the branch and runs the app's CI again.
+published, the app's CI (`site-ci.yml`, below) puts it back on npm: on the app's pull request, or a push to
+`main`, it replaces each `file:…tgz` dependency with the latest published version, reinstalls, runs the app's
+checks, commits package.json and package-lock.json to the branch and runs again on that commit.
 
 ## Reusable workflows
 
 Sites built on these packages keep almost nothing in their own workflows: each one calls a reusable
-workflow here, at the moving tag `@v1`, so a fix reaches every site at once once `v1` is moved to it (see
+workflow here, at the moving tag `@v2`, so a fix reaches every site at once once `v2` is moved to it (see
 CONTRIBUTING.md > Changes to the reusable workflows). The callers are the build-tools
 [templates](src/npm/build-tools/README.md#templates); a site only fills in its repository name or schema.
 
 | Workflow | What it does | The site's caller |
 | --- | --- | --- |
-| [site-ci.yml](.github/workflows/site-ci.yml) | Pull requests: fails on local tarball dependencies, then type-check, lint, format check, tests, build. The required check is **ci / Check, test and build**. | `ci.yml` (`pull_request`, `workflow_dispatch`) |
-| [site-deploy.yml](.github/workflows/site-deploy.yml) | `main`: reserves the next `v*` tag, builds with the site's `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BASE_PATH` variables, deploys to Pages, records a GitHub release. Inputs: `base-path`, `increment`. | `deploy.yml` (grants `contents`, `pages` and `id-token` write) |
-| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, running this repository's [ops/sql](ops/sql) (at the same commit) in the site's `database` environment. Input: `schema`. | `database.yml` (`schedule`) |
-| [site-published-packages.yml](.github/workflows/site-published-packages.yml) | Pull requests that change package files: swaps local tarballs for published versions (`use-published-packages.yml`), then starts the site's CI on the new commit. | `published-packages.yml` (grants `contents` and `actions` write) |
-| [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own. Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
+| [site-ci.yml](.github/workflows/site-ci.yml) | One job, **ci / Check, test and build** (the required check): swaps local `@wells-nelson` tarballs for the published versions, then type-check, lint, format check, tests, build; after a swap, commits it to the branch with a `Published-packages:` trailer (a commit with the trailer is never swapped again) and pushes with the `token` secret so the checks run on it (a missing or refused token falls back to `GITHUB_TOKEN`, with a warning on the run summary). Inputs: `node-version`, `scope`, `dist-tag`; output `committed`. | `ci.yml` (`pull_request`) and `deploy.yml` (pushes to `main`); grants `contents` write and passes the `PAT` secret as `token` |
+| [site-deploy.yml](.github/workflows/site-deploy.yml) | `main`, after site-ci.yml: reserves the next `v*` tag, builds with the site's `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BASE_PATH` variables, deploys to Pages, records a GitHub release. Inputs: `base-path`, `increment`. | `deploy.yml` (grants `contents`, `pages` and `id-token` write; skipped when CI committed a swap) |
+| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, running this repository's [ops/sql](ops/sql) (at the same commit) in the site's `database` environment. Input: `schema`. | `database.yml` (`schedule`; `secrets: inherit`, which the environment's password needs) |
+| [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own, for apps not using site-ci.yml (the same [script](ops/scripts/use-published-packages.cjs)). Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
 
 Reusable workflows read the calling site's variables and run their jobs in its environments, so the
 settings stay in each site's repository. Changing one of these workflows changes every site's next run:

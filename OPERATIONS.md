@@ -9,14 +9,16 @@ repository name.
 ## The shared workflows
 
 A site's `.github/workflows/` only sets triggers and permissions; the steps live in this repository's
-reusable workflows, called at `@v1` (see the README's "Reusable workflows"):
+reusable workflows, called at `@v2` (see the README's "Reusable workflows"):
 
 | Site workflow | Runs | What it does |
 | --- | --- | --- |
-| `ci.yml` | every pull request | No local tarball dependencies; type-check, lint, format check, unit tests, build. The required check is **ci / Check, test and build**. |
-| `deploy.yml` | every push to `main` | Reserves the next `v*` tag, checks and builds, deploys to GitHub Pages, records a GitHub release. |
+| `ci.yml` | every pull request | Swaps local package tarballs for the published versions; type-check, lint, format check, unit tests, build; commits the swap, and the checks run again on that commit. The required check is **ci / Check, test and build**. |
+| `deploy.yml` | every push to `main` | The same check (a swap is committed to `main`, and that commit's run deploys), then reserves the next `v*` tag, builds, deploys to GitHub Pages, records a GitHub release. |
 | `database.yml` | nightly, or by hand | Backup with a restore test, keep-alive, security lint, client error digest (below). |
-| `published-packages.yml` | pull requests that change package files | Swaps local package tarballs for the published versions, commits, and runs CI again. |
+
+**Loop guard:** the swap's commit has a `Published-packages:` trailer. CI never swaps a commit with that trailer
+again: if it still installs local tarballs, the check fails instead.
 
 ## Repository settings
 
@@ -24,6 +26,12 @@ reusable workflows, called at `@v1` (see the README's "Reusable workflows"):
   **ci / Check, test and build** status check. Allow squash merging.
 - **Pages** (Settings → Pages): Source **GitHub Actions**.
 - **Actions variables:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `BASE_PATH` only for a custom domain.
+- **Actions secret `PAT`:** a fine-grained personal access token for this repository with **Contents: read and
+  write**. CI pushes the package swap with it, because a push made with the workflow's own token starts no
+  workflow runs (the new commit would go unchecked and undeployed). To swap on `main` too, its owner must be
+  allowed to bypass the branch protection. CI checks the token at the start of every run; when it's missing or
+  GitHub refuses it (expired, revoked, another repository), CI falls back to the built-in token and puts a warning
+  on the run's summary.
 - **Environment `database`** (Settings → Environments), limited to `main`: the variable `SUPABASE_DB_URL` and the
   secret `SUPABASE_DB_PASSWORD` ([below](#the-database-environment)).
 
@@ -71,7 +79,8 @@ In **Settings → Environments → New environment**, create `database`, then:
    created, not your Supabase account password (**Project Settings → Database → Reset database password** if
    you don't have it; the sites use the anon key, so a reset changes nothing else). It also encrypts the
    backups: when you change it, keep the old one for 30 days.
-4. Run the workflow once from **Actions → Database → Run workflow**.
+4. Run the workflow once from **Actions → Database → Run workflow**. "no password supplied" means the password
+   didn't reach it: check the secret's name and that `database.yml` has `secrets: inherit`.
 
 To find `SUPABASE_DB_URL`: in the Supabase dashboard click **Connect**, choose **Connection String**, type
 **URI** and the **Session pooler** (the direct connection is IPv6-only, which GitHub's runners can't reach,

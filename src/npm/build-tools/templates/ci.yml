@@ -2,8 +2,10 @@
 
 name: CI
 
-# Type-check, unit tests and a production build on every pull request (the shared site-ci.yml).
-# Branch protection requires the check "ci / Check, test and build".
+# The pull request check (the shared site-ci.yml): swaps local @wells-nelson tarballs for the
+# published versions and commits that to the branch, then type-check, lint, formatting, unit tests
+# and a production build. Branch protection requires the check "ci / Check, test and build".
+# The swap is pushed with the PAT repository secret, so the checks run again on the new commit.
 
 on:
   pull_request:
@@ -15,4 +17,8 @@ permissions:
 
 jobs:
   ci:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v1
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v2
+    permissions:
+      contents: write
+    secrets:
+      token: ${{ secrets.PAT }}

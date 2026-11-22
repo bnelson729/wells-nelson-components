@@ -187,12 +187,12 @@ in this repository's tests (`sql-apply.test.ts`); to check a site's own addition
 Copy from `node_modules/@wells-nelson/build-tools/templates/`:
 
 - `deploy-pages.yml` → `.github/workflows/deploy.yml` (replace `__REPO__`)
-- `ci.yml`, `published-packages.yml` → `.github/workflows/`
+- `ci.yml` → `.github/workflows/`
 - `database.yml` → `.github/workflows/` (replace `__SCHEMA__`)
 
-Each is a few lines that call a reusable workflow in this repository at `@v1` (`site-ci.yml`, `site-deploy.yml`,
-`site-published-packages.yml`, `site-database.yml`). Don't copy steps into the site: change the reusable
-workflow here, and every site gets it once `v1` moves (see CONTRIBUTING.md).
+Each is a few lines that call a reusable workflow in this repository at `@v2` (`site-ci.yml`, `site-deploy.yml`,
+`site-database.yml`). Add the `PAT` secret they use ([OPERATIONS.md](OPERATIONS.md#repository-settings)). Don't copy steps into the site: change the reusable
+workflow here, and every site gets it once `v2` moves (see CONTRIBUTING.md).
 
 Write `README.md` (what it is, how it's organized), `CONTRIBUTING.md` (branches and pull requests, local
 development, tests, configuration, the site's Supabase setup; link [OPERATIONS.md](OPERATIONS.md) for the
@@ -205,8 +205,8 @@ run the migration, expose the schema (**Data API → Exposed schemas**), and add
 ## 7. Trying unreleased package changes
 
 Change the package here, then `npm run try -- ../my-site`: it builds and packs every package and installs the
-tarballs the site uses. Run it again after each change. CI rejects tarball dependencies on purpose; after the
-release, the **Use published packages** workflow swaps them. Don't use `npm link` or a folder path: they load a
+tarballs the site uses. Run it again after each change. After the release, the site's CI swaps them for the
+published versions and commits that to the branch. Don't use `npm link` or a folder path: they load a
 second copy of Svelte.
 
 ## 8. Verify like a user

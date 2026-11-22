@@ -49,7 +49,8 @@ onMount(() => void store.init({ beforeReady: importDevSeed }));
 
 - `app`: `local` / `cloud` data sets (`DataSet`: the RxDB database plus a TanStack DB
   collection per RxDB collection), `ready`, `restored` (start-up has also restored any session, or
-  `restoreTimeoutMs`, default 5 s, passed), `fatal`, `writeError` (a local write that failed; show it
+  `restoreTimeoutMs`, default 5 s, passed; the cloud data opens after at most `sessionWaitMs`, default 300 ms,
+  even while Supabase is still confirming the session over the network), `fatal`, `writeError` (a local write that failed; show it
   until dismissed, e.g. with `SyncBanners` from interactions) and `persisted` (whether the browser keeps
   the data for good).
 - `cloud`: `CloudSync`: session (Google, email link), replication, `pendingIds`, `hasPending`,

@@ -6,7 +6,9 @@ name: Site deploy
 # even when a run fails or is cancelled. The build gets it as APP_VERSION, and once the deploy
 # succeeds a GitHub release records it (creating it again is skipped, so re-running is safe).
 #
-# Call it from the site's .github/workflows/deploy.yml (build-tools template `deploy-pages.yml`):
+# Call it from the site's .github/workflows/deploy.yml (build-tools template `deploy-pages.yml`),
+# after site-ci.yml, which checks, lints and tests the commit (and may swap local tarballs for
+# published packages, committing a new commit that its own run deploys):
 #
 #   on:
 #     push:
@@ -15,8 +17,16 @@ name: Site deploy
 #     group: pages
 #     cancel-in-progress: false
 #   jobs:
+#     ci:
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v2
+#       permissions:
+#         contents: write
+#       secrets:
+#         token: ${{ secrets.PAT }}
 #     deploy:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v1
+#       needs: ci
+#       if: needs.ci.outputs.committed != 'true'
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v2
 #       permissions:
 #         contents: write
 #         pages: write
@@ -81,13 +91,8 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
+      # Checks, lint and tests ran in site-ci.yml, before this workflow.
       - run: npm ci
-      - name: Type-check
-        run: npm run check --if-present
-      - name: Lint
-        run: npm run lint --if-present
-      - name: Test
-        run: npm test --if-present
       - run: npm run build
         env:
           APP_VERSION: ${{ needs.version.outputs.version }}

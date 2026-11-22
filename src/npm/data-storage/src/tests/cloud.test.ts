@@ -20,7 +20,8 @@ vi.mock('rxdb/plugins/replication-supabase', async () => {
 				received$: new Subject(),
 				sent$: sent,
 				cancel: async () => {},
-				reSync: () => {}
+				reSync: () => {},
+				awaitInSync: async () => {}
 			};
 		}
 	};
@@ -88,5 +89,62 @@ describe('pushing a new cloud container', () => {
 		const pending = push('tasks', { id: 't1', project_id: 'p1' });
 		await vi.advanceTimersByTimeAsync(20_000);
 		expect(await pending).toMatchObject({ id: 't1' });
+	});
+});
+
+describe('starting with a stored session', () => {
+	afterEach(() => replications.clear());
+
+	function cloudWithSlowSession(storedUser: { id: string; email: string } | null) {
+		let answer!: (session: { user: { id: string; email: string } } | null) => void;
+		const session = new Promise<{ user: { id: string; email: string } } | null>((r) => (answer = r));
+		const client = {
+			auth: {
+				getSession: async () => ({ data: { session: await session } }),
+				onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } })
+			}
+		};
+		const app = new AppState<Docs>();
+		const api = {
+			configured: true,
+			schema: 'demo',
+			mayHaveSession: () => true,
+			storedUser: () => storedUser,
+			loadClient: async () => client,
+			getClient: () => client
+		} as unknown as SupabaseApi;
+		const cloud = new CloudSync<Docs>({
+			appKey: `c${Math.random().toString(36).slice(2, 8)}`,
+			schema: { collections, schemas, container: 'projects', containerField: 'project_id' },
+			app,
+			supabase: api,
+			roles: true,
+			storage: getRxStorageMemory,
+			sessionWaitMs: 30
+		});
+		return { cloud, app, answer };
+	}
+
+	it("opens this device's cloud data when Supabase is slow to confirm the session", async () => {
+		const { cloud, app, answer } = cloudWithSlowSession({ id: 'u1', email: 'me@example.com' });
+		await cloud.init();
+		expect(cloud.user?.id).toBe('u1');
+		expect(app.cloud).not.toBeNull();
+		const opened = app.cloud;
+		// Confirmed later for the same user: the same data set carries on.
+		answer({ user: { id: 'u1', email: 'me@example.com' } });
+		await new Promise((r) => setTimeout(r, 10));
+		expect(app.cloud).toBe(opened);
+		await app.cloud?.db.remove();
+	});
+
+	it('waits for Supabase when no session is stored', async () => {
+		const { cloud, app, answer } = cloudWithSlowSession(null);
+		await cloud.init();
+		expect(app.cloud).toBeNull();
+		answer({ user: { id: 'u2', email: 'you@example.com' } });
+		await vi.waitFor(() => expect(cloud.user?.id).toBe('u2'));
+		expect(app.cloud).not.toBeNull();
+		await app.cloud?.db.remove();
 	});
 });

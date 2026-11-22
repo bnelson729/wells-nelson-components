@@ -66,6 +66,11 @@ export interface SyncedStoreConfig<
 	persistStorage?: boolean;
 	/** Longest start-up waits for the session before `app.restored` turns true anyway (default 5000 ms). */
 	restoreTimeoutMs?: number;
+	/**
+	 * Longest start-up waits for Supabase to confirm a stored session (default 300 ms) before it
+	 * opens the cloud data already on this device; it syncs once the session is confirmed.
+	 */
+	sessionWaitMs?: number;
 }
 
 /**
@@ -99,7 +104,8 @@ export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<
 		supabase,
 		roles,
 		ownership: config.ownership,
-		storage: config.storage
+		storage: config.storage,
+		sessionWaitMs: config.sessionWaitMs
 	});
 	const ops = createContainerOps<D, C>({
 		schema: config,

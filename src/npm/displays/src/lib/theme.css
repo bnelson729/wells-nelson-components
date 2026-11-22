@@ -87,6 +87,16 @@
 	box-sizing: border-box;
 }
 
+/*
+ * Classic scrollbars (Windows, Linux) take width. Room for one is always kept, so the page and the
+ * fixed header don't shift sideways when a page starts or stops scrolling, and a thin one takes
+ * less of it. Overlay scrollbars (macOS, iOS, Android) take no room and are unaffected.
+ */
+html {
+	scrollbar-gutter: stable;
+	scrollbar-width: thin;
+}
+
 body {
 	margin: 0;
 	background: var(--bg);
@@ -105,9 +115,14 @@ h3 {
 	line-height: 1.2;
 }
 
+/* Every text-like input looks the same (a phone number field matches the name above it). */
 input[type='text'],
 input[type='email'],
 input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='number'],
+input[type='password'],
 input:not([type]) {
 	font: inherit;
 	color: inherit;

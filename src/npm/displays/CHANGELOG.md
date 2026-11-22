@@ -24,7 +24,10 @@ Accessibility and usability pass:
   nav buttons show theirs, and `profileShowLabel` labels the avatar.
 - `phoneLayout` / `PHONE_LAYOUT_QUERY`: when to show a `TabBar` instead of the `AppHeader` (narrow screens, and
   touch screens held sideways). `TabBar` now sets `--header-h: 0px` while shown.
-- Theme: date and time inputs match the text inputs (and keep their size on iOS).
+- Theme: date and time inputs match the text inputs (and keep their size on iOS); so do `tel`, `url`,
+  `number` and `password` inputs.
+- Theme: the page always keeps room for a classic (Windows, Linux) scrollbar, a thin one, so the page and the
+  fixed header no longer shift sideways when a page starts or stops scrolling (`scrollbar-gutter: stable`).
 - Theme, opt-in with `<html class="touch-app">`: no accidental text selection on touch screens (fields and
   `.selectable` excepted; `Leaderboards` and `SortableTable` are selectable), and touch feedback (pressed
   controls dim). **Sites:** apps add the class to `app.html`; websites leave it off.

@@ -15,9 +15,14 @@ name: Site database
 #     workflow_dispatch:
 #   jobs:
 #     database:
-#       uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@v1
+#       uses: bnelson729/wells-nelson-components/.github/workflows/site-database.yml@v2
+#       secrets: inherit
 #       with:
 #         schema: my_site
+#
+# `secrets: inherit` is required: a called workflow only sees the secrets its caller passes, and
+# environment secrets (SUPABASE_DB_PASSWORD) can't be passed one by one, since the calling job has
+# no environment. Without it psql fails with "no password supplied".
 #
 # Runs the library's SQL from ops/sql/ (at the same commit as this workflow), for the given schema;
 # the site keeps none of it. Both jobs run in
@@ -66,6 +71,14 @@ jobs:
           ref: ${{ github.job_workflow_sha || 'main' }}
           path: .wn
           sparse-checkout: ops/sql
+      - name: The database password is there
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: &need-password |
+          if [ -z "$PGPASSWORD" ]; then
+            echo "::error::SUPABASE_DB_PASSWORD is empty. Add it to the database environment, and call this workflow with 'secrets: inherit'."
+            exit 1
+          fi
       - name: Install the Postgres client
         run: &install-psql |
           sudo apt-get install -y -q postgresql-common
@@ -141,6 +154,10 @@ jobs:
           curl --fail --silent --show-error --max-time 30 -o /dev/null \
             -H "apikey: $SUPABASE_ANON_KEY" "$SUPABASE_URL/auth/v1/health"
 
+      - name: The database password is there
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: *need-password
       - name: Install the Postgres client
         run: *install-psql
 

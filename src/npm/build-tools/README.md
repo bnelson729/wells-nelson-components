@@ -110,10 +110,10 @@ Copy them from `node_modules/@wells-nelson/build-tools/templates/` into a new si
 the repository). The workflow templates are a few lines each: triggers, permissions and a call to one of
 the library's reusable workflows (see "Reusable workflows" in the repository README), where the steps live.
 
-- `deploy-pages.yml` → `.github/workflows/deploy.yml` (replace `__REPO__`): type-check, test, build, deploy to
-  Pages, with a version tag reserved before the build and a GitHub release after the deploy.
-- `ci.yml` and `published-packages.yml` → `.github/workflows/` as they are: the pull request check, and the
-  swap from local package tarballs to published versions.
+- `deploy-pages.yml` → `.github/workflows/deploy.yml` (replace `__REPO__`): the CI check, then build and deploy
+  to Pages, with a version tag reserved before the build and a GitHub release after the deploy.
+- `ci.yml` → `.github/workflows/` as it is: the pull request check, which also swaps local package tarballs for
+  the published versions and commits that (with the site's `PAT` secret).
 - `database.yml` → `.github/workflows/` (replace `__SCHEMA__`): nightly encrypted backup with a test restore,
   keep-alive, security lint and client error digest. The SQL it runs lives in the repository's `ops/sql`, so the
   site keeps none.

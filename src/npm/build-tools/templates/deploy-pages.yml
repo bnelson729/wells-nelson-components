@@ -3,9 +3,11 @@
 
 name: Deploy to GitHub Pages
 
-# Every merge to main deploys and releases a new version (the shared site-deploy.yml). Run it by
-# hand to bump the minor or major version. Reads the repository variables SUPABASE_URL,
-# SUPABASE_ANON_KEY and, for a custom domain, BASE_PATH.
+# Every push to main is checked (the shared site-ci.yml, as on pull requests), then deployed and
+# released as a new version (site-deploy.yml). When the check swaps local tarballs for published
+# packages, it commits that to main instead, and the run for that commit deploys. Run it by hand to
+# bump the minor or major version. Reads the repository variables SUPABASE_URL, SUPABASE_ANON_KEY
+# and, for a custom domain, BASE_PATH, and the PAT secret.
 
 on:
   push:
@@ -24,8 +26,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ci:
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-ci.yml@v2
+    permissions:
+      contents: write
+    secrets:
+      token: ${{ secrets.PAT }}
+
   deploy:
-    uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v1
+    needs: ci
+    # The check committed published packages: that commit's own run deploys.
+    if: needs.ci.outputs.committed != 'true'
+    uses: bnelson729/wells-nelson-components/.github/workflows/site-deploy.yml@v2
     permissions:
       contents: write
       pages: write

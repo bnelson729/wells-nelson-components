@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { EnvConfig } from './env.js';
 import type { Role } from './types.js';
 
@@ -62,6 +62,11 @@ export interface SupabaseApi {
 	 * sign-in redirect (PKCE `code` or an error in the URL).
 	 */
 	mayHaveSession(): boolean;
+	/**
+	 * The user of the session stored on this device, read without supabase-js or the network
+	 * (it may have expired). Null when none is stored.
+	 */
+	storedUser(): User | null;
 	fetchMembers(containerId: string): Promise<Member[]>;
 	inviteMember(containerId: string, email: string, role?: Role): Promise<void>;
 	setMemberRole(memberId: string, role: Role): Promise<void>;
@@ -169,6 +174,16 @@ export function createSupabaseApi(env: EnvConfig, members: MembersConfig, option
 		);
 	}
 
+	function storedUser(): User | null {
+		try {
+			const raw = localStorage.getItem(storageKey) ?? localStorage.getItem(legacyKey);
+			const user = raw ? (JSON.parse(raw) as { user?: User }).user : undefined;
+			return user?.id ? user : null;
+		} catch {
+			return null;
+		}
+	}
+
 	async function requireClient() {
 		const sb = await loadClient();
 		if (!sb) throw new Error('Cloud sync is not configured.');
@@ -186,6 +201,7 @@ export function createSupabaseApi(env: EnvConfig, members: MembersConfig, option
 		loadClient,
 		getClient: () => client,
 		mayHaveSession,
+		storedUser,
 
 		async fetchMembers(containerId) {
 			const { data, error } = await (await requireClient()).rpc(membersRpc, { [rpcParam]: containerId });
