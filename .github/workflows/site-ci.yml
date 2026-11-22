@@ -3,9 +3,10 @@ name: Site CI
 # Reusable check for a site built on these packages, run on pull requests (the site's ci.yml) and
 # on pushes to main before deploying (the site's deploy.yml). One job, "Check, test and build":
 #
-#   1. Local tarballs: when package.json still installs @wells-nelson packages from local tarballs
-#      (the tarballs only exist on the machine that packed them), they're swapped for the latest
-#      published versions, on the branch itself (the pull request's branch, or main).
+#   1. Local tarballs: when package.json or package-lock.json still installs @wells-nelson packages
+#      from local tarballs (the tarballs only exist on the machine that packed them), they're
+#      swapped for the latest published versions (a lock-only leftover for package.json's range), on
+#      the branch itself (the pull request's branch, or main).
 #   2. Type-check, lint, formatting, unit tests and a production build.
 #   3. After a swap that passed, package.json and package-lock.json are committed to that branch
 #      with a `Published-packages: …` trailer and pushed with the `token` secret (the site's PAT
@@ -114,8 +115,8 @@ jobs:
             npm install
             git diff --stat -- package.json package-lock.json
           fi
-          if grep -n '"file:[^"]*\.tgz"' package.json; then
-            echo "::error::package.json still installs local tarballs (only $SCOPE packages are swapped)."
+          if grep -n '"file:[^"]*\.tgz"' package.json package-lock.json; then
+            echo "::error::Local tarballs are still installed (only $SCOPE packages are swapped)."
             exit 1
           fi
 

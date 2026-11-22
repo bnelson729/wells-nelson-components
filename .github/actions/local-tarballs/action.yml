@@ -1,6 +1,7 @@
 name: Local tarball dependencies
 description: >-
-  Finds packages that package.json installs from local tarballs. When there are some, checks out
+  Finds packages installed from local tarballs, in package.json or only in package-lock.json (a
+  lock left pointing at tarballs, e.g. by a merge, fails `npm ci` too). When there are some, checks out
   the branch itself (a pull request's branch, or the pushed branch) so a swap can be committed to
   it. Fails for a fork's pull request (its branch can't be pushed to), and for a commit that already
   has the `Published-packages:` trailer (the loop guard: that was a swap's own commit). Run it in a
@@ -8,7 +9,7 @@ description: >-
 
 outputs:
   found:
-    description: "'true' when package.json installs local tarballs"
+    description: "'true' when package.json or package-lock.json installs local tarballs"
     value: ${{ steps.find.outputs.found }}
   branch:
     description: The branch now checked out, which the swap is committed to
@@ -23,19 +24,22 @@ runs:
         BRANCH: ${{ github.head_ref || github.ref_name }}
         FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
       run: |
-        if ! grep -n '"file:[^"]*\.tgz"' package.json; then
+        files=package.json
+        [ -f package-lock.json ] && files="$files package-lock.json"
+        # Specs in package.json and the lock's root, and the lock's resolved entries.
+        if ! grep -n '"file:[^"]*\.tgz"' $files; then
           echo "None."
           exit 0
         fi
         if [ "$FORK" = "true" ]; then
-          echo "::error::package.json installs packages from local tarballs, and a fork's branch can't be updated here. Point them at published versions."
+          echo "::error::Local tarballs are installed (see above), and a fork's branch can't be updated here. Point them at published versions."
           exit 1
         fi
         # The branch itself, not a pull request's merge commit: the swap is committed to it.
         git fetch --no-tags --depth=1 origin "refs/heads/$BRANCH"
         git checkout -B "$BRANCH" FETCH_HEAD
         if git log -1 --format=%B | grep -q '^Published-packages:'; then
-          echo "::error::The latest commit already switched to published packages, yet package.json still installs local tarballs. Not committing again (it would loop); fix package.json by hand."
+          echo "::error::The latest commit already switched to published packages, yet local tarballs are still installed (see above). Not committing again (it would loop); fix package.json and package-lock.json by hand."
           exit 1
         fi
         echo "found=true" >> "$GITHUB_OUTPUT"
