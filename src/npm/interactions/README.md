@@ -16,7 +16,8 @@ the input with `aria-describedby`, and an error is announced), `Checkbox` (optio
 `Combobox` (type to filter, offers "Create …"; plus `sameName`. It follows the WAI-ARIA combobox
 pattern: the field points at the highlighted option. Inside something that scrolls, like a `Modal`,
 opening it near the end adds room below so its options aren't cut off),
-`AddRow` (inline "name + plus" that refocuses), `Segmented` (one of a few) and `SearchBar`
+`AddRow` (inline "name + plus" that refocuses; the field is named by its `placeholder`, the button by
+`label`), `Segmented` (one of a few) and `SearchBar`
 (fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
 does `UndoButton`).
 
@@ -41,6 +42,9 @@ does `UndoButton`).
 `ActiveList`'s `collapsibleActive` lets the active section collapse too; that isn't remembered, so
 it's expanded whenever the list is shown again. With `sideBySide`, once the list is 40rem wide
 the active and inactive sections sit side by side, both always expanded.
+
+A CollapsibleSection's title is a heading (`headingLevel`, default 2) holding the button that collapses
+it, so screen readers can jump between sections; use 3 for sections inside another section.
 
 Both take `appearance`: `card` (default) draws rounded cards; `lines` fills the container edge to
 edge with rules between rows, like lines on paper. A `lines` CollapsibleSection's pinned header

@@ -1,7 +1,22 @@
 <script lang="ts">
 	import { Icon } from '@wells-nelson/displays';
 
-	let { placeholder, label, onadd }: { placeholder: string; label: string; onadd: (name: string) => void } = $props();
+	/**
+	 * A text field with a + button, for adding something by name. The field is named by its
+	 * placeholder (the text people see, e.g. "New list name"), the button by `label` (the action,
+	 * e.g. "Create list"). Blank names can't be added; the field clears and keeps focus after adding.
+	 */
+	let {
+		placeholder,
+		label,
+		onadd
+	}: {
+		/** Shown in the empty field, and its accessible name. */
+		placeholder: string;
+		/** The button's accessible name and tooltip. */
+		label: string;
+		onadd: (name: string) => void;
+	} = $props();
 
 	let value = $state('');
 	let input: HTMLInputElement | undefined = $state();
@@ -18,7 +33,7 @@
 </script>
 
 <form class="add-row" onsubmit={submit}>
-	<input type="text" bind:this={input} bind:value {placeholder} aria-label={label} enterkeyhint="done" />
+	<input type="text" bind:this={input} bind:value {placeholder} aria-label={placeholder} enterkeyhint="done" />
 	<button type="submit" aria-label={label} title={label} disabled={!value.trim()}>
 		<Icon name="plus" />
 	</button>

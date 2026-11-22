@@ -29,6 +29,8 @@
 		emptyText?: string;
 	} = $props();
 
+	const headingId = $props.id();
+
 	const activeKey = $derived(sortKey ?? columns[0]?.key);
 	const activeColumn = $derived(columns.find((c) => c.key === activeKey));
 	const sorted = $derived(activeColumn ? sortRows(rows, activeColumn.value, rowLabel, descending) : rows);
@@ -48,14 +50,15 @@
 </script>
 
 <section class="table-card card selectable">
-	{#if title}<h2>{title}</h2>{/if}
+	{#if title}<h2 id={headingId}>{title}</h2>{/if}
 	{#if rows.length === 0}
 		<p class="muted empty-row">{emptyText}</p>
 	{:else}
 		<!-- Focusable so the keyboard can scroll it sideways on a small screen. -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div class="scroll" tabindex="0" role="region" aria-label={title ?? 'Table'}>
-			<table>
+			<!-- Named after the heading, so table navigation says which table it's in. -->
+			<table aria-labelledby={title ? headingId : undefined}>
 				<thead>
 					<tr>
 						<th scope="col" class="name">{labelHeader}</th>

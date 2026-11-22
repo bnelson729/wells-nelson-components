@@ -202,6 +202,22 @@ export class CloudSync<D extends DocMap<D>> {
 		const sb = await this.#sb.loadClient();
 		if (!sb) return;
 
+		// Follow auth changes before asking for the session, so a sign-out that settles while it
+		// waits (a refresh token revoked elsewhere) isn't missed.
+		sb.auth.onAuthStateChange((event, session) => {
+			// Supabase recommends not awaiting other calls inside this callback.
+			setTimeout(() => {
+				if (session?.user && session.user.id !== this.user?.id) {
+					void this.#serial(() => this.#startFor(session.user));
+				} else if (session?.user) {
+					this.user = session.user;
+					this.sessionExpired = false;
+				} else if (event === 'SIGNED_OUT' && this.user && !this.#signingOut) {
+					this.sessionExpired = true;
+				}
+			});
+		});
+
 		// Confirming the session may wait on the network (an expired token is refreshed first).
 		// Past sessionWaitMs, open the cloud data already on this device for the stored user, and
 		// carry on once Supabase answers (replication waits for the token by itself).
@@ -220,22 +236,11 @@ export class CloudSync<D extends DocMap<D>> {
 			if (stored) await this.#serial(() => this.#startFor(stored));
 			void session.then((s) => {
 				if (s) void this.#serial(() => this.#startFor(s.user));
+				// The stored session is gone (e.g. revoked): its data stays, as after any expiry, until
+				// the user signs in again.
+				else if (stored && this.user?.id === stored.id && !this.#signingOut) this.sessionExpired = true;
 			});
 		}
-
-		sb.auth.onAuthStateChange((event, session) => {
-			// Supabase recommends not awaiting other calls inside this callback.
-			setTimeout(() => {
-				if (session?.user && session.user.id !== this.user?.id) {
-					void this.#serial(() => this.#startFor(session.user));
-				} else if (session?.user) {
-					this.user = session.user;
-					this.sessionExpired = false;
-				} else if (event === 'SIGNED_OUT' && this.user && !this.#signingOut) {
-					this.sessionExpired = true;
-				}
-			});
-		});
 	}
 
 	#serial<T>(fn: () => Promise<T>): Promise<T> {

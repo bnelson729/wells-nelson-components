@@ -4,6 +4,11 @@
 
 Accessibility and usability pass:
 
+- `CollapsibleSection`: the title is a heading (`headingLevel`, h2 by default) holding the collapse button, so
+  screen reader users can move between sections; the chevron is a pointer-only duplicate, out of the tab order
+  and hidden from assistive tech.
+- `AddRow`: the field is named by its placeholder (the text people see), the button by `label` (before, both
+  had `label`).
 - `TextField`: error and hint tied to the input (`aria-describedby`), errors announced; `hideLabel`, `required`.
 - `Combobox`: `aria-activedescendant` and option ids; `aria-selected` marks the chosen option; errors tied and announced.
 - `Checkbox`: `disabled`, `tone="muted"`; 44px; states stay visible in forced-colors mode (so does `Toggle`'s).

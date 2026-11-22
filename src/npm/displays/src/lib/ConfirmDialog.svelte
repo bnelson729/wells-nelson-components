@@ -5,7 +5,8 @@
 
 	/**
 	 * Asks before doing something. Opens with focus on Cancel. Give `message` as text, or
-	 * `children` for richer content (a list, a link).
+	 * `children` for richer content (a list, a link). When `onconfirm` throws, the dialog stays open
+	 * and shows the error's message, so the action can be tried again or cancelled.
 	 */
 	let {
 		open = $bindable(false),
@@ -29,12 +30,21 @@
 	} = $props();
 
 	let busy = $state(false);
+	let error = $state<string | null>(null);
+
+	// Each time it opens, it starts without the last attempt's error.
+	$effect.pre(() => {
+		if (open) error = null;
+	});
 
 	async function confirm() {
 		busy = true;
+		error = null;
 		try {
 			await onconfirm();
 			open = false;
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
 		} finally {
 			busy = false;
 		}
@@ -47,6 +57,7 @@
 	{:else if message}
 		<p class="message">{message}</p>
 	{/if}
+	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
 	{#snippet footer()}
 		<Button onclick={() => (open = false)}>Cancel</Button>
 		<Button variant={danger ? 'danger' : 'primary'} onclick={confirm} {busy}>

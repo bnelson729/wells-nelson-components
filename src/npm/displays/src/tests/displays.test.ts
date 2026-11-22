@@ -215,6 +215,20 @@ describe('SortableTable', () => {
 		expect(doneButton.closest('th')!.getAttribute('aria-sort')).toBe('ascending');
 	});
 
+	it('names the table after its title, for table navigation', () => {
+		const el = render(SortableTable<Row>, {
+			title: 'Members',
+			rows,
+			columns,
+			rowKey: (r: Row) => r.id,
+			rowLabel: (r: Row) => r.name
+		});
+		const heading = el.querySelector('h2')!;
+		expect(heading.id).not.toBe('');
+		expect(el.querySelector('table')!.getAttribute('aria-labelledby')).toBe(heading.id);
+		expect(heading.textContent).toBe('Members');
+	});
+
 	it('shows the empty text without rows', () => {
 		const el = render(SortableTable<Row>, {
 			rows: [],

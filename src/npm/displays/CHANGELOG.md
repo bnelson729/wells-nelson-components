@@ -13,11 +13,13 @@ Accessibility and usability pass:
   keyboard) the first field, else the first footer button.
 - `Button`: `danger-ghost`, `size="lg"`, `href` (with `rel`, `target`), `busy`. 44px tall.
 - `IconButton`: 44px; `pressed` (`aria-pressed`) for on/off buttons.
-- `ConfirmDialog`: opens on Cancel; `busyLabel`; `children` instead of `message`.
+- `ConfirmDialog`: opens on Cancel; `busyLabel`; `children` instead of `message`. When `onconfirm` throws, it
+  stays open and shows the error's message (before, it stayed open silently and the rejection went unhandled).
 - New `Chip` (pill button, on/off with `pressed`) and `Notice` (warning / danger / info, actions, dismiss, link).
 - `Badge tone="count"` with an optional `label` for assistive tech.
 - `AppHeader`: the unsynced dot is part of the profile link's name; 44px brand link and profile.
-- `SortableTable`: 44px headers; the table's scroller and `Leaderboards` can be scrolled from the keyboard.
+- `SortableTable`: 44px headers; the table's scroller and `Leaderboards` can be scrolled from the keyboard; the
+  table is named after its title (`aria-labelledby`), so table navigation says which table it is.
 - `Splash` says "Loading" to assistive tech; `FatalError` has a "Try again" button (`retryLabel`).
 
 - `IconButton` `showLabel`: the label next to the icon. `AppHeader` `labels` (`always` / `active`) decides which

@@ -138,6 +138,19 @@ describe('starting with a stored session', () => {
 		await app.cloud?.db.remove();
 	});
 
+	// A refresh token revoked elsewhere: the device's data stays, and the user is asked to sign in again.
+	it('marks the session expired when Supabase says the stored one is gone', async () => {
+		const { cloud, app, answer } = cloudWithSlowSession({ id: 'u1', email: 'me@example.com' });
+		await cloud.init();
+		answer(null);
+		await new Promise((r) => setTimeout(r, 10));
+		try {
+			expect(cloud.sessionExpired).toBe(true);
+		} finally {
+			await app.cloud?.db.remove();
+		}
+	});
+
 	it('waits for Supabase when no session is stored', async () => {
 		const { cloud, app, answer } = cloudWithSlowSession(null);
 		await cloud.init();

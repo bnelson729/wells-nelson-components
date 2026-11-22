@@ -8,6 +8,9 @@
 	 * header while you scroll through its rows. Collapsed sections hide rows with CSS rather than
 	 * unmounting them, so a row being dragged stays attached to the page.
 	 * Children are rendered inside a <ul>; give draggable rows `data-dnd-item`.
+	 * The title is a heading (`headingLevel`, h2 by default) holding the button that collapses the
+	 * section, so screen reader users can move between sections by heading. The chevron does the
+	 * same for pointers and stays out of the tab order.
 	 */
 	let {
 		title,
@@ -26,6 +29,7 @@
 		variant = 'default',
 		appearance = 'card',
 		appHeaderSelector = '.app-header',
+		headingLevel = 2,
 		children
 	}: {
 		title: string;
@@ -54,6 +58,8 @@
 		appearance?: 'card' | 'lines';
 		/** The fixed app header, measured when scrolling a collapsed section back into view. */
 		appHeaderSelector?: string;
+		/** Level of the title's heading: 2 under a page's h1, 3 for sections inside another section. */
+		headingLevel?: 2 | 3 | 4;
 		children: Snippet;
 	} = $props();
 
@@ -96,17 +102,14 @@
 		class="group-header"
 		use:draggable={{ data: dragData ?? noDrag, disabled: !dragData, onstart: ondragstart, onend: ondragend }}
 	>
-		<button
-			type="button"
-			class="collapse"
-			aria-expanded={!collapsed}
-			aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
-			onclick={toggle}
-		>
+		<!-- A bigger target for pointers; keyboards and screen readers use the title's button. -->
+		<button type="button" class="collapse" tabindex="-1" aria-hidden="true" onclick={toggle}>
 			<span class="chev" class:collapsed><Icon name="chevron" size={20} /></span>
 		</button>
-		<!-- The name toggles collapse too; settings live behind the pencil. -->
-		<button type="button" class="title" aria-expanded={!collapsed} onclick={toggle}>{title}</button>
+		<!-- The name collapses the section; settings live behind the pencil. -->
+		<svelte:element this={`h${headingLevel}`} class="heading">
+			<button type="button" class="title" aria-expanded={!collapsed} onclick={toggle}>{title}</button>
+		</svelte:element>
 		<Badge tone="count" label={countLabel(count)}>{count}</Badge>
 		{#if onadd}
 			<IconButton icon="plus" label={addLabel} onclick={onadd} />
@@ -193,9 +196,14 @@
 	.chev.collapsed {
 		transform: rotate(-90deg);
 	}
-	.title {
+	.heading {
 		flex: 1;
 		min-width: 0;
+		margin: 0;
+		font: inherit;
+	}
+	.title {
+		width: 100%;
 		padding: 0.5rem 0.25rem;
 		border: none;
 		background: none;

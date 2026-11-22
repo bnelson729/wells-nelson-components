@@ -121,7 +121,8 @@ bottom UI sits above it.
 icon, `block`, `size="lg"` for the main actions of a busy screen (`--control-h` tall when set), `href`
 for a link that looks like a button, `busy`), `IconButton` (button or link, required label, `active`
 on a link, `pressed` on an on/off button, `showLabel`), `Modal` (native `<dialog>`, sm / md / lg) and
-`ConfirmDialog` (danger variant, `busyLabel`, text or a `children` snippet) complete the set. See them all
+`ConfirmDialog` (danger variant, `busyLabel`, text or a `children` snippet; when `onconfirm` throws it stays
+open and shows the error) complete the set. See them all
 in the sandbox (`npm run sandbox`).
 
 **Modals.** Escape, ✕ and the footer's buttons close a `Modal`. A click or tap outside closes it only
