@@ -49,8 +49,22 @@ CONTRIBUTING.md > Changes to the reusable workflows). The callers are the build-
 | --- | --- | --- |
 | [site-ci.yml](.github/workflows/site-ci.yml) | One job, **ci / Check, test and build** (the required check): swaps local `@wells-nelson` tarballs for the published versions, then type-check, lint, format check, tests, build; after a swap, commits it to the branch with a `Published-packages:` trailer (a commit with the trailer is never swapped again) and pushes with the `token` secret so the checks run on it (a missing or refused token falls back to `GITHUB_TOKEN`, with a warning on the run summary). Inputs: `node-version`, `scope`, `dist-tag`; output `committed`. | `ci.yml` (`pull_request`) and `deploy.yml` (pushes to `main`); grants `contents` write and passes the `PAT` secret as `token` |
 | [site-deploy.yml](.github/workflows/site-deploy.yml) | `main`, after site-ci.yml: reserves the next `v*` tag, builds with the site's `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BASE_PATH` variables, deploys to Pages, records a GitHub release. Inputs: `base-path`, `increment`. | `deploy.yml` (grants `contents`, `pages` and `id-token` write; skipped when CI committed a swap) |
-| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, running this repository's [ops/sql](ops/sql) (at the same commit) in the site's `database` environment. Input: `schema`. | `database.yml` (`schedule`; `secrets: inherit`, which the environment's password needs) |
-| [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own, for apps not using site-ci.yml (the same [script](ops/scripts/use-published-packages.cjs)). Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
+| [site-database.yml](.github/workflows/site-database.yml) | Nightly: encrypted backup with a test restore, keep-alive, security lint, client error digest, running this repository's [ops/sql](ops/sql) (through the actions below, at the same tag) in the site's `database` environment. Input: `schema`. | `database.yml` (`schedule`; `secrets: inherit`, which the environment's password needs) |
+| [use-published-packages.yml](.github/workflows/use-published-packages.yml) | The swap on its own, for apps not using site-ci.yml (the same actions). Inputs: `verify`, `scope` (default `@wells-nelson/`), `dist-tag`, `node-version`, `working-directory`, `commit-message`; output `replaced`; optional `token` secret. Forks are skipped. | |
+
+Their longer steps are composite actions in [.github/actions](.github/actions), which the workflows call
+at the same tag (`bnelson729/wells-nelson-components/.github/actions/<name>@v2`). GitHub fetches an action
+with its whole repository, so no step checks this repository out, and the actions reach `ops/sql` beside them:
+
+| Action | What it does | Used by |
+| --- | --- | --- |
+| [check-pat](.github/actions/check-pat/action.yml) | Whether the PAT can push to the repository (`pat`), else `builtin` with a warning on the run summary | site-ci, use-published-packages |
+| [local-tarballs](.github/actions/local-tarballs/action.yml) | Finds local tarball dependencies, checks out the branch to commit to, and the loop guard | site-ci |
+| [use-published-packages](.github/actions/use-published-packages/action.yml) | Points tarball dependencies at their published versions (`swap.cjs`) | site-ci, use-published-packages |
+| [commit-published-packages](.github/actions/commit-published-packages/action.yml) | Commits and pushes the swap with the `Published-packages:` trailer | site-ci, use-published-packages |
+| [postgres-client](.github/actions/postgres-client/action.yml) | psql, pg_dump and pg_restore of one Postgres version | site-database |
+| [schema-backup](.github/actions/schema-backup/action.yml) | Dump, restore test against a scratch database, encryption | site-database |
+| [schema-checks](.github/actions/schema-checks/action.yml) | Security lint and the client error digest | site-database |
 
 Reusable workflows read the calling site's variables and run their jobs in its environments, so the
 settings stay in each site's repository. Changing one of these workflows changes every site's next run:

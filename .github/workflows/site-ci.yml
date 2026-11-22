@@ -13,6 +13,10 @@ name: Site CI
 #      output is then 'true': the caller skips work on the outdated commit (deploy.yml deploys the
 #      new one from its own run).
 #
+# The steps are this repository's composite actions (.github/actions/check-pat, local-tarballs,
+# use-published-packages, commit-published-packages), called at @v2 like this workflow: move the
+# tag for both together.
+#
 # Loop guard: a commit with the `Published-packages:` trailer is never swapped again. If it still
 # installs local tarballs, the check fails instead of committing on top of it.
 #
@@ -72,37 +76,11 @@ jobs:
     outputs:
       committed: ${{ steps.commit.outputs.committed || 'false' }}
     steps:
-      # Only says which token to use ('pat' or 'builtin'); the token itself never leaves the secret.
       - name: Check the PAT
         id: pat
-        env:
-          PAT: ${{ secrets.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [ -z "$PAT" ]; then
-            reason="No PAT was passed (the site's PAT repository secret is missing or empty, or this run can't read secrets)."
-          elif ! status=$(curl -sS -o "$RUNNER_TEMP/repo.json" -w '%{http_code}' -H "Authorization: Bearer $PAT" \
-              -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$REPO"); then
-            reason="GitHub couldn't be reached to check the PAT."
-          elif [ "$status" != "200" ]; then
-            reason="GitHub refused the PAT for $REPO (HTTP $status): it may have expired, been revoked, or not include this repository."
-          elif [ "$(jq -r '.permissions.push // "unknown"' "$RUNNER_TEMP/repo.json")" = "false" ]; then
-            reason="The PAT can read $REPO but can't push to it: give it Contents read and write."
-          else
-            echo "use=pat" >> "$GITHUB_OUTPUT"
-            echo "The PAT is valid for $REPO."
-            exit 0
-          fi
-          echo "use=builtin" >> "$GITHUB_OUTPUT"
-          echo "::warning title=Using GITHUB_TOKEN instead of the PAT::$reason A package swap committed by this run won't start the checks or the deploy on the new commit."
-          {
-            echo "### ⚠️ Using the built-in GITHUB_TOKEN instead of the PAT"
-            echo
-            echo "$reason"
-            echo
-            echo 'If this run commits a package swap, GitHub will not run the checks (or, on `main`, the deploy) on the new commit.'
-            echo 'Add a fine-grained token with **Contents: read and write** on this repository as the `PAT` secret.'
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: bnelson729/wells-nelson-components/.github/actions/check-pat@v2
+        with:
+          token: ${{ secrets.token }}
 
       - uses: actions/checkout@v4
         with:
@@ -115,52 +93,20 @@ jobs:
 
       - name: Local tarball dependencies
         id: tarballs
-        env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
-          FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-        run: |
-          if ! grep -n '"file:[^"]*\.tgz"' package.json; then
-            echo "None."
-            exit 0
-          fi
-          if [ "$FORK" = "true" ]; then
-            echo "::error::package.json installs packages from local tarballs, and a fork's branch can't be updated here. Point them at published versions."
-            exit 1
-          fi
-          # The branch itself, not a pull request's merge commit: the swap is committed to it.
-          git fetch --no-tags --depth=1 origin "refs/heads/$BRANCH"
-          git checkout -B "$BRANCH" FETCH_HEAD
-          if git log -1 --format=%B | grep -q '^Published-packages:'; then
-            echo "::error::The latest commit already switched to published packages, yet package.json still installs local tarballs. Not committing again (it would loop); fix package.json by hand."
-            exit 1
-          fi
-          echo "found=true" >> "$GITHUB_OUTPUT"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-
-      - name: Get the swap script
-        if: steps.tarballs.outputs.found == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: bnelson729/wells-nelson-components
-          # The commit this reusable workflow runs from, so the script matches it.
-          ref: ${{ github.job_workflow_sha || 'main' }}
-          path: .wn
-          sparse-checkout: ops/scripts
+        uses: bnelson729/wells-nelson-components/.github/actions/local-tarballs@v2
 
       - name: Point tarball dependencies at their published versions
         id: swap
         if: steps.tarballs.outputs.found == 'true'
-        env:
-          SCOPE: ${{ inputs.scope }}
-          DIST_TAG: ${{ inputs.dist-tag }}
-        run: |
-          node .wn/ops/scripts/use-published-packages.cjs
-          # Not part of the site: keep it out of lint, formatting and the commit.
-          rm -rf .wn
+        uses: bnelson729/wells-nelson-components/.github/actions/use-published-packages@v2
+        with:
+          scope: ${{ inputs.scope }}
+          dist-tag: ${{ inputs.dist-tag }}
 
       - name: Install
         env:
           REPLACED: ${{ steps.swap.outputs.replaced }}
+          SCOPE: ${{ inputs.scope }}
         run: |
           if [ -z "$REPLACED" ]; then
             npm ci
@@ -169,7 +115,7 @@ jobs:
             git diff --stat -- package.json package-lock.json
           fi
           if grep -n '"file:[^"]*\.tgz"' package.json; then
-            echo "::error::package.json still installs local tarballs (only ${{ inputs.scope }} packages are swapped)."
+            echo "::error::package.json still installs local tarballs (only $SCOPE packages are swapped)."
             exit 1
           fi
 
@@ -182,28 +128,8 @@ jobs:
       - name: Commit the published versions
         id: commit
         if: steps.swap.outputs.replaced != ''
-        env:
-          BRANCH: ${{ steps.tarballs.outputs.branch }}
-          REPLACED: ${{ steps.swap.outputs.replaced }}
-          TOKEN: ${{ steps.pat.outputs.use }}
-        run: |
-          git add package.json package-lock.json
-          if git diff --cached --quiet; then
-            echo "Nothing to commit."
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
-          # The trailer marks the commit as this workflow's (the loop guard above).
-          git commit -m "Use published packages instead of local tarballs" -m "Published-packages: $REPLACED"
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "committed=true" >> "$GITHUB_OUTPUT"
-          {
-            echo "### Switched to published packages"
-            echo "Committed to \`$BRANCH\`; the checks run again on that commit."
-            for p in $REPLACED; do echo "- \`$p\`"; done
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$TOKEN" != "pat" ]; then
-            echo "::warning title=Swap pushed with GITHUB_TOKEN::Nothing checks or deploys $BRANCH's new commit by itself: push again or re-run the workflows once the PAT secret is fixed."
-            echo '**Pushed with GITHUB_TOKEN:** re-run the checks (and on `main` the deploy) on the new commit by hand.' >> "$GITHUB_STEP_SUMMARY"
-          fi
+        uses: bnelson729/wells-nelson-components/.github/actions/commit-published-packages@v2
+        with:
+          branch: ${{ steps.tarballs.outputs.branch }}
+          replaced: ${{ steps.swap.outputs.replaced }}
+          token: ${{ steps.pat.outputs.use }}

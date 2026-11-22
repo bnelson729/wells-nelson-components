@@ -1,0 +1,36 @@
+name: Use published packages
+description: >-
+  Points every local tarball dependency (`file:…/x.tgz`) whose name starts with `scope` at its
+  latest published version (`^x.y.z`) in package.json and package-lock.json (swap.cjs), before
+  anything is installed: an install sees the whole tree, and the tarballs only exist where they
+  were packed. Doesn't install or commit.
+
+inputs:
+  scope:
+    description: Only swap packages whose name starts with this ('' for any package)
+    required: false
+    default: '@wells-nelson/'
+  dist-tag:
+    description: npm dist-tag to take the published version from
+    required: false
+    default: latest
+  working-directory:
+    description: Directory that holds package.json
+    required: false
+    default: .
+
+outputs:
+  replaced:
+    description: The packages switched to published versions (space-separated name@range), or empty
+    value: ${{ steps.swap.outputs.replaced }}
+
+runs:
+  using: composite
+  steps:
+    - id: swap
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        SCOPE: ${{ inputs.scope }}
+        DIST_TAG: ${{ inputs.dist-tag }}
+      run: node "$GITHUB_ACTION_PATH/swap.cjs"

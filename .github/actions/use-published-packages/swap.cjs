@@ -1,7 +1,7 @@
 // Point every local tarball dependency (`"file:…/x.tgz"`) whose name starts with $SCOPE at its
 // latest published version on the $DIST_TAG dist-tag (`^x.y.z`), in package.json and
 // package-lock.json of the current directory. Writes `replaced=<name@range …>` (empty when there
-// was nothing to replace) to $GITHUB_OUTPUT. Used by site-ci.yml and use-published-packages.yml.
+// was nothing to replace) to $GITHUB_OUTPUT. Run by this composite action (action.yml).
 //
 // Every tarball spec is rewritten before anything is installed: an install sees the whole tree,
 // so a tarball left for later (its path only exists on the machine that packed it) would fail it.

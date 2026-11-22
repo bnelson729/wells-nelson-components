@@ -1,0 +1,22 @@
+name: Postgres client
+description: >-
+  Installs psql, pg_dump and pg_restore of one Postgres major version (from the PostgreSQL apt
+  repository) and puts them first on the PATH.
+
+inputs:
+  pg-major:
+    description: Postgres major version (match the server's)
+    required: false
+    default: '17'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PG_MAJOR: ${{ inputs.pg-major }}
+      run: |
+        sudo apt-get install -y -q postgresql-common
+        sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+        sudo apt-get install -y -q "postgresql-client-$PG_MAJOR"
+        echo "/usr/lib/postgresql/$PG_MAJOR/bin" >> "$GITHUB_PATH"

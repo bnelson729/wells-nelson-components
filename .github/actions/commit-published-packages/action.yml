@@ -1,0 +1,65 @@
+name: Commit published packages
+description: >-
+  Commits package.json and package-lock.json after a swap (use-published-packages) and pushes them
+  to the branch, with a `Published-packages:` trailer (local-tarballs' loop guard looks for it).
+  Pushes with the checkout's token; with the built-in GITHUB_TOKEN the new commit starts no
+  workflow runs, which a warning on the run's summary says.
+
+inputs:
+  branch:
+    description: Branch to push to
+    required: true
+  replaced:
+    description: The packages that were swapped (use-published-packages' output)
+    required: true
+  token:
+    description: "Which token the checkout pushes with: 'pat' or 'builtin' (check-pat's output)"
+    required: false
+    default: builtin
+  message:
+    description: The commit's subject
+    required: false
+    default: Use published packages instead of local tarballs
+  working-directory:
+    description: Directory that holds package.json
+    required: false
+    default: .
+
+outputs:
+  committed:
+    description: "'true' when a commit was pushed"
+    value: ${{ steps.commit.outputs.committed || 'false' }}
+
+runs:
+  using: composite
+  steps:
+    - id: commit
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BRANCH: ${{ inputs.branch }}
+        REPLACED: ${{ inputs.replaced }}
+        TOKEN: ${{ inputs.token }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        git add package.json package-lock.json
+        if git diff --cached --quiet; then
+          echo "Nothing to commit."
+          exit 0
+        fi
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+        git commit -m "$MESSAGE" -m "Published-packages: $REPLACED"
+        git push origin "HEAD:refs/heads/$BRANCH"
+        echo "committed=true" >> "$GITHUB_OUTPUT"
+        {
+          echo "### Switched to published packages"
+          echo "Committed to \`$BRANCH\`:"
+          for p in $REPLACED; do echo "- \`$p\`"; done
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ "$TOKEN" = "pat" ]; then
+          echo "The checks run again on that commit." >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "::warning title=Swap pushed with GITHUB_TOKEN::Nothing checks or deploys the new commit on $BRANCH by itself: push again or re-run the workflows once the PAT secret is fixed."
+          echo '**Pushed with GITHUB_TOKEN:** re-run the checks (and on `main` the deploy) on the new commit by hand.' >> "$GITHUB_STEP_SUMMARY"
+        fi

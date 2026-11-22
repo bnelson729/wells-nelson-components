@@ -1,0 +1,70 @@
+name: Schema checks
+description: >-
+  The nightly checks of one schema: the security lint (a table without row level security,
+  anything signed-out callers can reach, a security-definer function without a fixed search_path)
+  and the errors the site reported in the last 24 hours. Either one fails the step and lists what
+  it found on the run's summary. Uses the repository's ops/sql (GitHub downloads the whole
+  repository for an action, at the same version). Needs the Postgres client (postgres-client).
+
+inputs:
+  schema:
+    description: The Postgres schema to check
+    required: true
+  db-url:
+    description: Connection string of the database, without the password
+    required: true
+  password:
+    description: The database password
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: The database password is there
+      shell: bash
+      env:
+        PGPASSWORD: ${{ inputs.password }}
+      run: |
+        if [ -z "$PGPASSWORD" ]; then
+          echo "::error::The database password is empty. Add SUPABASE_DB_PASSWORD to the database environment, and call the workflow with 'secrets: inherit'."
+          exit 1
+        fi
+
+    - name: Security lint (row level security, signed-out access)
+      shell: bash
+      env:
+        SCHEMA: ${{ inputs.schema }}
+        DB_URL: ${{ inputs.db-url }}
+        PGPASSWORD: ${{ inputs.password }}
+        SQL: ${{ github.action_path }}/../../../ops/sql
+      run: |
+        problems=$(psql "$DB_URL" -v ON_ERROR_STOP=1 -At -v schema="$SCHEMA" -f "$SQL/security-lint.sql")
+        if [ -n "$problems" ]; then
+          echo "### Security lint failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "$problems" | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+          echo "$problems" | while read -r line; do echo "::error::$line"; done
+          exit 1
+        fi
+        echo "Security lint passed." >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Errors the site reported in the last day
+      shell: bash
+      env:
+        SCHEMA: ${{ inputs.schema }}
+        DB_URL: ${{ inputs.db-url }}
+        PGPASSWORD: ${{ inputs.password }}
+        SQL: ${{ github.action_path }}/../../../ops/sql
+      run: |
+        errors=$(psql "$DB_URL" -v ON_ERROR_STOP=1 -At -F ' | ' -v schema="$SCHEMA" -f "$SQL/client-errors.sql")
+        if [ -n "$errors" ]; then
+          {
+            echo "### Client errors in the last 24 hours"
+            echo
+            echo "| Count | Kind | Version | Message |"
+            echo "| ---: | --- | --- | --- |"
+            echo "$errors" | sed 's/^/| /; s/$/ |/'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::The site reported errors in the last 24 hours (see the summary)."
+          exit 1
+        fi
+        echo "No client errors in the last 24 hours." >> "$GITHUB_STEP_SUMMARY"

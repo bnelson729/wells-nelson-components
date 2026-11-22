@@ -20,7 +20,9 @@ name: Use published packages
 #
 # Pull requests from forks are skipped (their branches can't be pushed to). A commit pushed with
 # the default GITHUB_TOKEN doesn't start new workflow runs; pass a `token` secret (a fine-grained
-# token with Contents: write) if the pull request's other checks should re-run on it.
+# token with Contents: write) if the pull request's other checks should re-run on it. The token is
+# checked first; a missing or refused one falls back to GITHUB_TOKEN with a warning on the summary.
+# The steps are this repository's composite actions (.github/actions), called at @v2.
 
 on:
   workflow_call:
@@ -74,36 +76,29 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Check the PAT
+        id: pat
+        uses: bnelson729/wells-nelson-components/.github/actions/check-pat@v2
+        with:
+          token: ${{ secrets.token }}
+
       - uses: actions/checkout@v7.0.1
         with:
           # The branch itself (not the merge commit), so the result can be pushed back to it.
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.token || github.token }}
+          token: ${{ steps.pat.outputs.use == 'pat' && secrets.token || github.token }}
 
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: ${{ inputs.node-version }}
 
-      - name: Get the swap script
-        uses: actions/checkout@v7.0.1
-        with:
-          repository: bnelson729/wells-nelson-components
-          # The commit this reusable workflow runs from, so the script matches it.
-          ref: ${{ github.job_workflow_sha || 'main' }}
-          path: .wn
-          sparse-checkout: ops/scripts
-
-      # The script (shared with site-ci.yml) rewrites every tarball spec before anything is
-      # installed: an install sees the whole tree.
       - name: Point tarball dependencies at their published versions
         id: find
-        env:
-          SCOPE: ${{ inputs.scope }}
-          DIST_TAG: ${{ inputs.dist-tag }}
-          SCRIPT: ${{ github.workspace }}/.wn/ops/scripts/use-published-packages.cjs
-        run: |
-          node "$SCRIPT"
-          rm -rf "$GITHUB_WORKSPACE/.wn"
+        uses: bnelson729/wells-nelson-components/.github/actions/use-published-packages@v2
+        with:
+          scope: ${{ inputs.scope }}
+          dist-tag: ${{ inputs.dist-tag }}
+          working-directory: ${{ inputs.working-directory }}
 
       - name: Install the published versions
         if: steps.find.outputs.replaced != ''
@@ -123,18 +118,10 @@ jobs:
 
       - name: Commit to the pull request branch
         if: steps.find.outputs.replaced != ''
-        env:
-          MESSAGE: ${{ inputs.commit-message }}
-          REPLACED: ${{ steps.find.outputs.replaced }}
-        run: |
-          git add package.json package-lock.json
-          if git diff --cached --quiet; then
-            echo "Nothing to commit."
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
-          git commit -m "$MESSAGE" -m "Published-packages: $REPLACED"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
-          echo "### Switched to published packages" >> "$GITHUB_STEP_SUMMARY"
-          for p in $REPLACED; do echo "- \`$p\`" >> "$GITHUB_STEP_SUMMARY"; done
+        uses: bnelson729/wells-nelson-components/.github/actions/commit-published-packages@v2
+        with:
+          branch: ${{ github.head_ref }}
+          replaced: ${{ steps.find.outputs.replaced }}
+          token: ${{ steps.pat.outputs.use }}
+          message: ${{ inputs.commit-message }}
+          working-directory: ${{ inputs.working-directory }}

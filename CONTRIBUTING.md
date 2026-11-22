@@ -101,11 +101,14 @@ and add a new numbered file for every change, so when you change the generated S
 
 Sites call `.github/workflows/site-*.yml` and `use-published-packages.yml` at the tag `v2` (`v1` is the version
 before CI took over the package swap), which you move by
-hand, so a change on `main` reaches no site until you do. `site-database.yml` runs the SQL in
-[ops/sql](ops/sql) at its own commit, so the SQL moves with the tag. To ship a change:
+hand, so a change on `main` reaches no site until you do. Their steps are the composite actions in
+[.github/actions](.github/actions), which the workflows call at `@v2` too, and the actions run the SQL in
+[ops/sql](ops/sql) of the same version, so all of it moves with the tag. To ship a change:
 
 1. Merge it to `main`.
 2. Try it from one site: point that site's caller at `@main` on a branch, run the workflow, and put it back.
+   The workflow still calls the actions at `@v2`: to try a changed action, point the workflow's `uses:` lines
+   at `@main` on that branch too, and back before merging.
 3. Move the tag: `git tag -f v2 && git push -f origin v2`. Every site uses it from its next run.
 
 A change that breaks callers (a removed input, a new required input, more permissions) goes to `v2` instead,

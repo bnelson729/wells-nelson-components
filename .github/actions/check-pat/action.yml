@@ -1,0 +1,50 @@
+name: Check the PAT
+description: >-
+  Says whether a personal access token can push to this repository. When it's missing, refused or
+  can't push, the output is 'builtin' and a warning goes on the run's summary: use GITHUB_TOKEN
+  instead (a push made with it starts no workflow runs). Outputs only a choice, never the token.
+
+inputs:
+  token:
+    description: The PAT (pass the secret; empty when it isn't set)
+    required: false
+    default: ''
+
+outputs:
+  use:
+    description: "'pat' when the token is valid for this repository, otherwise 'builtin'"
+    value: ${{ steps.check.outputs.use }}
+
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        PAT: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+      run: |
+        if [ -z "$PAT" ]; then
+          reason="No PAT was passed (the site's PAT repository secret is missing or empty, or this run can't read secrets)."
+        elif ! status=$(curl -sS -o "$RUNNER_TEMP/repo.json" -w '%{http_code}' -H "Authorization: Bearer $PAT" \
+            -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$REPO"); then
+          reason="GitHub couldn't be reached to check the PAT."
+        elif [ "$status" != "200" ]; then
+          reason="GitHub refused the PAT for $REPO (HTTP $status): it may have expired, been revoked, or not include this repository."
+        elif [ "$(jq -r '.permissions.push // "unknown"' "$RUNNER_TEMP/repo.json")" = "false" ]; then
+          reason="The PAT can read $REPO but can't push to it: give it Contents read and write."
+        else
+          echo "use=pat" >> "$GITHUB_OUTPUT"
+          echo "The PAT is valid for $REPO."
+          exit 0
+        fi
+        echo "use=builtin" >> "$GITHUB_OUTPUT"
+        echo "::warning title=Using GITHUB_TOKEN instead of the PAT::$reason A package swap committed by this run won't start the checks or the deploy on the new commit."
+        {
+          echo "### ⚠️ Using the built-in GITHUB_TOKEN instead of the PAT"
+          echo
+          echo "$reason"
+          echo
+          echo 'If this run commits a package swap, GitHub will not run the checks (or, on `main`, the deploy) on the new commit.'
+          echo 'Add a fine-grained token with **Contents: read and write** on this repository as the `PAT` secret.'
+        } >> "$GITHUB_STEP_SUMMARY"
