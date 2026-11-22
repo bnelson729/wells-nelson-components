@@ -13,12 +13,19 @@ import '@wells-nelson/displays/palettes/green.css';
 ```
 
 Tokens: `--bg`, `--surface`, `--surface-2`, `--surface-hover`, `--text`, `--muted`, `--border`,
-`--border-strong`, `--accent`, `--accent-strong`, `--accent-text`, `--accent-soft`, `--on-accent`,
-`--danger`, `--danger-soft`, `--warning`, `--warning-soft`, `--radius`, `--radius-lg`, `--shadow`,
-`--shadow-lg`, `--header-h`, `--header-offset`, `--content-w`, `--tabbar-h`, `--footer-offset`
-(the space fixed bottom UI leaves for a `TabBar`; 0 without one). Helpers: `.page`, `.page-title`,
-`.stack`, `.card`, `.row-card`, `.muted`, `.notice`, `.empty`, `.visually-hidden`, plus
-drag-and-drop classes. Keep app-only tokens in the app's own stylesheet.
+`--border-strong` (dividers), `--control-border` (the outline of a field, checkbox, switch or segmented
+control: 3:1 against `--surface` and `--bg`), `--accent`, `--accent-strong`, `--accent-text`,
+`--accent-soft`, `--on-accent`, `--danger`, `--on-danger`, `--danger-soft`, `--warning`,
+`--warning-soft`, `--focus` (the focus ring), `--tap` (smallest hit area, 44px), `--radius`,
+`--radius-lg`, `--shadow`, `--shadow-lg`, `--header-h`, `--header-offset`, `--content-w`, `--tabbar-h`,
+`--footer-offset` (the space fixed bottom UI leaves for a `TabBar`; 0 without one). Text on a colored
+fill uses that fill's `--on-*` token, never a fixed `#fff`.
+
+Helpers: `.page`, `.page-title`, `.stack`, `.card`, `.card-section` (a titled group inside a card,
+e.g. on a Profile page), `.row-card`, `.muted`, `.text-sm`, `.error-text`, `.notice`, `.empty`,
+`.visually-hidden`, plus drag-and-drop classes. Native `select` is styled like the text inputs.
+Everything focusable gets one focus ring (`:focus-visible`, 2px `--focus`); placeholders use
+`--muted`. Keep app-only tokens in the app's own stylesheet.
 
 Date and time inputs (`date`, `time`, `datetime-local`) match the text inputs, and on iOS keep a
 fixed size whatever their value. Apps that put `class="touch-app"` on `<html>` get app-like touch
@@ -78,6 +85,14 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 <Leaderboards rowKey={(s) => s.id} rowLabel={(s) => s.name} boards={[{ title: 'Most done', rows: topDone, value: (s) => s.done }]} />
 
 <Badge tone="warning">Pending</Badge>
+<Badge tone="count" label="3 items">3</Badge>
+
+<!-- A pill button: with pressed it switches on and off, without it's an action. -->
+<Chip pressed={picked} onclick={toggle}>Sat 14</Chip>
+
+<!-- Something to know: warning (default), danger or info; optional actions, ✕, or a link. -->
+<Notice role="status">Your session expired.</Notice>
+<Notice tone="danger" role="alert" ondismiss={clear}>Couldn't save.</Notice>
 <Splash text="MA" />
 <FatalError error={app.fatal} />
 ```
@@ -100,6 +115,17 @@ bottom UI sits above it.
 {#if phoneLayout.current}<TabBar items={…} />{:else}<AppHeader …>…</AppHeader>{/if}
 ```
 
-`Button` (primary / secondary / danger / ghost, optional icon, `block`), `IconButton` (button or
-link, required label, `active`, `showLabel`), `Modal` (native `<dialog>`, sm / md / lg) and `ConfirmDialog`
-(danger variant, busy state) complete the set. See them all in the sandbox (`npm run sandbox`).
+`Button` (primary / secondary / danger / ghost / danger-ghost for a quiet destructive action, optional
+icon, `block`, `size="lg"` for the main actions of a busy screen (`--control-h` tall when set), `href`
+for a link that looks like a button, `busy`), `IconButton` (button or link, required label, `active`
+on a link, `pressed` on an on/off button, `showLabel`), `Modal` (native `<dialog>`, sm / md / lg) and
+`ConfirmDialog` (danger variant, `busyLabel`, text or a `children` snippet) complete the set. See them all
+in the sandbox (`npm run sandbox`).
+
+**Modals.** Escape, ✕ and the footer's buttons close a `Modal`. A click or tap outside closes it only
+when the press started outside too (so selecting text in a field doesn't), and never once something
+inside has been typed in or changed, so work isn't lost by accident; `dismissible={false}` turns
+outside clicks off altogether. It opens with focus on an `autofocus` element, else (with a mouse or
+keyboard) the first field, else the first footer button, which for `ConfirmDialog` is Cancel.
+
+All controls are at least `--tap` (44px) in both directions where they're tapped.

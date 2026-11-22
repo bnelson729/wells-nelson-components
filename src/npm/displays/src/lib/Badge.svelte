@@ -1,17 +1,29 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	/** Small status pill, e.g. "Default", "Pending", "Editor". */
+	/**
+	 * Small status pill, e.g. "Default", "Pending", "Editor". `tone="count"` is the number beside a
+	 * heading; give it `label` ("3 items") so assistive tech hears more than the bare number.
+	 */
 	let {
 		tone = 'neutral',
+		label,
 		children
 	}: {
-		tone?: 'neutral' | 'accent' | 'warning' | 'danger';
+		tone?: 'neutral' | 'accent' | 'warning' | 'danger' | 'count';
+		/** What assistive tech reads instead of the visible text. */
+		label?: string;
 		children: Snippet;
 	} = $props();
 </script>
 
-<span class="badge {tone}">{@render children()}</span>
+{#if label}
+	<span class="badge {tone}"
+		><span aria-hidden="true">{@render children()}</span><span class="visually-hidden">{label}</span></span
+	>
+{:else}
+	<span class="badge {tone}">{@render children()}</span>
+{/if}
 
 <style>
 	.badge {
@@ -39,5 +51,15 @@
 	.danger {
 		background: var(--danger-soft);
 		color: var(--danger);
+	}
+	.count {
+		min-width: 1.6rem;
+		padding: 0 0.45rem;
+		background: var(--surface-2);
+		color: var(--muted);
+		font-size: 0.8rem;
+		font-weight: 600;
+		line-height: 1.5rem;
+		text-align: center;
 	}
 </style>

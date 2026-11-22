@@ -32,19 +32,19 @@
 	}
 </script>
 
-<section class="card section">
+<section class="card card-section">
 	<div class="who">
 		{#if meta.avatar_url}
 			<img src={meta.avatar_url} alt="" referrerpolicy="no-referrer" />
 		{/if}
 		<div>
 			<div class="name">{displayName}</div>
-			<div class="muted small">{user?.email}</div>
+			<div class="muted text-sm">{user?.email}</div>
 		</div>
 	</div>
 </section>
 
-<section class="card section">
+<section class="card card-section">
 	<h2>Sync</h2>
 	<dl class="status">
 		<dt>Connection</dt>
@@ -54,7 +54,7 @@
 	</dl>
 	{#if pending.length > 0}
 		<div>
-			<p class="small"><strong>{capitalize(nouns.plural)} with changes waiting to sync</strong></p>
+			<p class="text-sm"><strong>{capitalize(nouns.plural)} with changes waiting to sync</strong></p>
 			<ul class="pending">
 				{#each pending as p (p.id)}
 					<li><Icon name="cloud-pending" size={16} /> {p.name}</li>
@@ -62,33 +62,20 @@
 			</ul>
 		</div>
 	{:else}
-		<p class="muted small">Everything is synced.</p>
+		<p class="muted text-sm">Everything is synced.</p>
 	{/if}
-	{#if cloud.error}<p class="error small">Last sync error: {cloud.error}</p>{/if}
+	{#if cloud.error}
+		<p class="error-text text-sm" role="alert">Last sync error: {cloud.error}</p>
+		<p class="muted text-sm">
+			Your changes are safe on this device. They sync when the connection is back, or press Force re-sync to try now.
+		</p>
+	{/if}
 	<Button icon="refresh" onclick={resync} disabled={!cloud.online || resyncing}>
 		{resyncing ? 'Syncing…' : 'Force re-sync'}
 	</Button>
 </section>
 
 <style>
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 1rem;
-	}
-	.section p {
-		margin: 0;
-		line-height: 1.5;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.05rem;
-	}
-	.small {
-		font-size: 0.9rem;
-	}
 	.who {
 		display: flex;
 		align-items: center;
@@ -127,8 +114,5 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-	}
-	.error {
-		color: var(--danger);
 	}
 </style>

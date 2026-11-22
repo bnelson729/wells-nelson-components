@@ -29,32 +29,38 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.4rem 0.4rem 0.4rem 0.9rem;
+		padding: 0.25rem 0.25rem 0.25rem 0.9rem;
 		background: var(--surface);
-		border: 1px dashed var(--border-strong);
+		border: 1px dashed var(--control-border);
 		border-radius: var(--radius);
 	}
 	input {
 		flex: 1;
 		min-width: 0;
+		min-height: var(--tap, 2.75rem);
 		border: none;
 		background: transparent;
-		padding: 0.4rem 0;
+		padding: 0;
 		box-shadow: none;
 	}
-	input:focus {
+	/* The ring goes round the whole row (field and button), not the borderless field. */
+	input:focus-visible {
 		outline: none;
-		box-shadow: none;
 	}
 	.add-row:focus-within {
 		border-style: solid;
-		border-color: var(--accent);
+		border-color: var(--focus, var(--accent));
+	}
+	.add-row:has(input:focus-visible) {
+		outline: 2px solid var(--focus, var(--accent));
+		outline-offset: 2px;
 	}
 	button {
 		display: grid;
 		place-items: center;
-		width: 2.4rem;
-		height: 2.4rem;
+		flex: none;
+		width: var(--tap, 2.75rem);
+		height: var(--tap, 2.75rem);
 		border: none;
 		border-radius: 50%;
 		background: var(--accent);
@@ -62,7 +68,7 @@
 		cursor: pointer;
 	}
 	button:disabled {
-		background: var(--border-strong);
+		background: var(--control-border);
 		cursor: not-allowed;
 	}
 </style>

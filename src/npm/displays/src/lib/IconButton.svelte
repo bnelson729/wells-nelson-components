@@ -8,6 +8,7 @@
 		href,
 		onclick,
 		active = false,
+		pressed,
 		size = 22,
 		disabled = false,
 		showLabel = false
@@ -16,7 +17,11 @@
 		label: string;
 		href?: string;
 		onclick?: (e: MouseEvent) => void;
+		/** On a link: this is the current page (`aria-current`), drawn highlighted. */
 		active?: boolean;
+		/** On a button that switches something on and off: whether it's on (`aria-pressed`), drawn highlighted. */
+		pressed?: boolean;
+		/** Icon size in px. The button itself is always `--tap` (44px) square. */
 		size?: number;
 		disabled?: boolean;
 		/**
@@ -48,9 +53,10 @@
 	<button
 		type="button"
 		class="icon-btn"
-		class:active
+		class:active={active || pressed}
 		class:labeled={showLabel}
 		aria-label={label}
+		aria-pressed={pressed}
 		title={showLabel ? undefined : label}
 		{onclick}
 		{disabled}
@@ -63,8 +69,8 @@
 	.icon-btn {
 		display: inline-grid;
 		place-items: center;
-		width: 2.5rem;
-		height: 2.5rem;
+		width: var(--tap, 2.75rem);
+		height: var(--tap, 2.75rem);
 		flex: none;
 		border: none;
 		border-radius: 50%;
@@ -79,7 +85,7 @@
 		gap: 0.4rem;
 		width: auto;
 		padding: 0 0.85rem 0 0.6rem;
-		border-radius: 1.25rem;
+		border-radius: calc(var(--tap, 2.75rem) / 2);
 	}
 	.text {
 		font-size: 0.92rem;

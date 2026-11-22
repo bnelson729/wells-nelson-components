@@ -165,7 +165,7 @@
 		{#if isOwner}
 			<TextField label={`${Singular} name`} bind:value={name} enterkeyhint="done" />
 		{:else}
-			<p class="muted small">
+			<p class="muted text-sm">
 				You're {role === 'editor' ? 'an editor' : 'a viewer'} on “{currentName}”. Only owners can rename it.
 			</p>
 		{/if}
@@ -180,7 +180,7 @@
 	<section class="group">
 		<h3>Sync</h3>
 		{#if localOnlyReason && !isCloud}
-			<p class="muted small"><Icon name="wifi-off" size={16} /> {localOnlyReason}</p>
+			<p class="muted text-sm"><Icon name="wifi-off" size={16} /> {localOnlyReason}</p>
 		{:else if signedIn}
 			<Toggle
 				label="Cloud-enabled"
@@ -188,7 +188,7 @@
 				disabled={busy}
 				onchange={(on) => (on ? run(onmakecloud) : (confirmLocal = true))}
 			/>
-			<p class="muted small">
+			<p class="muted text-sm">
 				{#if isCloud}
 					Synced to your account{cloud.hasPending(containerId) ? ' — changes are waiting to upload' : ''}.
 				{:else}
@@ -196,41 +196,41 @@
 				{/if}
 			</p>
 		{:else}
-			<p class="muted small">
+			<p class="muted text-sm">
 				<Icon name="wifi-off" size={16} /> Local-only. <a href={signInHref}>Sign in</a> to sync and share {nouns.plural}.
 			</p>
 		{/if}
 	</section>
 
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
 
 	{#if leaveOnly}
 		<Button
-			variant="ghost"
+			variant="danger-ghost"
 			onclick={() => (confirmLeave = true)}
 			disabled={busy || !cloud.online}
-			style="align-self:flex-start;color:var(--danger)"
+			style="align-self:flex-start"
 		>
 			Leave {nouns.singular}
 		</Button>
 		{#if isOwner}
-			<p class="muted small">
+			<p class="muted text-sm">
 				{roles ? 'Other owners remain' : 'It’s shared'}, so the {nouns.singular} stays for them.
 			</p>
 		{/if}
 	{:else}
 		<Button
-			variant="ghost"
+			variant="danger-ghost"
 			icon="trash"
 			onclick={() => (confirmDelete = true)}
 			disabled={busy || (isCloud && !cloud.online)}
-			style="align-self:flex-start;color:var(--danger)"
+			style="align-self:flex-start"
 		>
 			Delete {nouns.singular}
 		</Button>
 	{/if}
 	{#if isCloud && !cloud.online}
-		<p class="muted small">Reconnect to delete or leave a cloud-enabled {nouns.singular}.</p>
+		<p class="muted text-sm">Reconnect to delete or leave a cloud-enabled {nouns.singular}.</p>
 	{/if}
 
 	{#snippet footer()}
@@ -244,6 +244,7 @@
 	title={`Disconnect this ${nouns.singular}?`}
 	message={localMessage}
 	confirmLabel="Make local-only"
+	busyLabel="Disconnecting…"
 	danger
 	onconfirm={() => run(onmakelocal)}
 />
@@ -253,6 +254,7 @@
 	title={`Delete this ${nouns.singular}?`}
 	message={`“${currentName}” and ${contentsLabel} will be permanently deleted${others.length ? ' for everyone it is shared with' : ''}.`}
 	confirmLabel={`Delete ${nouns.singular}`}
+	busyLabel="Deleting…"
 	danger
 	onconfirm={doDelete}
 />
@@ -263,6 +265,7 @@
 	message={`“${currentName}” is shared, so it stays for the others. It will be removed from your account and this device.` +
 		(roles ? ' Ask an owner to share it again if you need it back.' : '')}
 	confirmLabel={`Leave ${nouns.singular}`}
+	busyLabel="Leaving…"
 	danger
 	onconfirm={doLeave}
 />
@@ -277,17 +280,12 @@
 		margin: 0;
 		font-size: 0.95rem;
 	}
-	.small {
+	.text-sm {
 		margin: 0;
-		font-size: 0.9rem;
 		line-height: 1.45;
 	}
-	.small :global(.icon) {
+	.text-sm :global(.icon) {
 		display: inline;
 		vertical-align: -3px;
-	}
-	.error {
-		margin: 0;
-		color: var(--danger);
 	}
 </style>

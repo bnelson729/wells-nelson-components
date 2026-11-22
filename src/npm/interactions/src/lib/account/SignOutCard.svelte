@@ -37,12 +37,12 @@
 	}
 </script>
 
-<section class="card section">
-	<p class="muted small">
+<section class="card card-section">
+	<p class="muted text-sm">
 		Signing out removes your cloud-enabled {nouns.plural} from this device. Local-only {nouns.plural} stay.
 	</p>
 	<Button onclick={request} disabled={busy}>Sign out</Button>
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
 </section>
 
 <ConfirmDialog
@@ -50,26 +50,10 @@
 	title="Sign out with unsynced changes?"
 	message={`These ${nouns.plural} have changes that haven't reached the cloud yet:\n${pending.map((p) => `• ${p.name}`).join('\n')}\n\nIf you sign out now those changes will be lost. Reconnect and use "Force re-sync" first to keep them.`}
 	confirmLabel="Sign out anyway"
+	busyLabel="Signing out…"
 	danger
 	onconfirm={signOut}
 />
 
 <style>
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 1rem;
-	}
-	.section p {
-		margin: 0;
-		line-height: 1.5;
-	}
-	.small {
-		font-size: 0.9rem;
-	}
-	.error {
-		color: var(--danger);
-	}
 </style>

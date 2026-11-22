@@ -38,11 +38,11 @@
 </script>
 
 {#if !cloud.configured}
-	<section class="card section">
+	<section class="card card-section">
 		<h2>Cloud sync isn't set up</h2>
 		<p class="muted">
-			This copy of {appName} runs local-only: every {nouns.singular} stays on this device. Signing in becomes available once
-			Supabase is configured (see the README).
+			This copy of {appName} runs local-only: every {nouns.singular} stays on this device, and signing in isn't available.
+			Everything else works as usual.
 		</p>
 	</section>
 {:else if !cloud.user || cloud.sessionExpired}
@@ -51,21 +51,3 @@
 	<SyncStatusCard {cloud} {account} {nouns} {pending} />
 	<SignOutCard {cloud} {account} {nouns} {pending} />
 {/if}
-
-<style>
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 1rem;
-	}
-	.section p {
-		margin: 0;
-		line-height: 1.5;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.05rem;
-	}
-</style>

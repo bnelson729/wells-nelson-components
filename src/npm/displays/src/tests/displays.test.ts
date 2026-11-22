@@ -2,9 +2,12 @@ import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import AppHeader from '../lib/AppHeader.svelte';
 import Badge from '../lib/Badge.svelte';
+import Button from '../lib/Button.svelte';
+import Chip from '../lib/Chip.svelte';
 import Icon from '../lib/Icon.svelte';
 import IconButton from '../lib/IconButton.svelte';
 import Modal from '../lib/Modal.svelte';
+import Notice from '../lib/Notice.svelte';
 import SortableTable from '../lib/SortableTable.svelte';
 import TabBar from '../lib/TabBar.svelte';
 import { iconMarkup, registerIcons } from '../lib/icons.js';
@@ -234,9 +237,118 @@ describe('Badge', () => {
 	});
 });
 
+describe('Badge', () => {
+	it('gives a count a fuller name for assistive tech', () => {
+		const el = render(Badge, { tone: 'count', label: '3 items', children: text('3') });
+		expect(el.querySelector('[aria-hidden="true"]')!.textContent).toBe('3');
+		expect(el.querySelector('.visually-hidden')!.textContent).toBe('3 items');
+	});
+});
+
+describe('Button', () => {
+	it('renders a link when given href', () => {
+		const el = render(Button, { href: '/apps', variant: 'primary', children: text('Open') });
+		const a = el.querySelector('a.btn')!;
+		expect(a.getAttribute('href')).toBe('/apps');
+		expect(a.classList.contains('primary')).toBe(true);
+	});
+
+	it('is disabled and marked busy while busy', () => {
+		const el = render(Button, { busy: true, children: text('Saving…') });
+		const b = el.querySelector('button')!;
+		expect(b.disabled).toBe(true);
+		expect(b.getAttribute('aria-busy')).toBe('true');
+	});
+
+	it('has a quiet danger variant and a large size', () => {
+		const el = render(Button, { variant: 'danger-ghost', size: 'lg', children: text('Delete') });
+		expect([...el.querySelector('button')!.classList]).toEqual(expect.arrayContaining(['danger-ghost', 'lg']));
+	});
+});
+
+describe('Chip', () => {
+	it('is a toggle with pressed, an action without', () => {
+		const on = render(Chip, { pressed: true, children: text('Sat') });
+		expect(on.querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+		const action = render(Chip, { children: text('Line 1') });
+		expect(action.querySelector('button')!.hasAttribute('aria-pressed')).toBe(false);
+	});
+});
+
+describe('Notice', () => {
+	it('shows its text with a role and can be dismissed', () => {
+		let dismissed = false;
+		const el = render(Notice, {
+			tone: 'danger',
+			role: 'alert',
+			ondismiss: () => (dismissed = true),
+			children: text('Failed')
+		});
+		expect(el.querySelector('[role="alert"]')!.textContent).toContain('Failed');
+		el.querySelector<HTMLButtonElement>('button[aria-label="Dismiss"]')!.click();
+		expect(dismissed).toBe(true);
+	});
+});
+
+describe('AppHeader', () => {
+	it('names the unsynced dot on the profile link', () => {
+		const el = render(AppHeader, {
+			brand: text('US'),
+			brandHref: '/',
+			brandLabel: 'Home',
+			profileHref: '/profile',
+			unsynced: true
+		});
+		expect(el.querySelector('.profile')!.getAttribute('aria-label')).toBe('Profile (Unsynced changes)');
+	});
+});
+
 describe('Modal', () => {
+	// jsdom has <dialog> but not always its modal API.
+	const proto = HTMLDialogElement.prototype as HTMLDialogElement & Record<string, unknown>;
+	if (!proto.showModal) {
+		proto.showModal = function (this: HTMLDialogElement) {
+			this.setAttribute('open', '');
+		};
+		proto.close = function (this: HTMLDialogElement) {
+			if (!this.hasAttribute('open')) return;
+			this.removeAttribute('open');
+			this.dispatchEvent(new Event('close'));
+		};
+	}
+
+	const press = (down: Element, up: Element) => {
+		down.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+		up.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		flushSync();
+	};
+
 	it('offers a large size for dense content', () => {
 		const el = render(Modal, { title: 'Pick players', size: 'lg', open: false, children: text('Body') });
 		expect(el.querySelector('dialog')!.classList.contains('lg')).toBe(true);
+	});
+
+	it('closes on a press outside, but not on one that started inside', () => {
+		const el = render(Modal, { title: 'Edit', open: true, children: text('Body') });
+		const dialog = el.querySelector('dialog')!;
+		press(dialog.querySelector('.body')!, dialog);
+		expect(dialog.hasAttribute('open')).toBe(true);
+		press(dialog, dialog);
+		expect(dialog.hasAttribute('open')).toBe(false);
+	});
+
+	it('stops closing on a press outside once something was typed', () => {
+		const el = render(Modal, { title: 'Edit', open: true, children: text('Body') });
+		const dialog = el.querySelector('dialog')!;
+		dialog.querySelector('.body')!.dispatchEvent(new Event('input', { bubbles: true }));
+		press(dialog, dialog);
+		expect(dialog.hasAttribute('open')).toBe(true);
+	});
+
+	it('can refuse a press outside altogether', () => {
+		const el = render(Modal, { title: 'Edit', open: true, dismissible: false, children: text('Body') });
+		const dialog = el.querySelector('dialog')!;
+		press(dialog, dialog);
+		expect(dialog.hasAttribute('open')).toBe(true);
 	});
 });

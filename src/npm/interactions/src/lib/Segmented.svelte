@@ -54,7 +54,7 @@
 	}
 	.options {
 		display: flex;
-		border: 1px solid var(--border-strong);
+		border: 1px solid var(--control-border);
 		border-radius: var(--radius);
 		overflow: hidden;
 	}
@@ -63,7 +63,7 @@
 		flex: 1;
 		display: grid;
 		place-items: center;
-		min-height: 2.5rem;
+		min-height: var(--tap, 2.75rem);
 		padding: 0 0.5rem;
 		text-align: center;
 		cursor: pointer;
@@ -71,7 +71,7 @@
 		font-weight: 500;
 	}
 	label + label {
-		border-left: 1px solid var(--border-strong);
+		border-left: 1px solid var(--control-border);
 	}
 	label.selected {
 		background: var(--accent);
@@ -86,7 +86,7 @@
 		cursor: pointer;
 	}
 	label:has(input:focus-visible) {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus, var(--accent));
 		outline-offset: -3px;
 	}
 	fieldset:disabled label {

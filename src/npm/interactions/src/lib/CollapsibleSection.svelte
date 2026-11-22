@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Icon, IconButton } from '@wells-nelson/displays';
+	import { Badge, Icon, IconButton } from '@wells-nelson/displays';
 	import { tick, type Snippet } from 'svelte';
 	import { draggable, dropZone, type DragData, type DropZoneOptions } from './dnd.js';
 
@@ -107,7 +107,7 @@
 		</button>
 		<!-- The name toggles collapse too; settings live behind the pencil. -->
 		<button type="button" class="title" aria-expanded={!collapsed} onclick={toggle}>{title}</button>
-		<span class="count" aria-label={countLabel(count)}>{count}</span>
+		<Badge tone="count" label={countLabel(count)}>{count}</Badge>
 		{#if onadd}
 			<IconButton icon="plus" label={addLabel} onclick={onadd} />
 		{/if}
@@ -176,8 +176,8 @@
 	.collapse {
 		display: grid;
 		place-items: center;
-		width: 2.5rem;
-		height: 2.5rem;
+		width: var(--tap, 2.75rem);
+		height: var(--tap, 2.75rem);
 		border: none;
 		background: none;
 		border-radius: 50%;
@@ -204,16 +204,6 @@
 		font-size: 1.02rem;
 		cursor: pointer;
 		overflow-wrap: anywhere;
-	}
-	.count {
-		min-width: 1.6rem;
-		padding: 0 0.45rem;
-		border-radius: 1rem;
-		background: var(--surface-2);
-		color: var(--muted);
-		font-size: 0.8rem;
-		text-align: center;
-		line-height: 1.5rem;
 	}
 	.items {
 		margin: 0;

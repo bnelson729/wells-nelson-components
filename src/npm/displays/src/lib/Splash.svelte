@@ -1,9 +1,12 @@
 <script lang="ts">
 	/** Startup placeholder shown while the local database opens. */
-	let { text }: { text: string } = $props();
+	let { text, label = 'Loading' }: { text: string; /** Read out by assistive tech. */ label?: string } = $props();
 </script>
 
-<div class="splash" aria-busy="true">{text}</div>
+<div class="splash" role="status">
+	<span aria-hidden="true">{text}</span>
+	<span class="visually-hidden">{label}</span>
+</div>
 
 <style>
 	.splash {

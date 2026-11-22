@@ -10,10 +10,12 @@ npm install @wells-nelson/displays @wells-nelson/interactions
 
 ## Inputs
 
-`TextField` (label, error, hint), `Checkbox` (optionally hidden label), `Toggle` (a switch for
-settings that apply at once), `Combobox` (type to filter, offers "Create …"; plus `sameName`. Inside
-something that scrolls, like a `Modal`, opening it near the end adds room below so its options
-aren't cut off),
+`TextField` (label, error, hint, `hideLabel`, `required` adds "(required)"; the error or hint is tied to
+the input with `aria-describedby`, and an error is announced), `Checkbox` (optionally hidden label,
+`disabled`, `tone="muted"` for a gray tick), `Toggle` (a switch for settings that apply at once),
+`Combobox` (type to filter, offers "Create …"; plus `sameName`. It follows the WAI-ARIA combobox
+pattern: the field points at the highlighted option. Inside something that scrolls, like a `Modal`,
+opening it near the end adds room below so its options aren't cut off),
 `AddRow` (inline "name + plus" that refocuses), `Segmented` (one of a few) and `SearchBar`
 (fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
 does `UndoButton`).
@@ -72,17 +74,22 @@ For apps, in the root layout's `onMount` (each returns a function that undoes it
 
 `errorText(err)` turns an error into one line for the UI: show it where an awaited action failed.
 
+`focusFirstInvalid(form)`: after a submit that failed validation, moves focus to the first field marked
+`aria-invalid` once the messages are rendered.
+
 ## Undo
 
 ```ts
-const undo = new UndoStack(); // button visible 5 s, history kept 1 min idle
+const undo = new UndoStack(); // button visible 8 s (kept while hovered or focused), history kept 1 min idle
 setDone(task, true);
-undo.push({ undo: () => setDone(task, false) });
+undo.push({ label: `Done: ${task.name}`, undo: () => setDone(task, false) });
 ```
 
 ```svelte
 <UndoButton stack={undo} />
 ```
+
+The button sits in a status region, so its `label` and "Undo" are read out when it appears.
 
 ## App version
 

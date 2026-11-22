@@ -16,18 +16,25 @@
 	--surface-2: #edf0f4;
 	--surface-hover: #e6eaf0;
 	--text: #1b1f26;
-	--muted: #646c78;
+	--muted: #5f6773;
 	--border: #dfe3ea;
 	--border-strong: #c3c9d3;
+	/* Outlines that identify a control (fields, checkbox, switch, segmented): 3:1 on --surface and --bg. */
+	--control-border: #868e9a;
 	--accent: #1f5fa8;
 	--accent-strong: #184c88;
 	--accent-text: #1d58a0;
 	--accent-soft: #dbe7f6;
 	--on-accent: #ffffff;
 	--danger: #b3261e;
+	--on-danger: #ffffff;
 	--danger-soft: #f9dedc;
 	--warning: #8a5a00;
 	--warning-soft: #fdf0d5;
+	/* Keyboard focus ring. */
+	--focus: var(--accent);
+	/* Smallest hit area of a control (Apple HIG 44pt). */
+	--tap: 2.75rem;
 	--radius: 0.6rem;
 	--radius-lg: 1rem;
 	--shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
@@ -60,12 +67,14 @@
 		--muted: #98a1ad;
 		--border: #2a3038;
 		--border-strong: #434b56;
+		--control-border: #6b7480;
 		--accent: #4b8ad6;
 		--accent-strong: #62a0e8;
 		--accent-text: #7fb2ef;
 		--accent-soft: #1d2c40;
 		--on-accent: #0b1422;
-		--danger: #e5534b;
+		--danger: #f0766f;
+		--on-danger: #2a0b09;
 		--danger-soft: #3d1c1a;
 		--warning: #e3b341;
 		--warning-soft: #3a2f14;
@@ -104,7 +113,7 @@ input:not([type]) {
 	color: inherit;
 	width: 100%;
 	padding: 0.6rem 0.75rem;
-	border: 1px solid var(--border-strong);
+	border: 1px solid var(--control-border);
 	border-radius: var(--radius);
 	background: var(--surface);
 }
@@ -121,7 +130,7 @@ input[type='datetime-local'] {
 	width: 100%;
 	min-height: calc(1.4em + 1.2rem + 2px);
 	padding: 0.6rem 0.75rem;
-	border: 1px solid var(--border-strong);
+	border: 1px solid var(--control-border);
 	border-radius: var(--radius);
 	background: var(--surface);
 }
@@ -141,10 +150,32 @@ input[type='datetime-local'] {
 	}
 }
 
-input:focus-visible {
-	outline: none;
-	border-color: var(--accent);
-	box-shadow: 0 0 0 3px var(--accent-soft);
+/* One focus ring for everything focusable; fields draw it on their border. */
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+	outline-offset: -1px;
+	border-color: var(--focus);
+}
+
+::placeholder {
+	color: var(--muted);
+	opacity: 1;
+}
+
+select {
+	font: inherit;
+	color: inherit;
+	min-height: var(--tap);
+	padding: 0 0.6rem;
+	border: 1px solid var(--control-border);
+	border-radius: var(--radius);
+	background: var(--surface);
 }
 
 input[aria-invalid='true'] {
@@ -244,6 +275,35 @@ button {
 
 .muted {
 	color: var(--muted);
+}
+
+/* Secondary text, and a message about something that went wrong. */
+.text-sm {
+	font-size: 0.9rem;
+}
+
+.error-text {
+	margin: 0;
+	color: var(--danger);
+}
+
+/* A card holding one titled group of settings or actions (e.g. the Profile page). */
+.card-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 1rem;
+	margin-bottom: 1rem;
+}
+
+.card-section > h2 {
+	margin: 0;
+	font-size: 1.05rem;
+}
+
+.card-section > p {
+	margin: 0;
+	line-height: 1.5;
 }
 
 .notice {

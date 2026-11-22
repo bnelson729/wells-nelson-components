@@ -73,14 +73,40 @@ describe('UndoStack', () => {
 		expect(stack.visible).toBe(false);
 	});
 
-	it('hides the button after 5 seconds but keeps history for a minute', async () => {
+	it('stays up while hovered or focused, and says what it would undo', () => {
+		const stack = new UndoStack();
+		stack.push({ undo: vi.fn(), label: 'Got Milk' });
+		expect(stack.message).toBe('Got Milk');
+		stack.pause();
+		vi.advanceTimersByTime(20_000);
+		expect(stack.visible).toBe(true);
+		stack.resume();
+		vi.advanceTimersByTime(8_001);
+		expect(stack.visible).toBe(false);
+		expect(stack.message).toBe('Got Milk');
+	});
+
+	it('announces what the button would undo', async () => {
+		const { default: UndoButton } = await import('../lib/UndoButton.svelte');
+		const stack = new UndoStack();
+		const el = render(UndoButton, { stack });
+		const region = el.querySelector('[role="status"]')!;
+		expect(region.textContent?.trim()).toBe('');
+		stack.push({ undo: vi.fn(), label: 'Got Milk' });
+		flushSync();
+		expect(region.textContent?.replace(/\s+/g, ' ').trim()).toBe('Got Milk. Undo');
+	});
+
+	it('hides the button after 8 seconds but keeps history for a minute', async () => {
 		const stack = new UndoStack();
 		const undo = vi.fn();
 		stack.push({ undo });
-		vi.advanceTimersByTime(5_001);
+		vi.advanceTimersByTime(7_900);
+		expect(stack.visible).toBe(true);
+		vi.advanceTimersByTime(101);
 		expect(stack.visible).toBe(false);
 		expect(stack.size).toBe(1);
-		vi.advanceTimersByTime(55_000);
+		vi.advanceTimersByTime(52_000);
 		expect(stack.size).toBe(0);
 		await stack.undo();
 		expect(undo).not.toHaveBeenCalled();
@@ -271,6 +297,65 @@ describe('Combobox in a scrolling container', () => {
 		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		flushSync();
 		expect(scroller.querySelector('.reserve')).toBeNull();
+	});
+});
+
+describe('Combobox for assistive tech', () => {
+	it('points the field at the highlighted option and marks only the chosen one selected', () => {
+		const el = render(Combobox, {
+			label: 'Department',
+			options: [
+				{ id: 'd1', label: 'Dairy' },
+				{ id: 'd2', label: 'Bakery' }
+			],
+			choice: { id: 'd2' }
+		});
+		const input = el.querySelector('input')!;
+		input.dispatchEvent(new FocusEvent('focus'));
+		flushSync();
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+		flushSync();
+		const options = [...el.querySelectorAll('[role="option"]')];
+		expect(input.getAttribute('aria-activedescendant')).toBe(options[1].id);
+		expect(options.map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+	});
+
+	it('ties an error to the field and announces it', () => {
+		const el = render(Combobox, { label: 'Department', options: [], error: 'Pick a department.' });
+		const message = el.querySelector('[role="alert"]')!;
+		expect(message.textContent).toBe('Pick a department.');
+		expect(el.querySelector('input')!.getAttribute('aria-describedby')).toBe(message.id);
+	});
+});
+
+describe('TextField', () => {
+	it('ties the error to the input, announces it, and marks required fields', async () => {
+		const { default: TextField } = await import('../lib/TextField.svelte');
+		const el = render(TextField, { label: 'Name', required: true, error: 'Give it a name.' });
+		const input = el.querySelector('input')!;
+		const message = el.querySelector('[role="alert"]')!;
+		expect(input.getAttribute('aria-describedby')).toBe(message.id);
+		expect(input.getAttribute('aria-invalid')).toBe('true');
+		expect(el.querySelector('label')!.textContent).toBe('Name (required)');
+	});
+});
+
+describe('focusFirstInvalid', () => {
+	it('focuses the first field marked invalid', async () => {
+		const { focusFirstInvalid } = await import('../lib/forms.js');
+		const form = document.createElement('form');
+		form.innerHTML = '<input id="a"><input id="b" aria-invalid="true"><input id="c" aria-invalid="true">';
+		document.body.append(form);
+		await focusFirstInvalid(form);
+		expect(document.activeElement?.id).toBe('b');
+	});
+});
+
+describe('Checkbox', () => {
+	it('can be disabled', async () => {
+		const { default: Checkbox } = await import('../lib/Checkbox.svelte');
+		const el = render(Checkbox, { label: 'Done', disabled: true });
+		expect(el.querySelector('input')!.disabled).toBe(true);
 	});
 });
 

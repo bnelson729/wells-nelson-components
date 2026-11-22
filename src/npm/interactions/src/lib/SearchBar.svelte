@@ -38,22 +38,31 @@
 		margin: 0 auto;
 		padding: 0 0.25rem 0 0.9rem;
 		background: var(--surface);
-		border: 1px solid var(--border-strong);
+		border: 1px solid var(--control-border);
 		border-radius: 2rem;
 		box-shadow: var(--shadow);
 		color: var(--muted);
 	}
 	.inner:focus-within {
-		border-color: var(--accent);
+		border-color: var(--focus, var(--accent));
+	}
+	/* The ring goes round the whole bar, not the borderless field inside it. */
+	.inner:has(input:focus-visible) {
+		outline: 2px solid var(--focus, var(--accent));
+		outline-offset: 2px;
 	}
 	input {
 		flex: 1;
 		min-width: 0;
+		min-height: var(--tap, 2.75rem);
 		border: none;
 		background: transparent;
-		padding: 0.7rem 0;
+		padding: 0;
 		color: var(--text);
 		box-shadow: none !important;
+	}
+	input:focus-visible {
+		outline: none;
 	}
 	input::-webkit-search-cancel-button {
 		display: none;

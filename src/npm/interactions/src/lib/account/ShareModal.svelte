@@ -158,11 +158,11 @@
 		<p>Only cloud-enabled {nouns.plural} can be shared. This one is only on this device.</p>
 		<Button variant="primary" icon="cloud" onclick={() => act(onmakecloud)} disabled={busy}>Make cloud-enabled</Button>
 	{:else}
-		<p class="muted small">{explainer}</p>
+		<p class="muted text-sm">{explainer}</p>
 
 		{#if isOwner}
 			{#if !uploaded}
-				<p class="muted small">Sharing is available once this {nouns.singular} has finished uploading.</p>
+				<p class="muted text-sm">Sharing is available once this {nouns.singular} has finished uploading.</p>
 			{:else}
 				<form class="invite" class:with-role={roles} onsubmit={invite}>
 					<input type="email" placeholder="name@example.com" bind:value={email} aria-label="Email to share with" />
@@ -175,7 +175,7 @@
 				</form>
 			{/if}
 		{:else}
-			<p class="muted small">Only owners can change who this {nouns.singular} is shared with.</p>
+			<p class="muted text-sm">Only owners can change who this {nouns.singular} is shared with.</p>
 		{/if}
 
 		{#if shown.length > 0}
@@ -219,19 +219,19 @@
 				{/each}
 			</ul>
 			{#if roles && isOwner && ownerCount <= 1}
-				<p class="muted small">You're the only owner. To step down, make someone else an owner first.</p>
+				<p class="muted text-sm">You're the only owner. To step down, make someone else an owner first.</p>
 			{/if}
 			{#if shown.some((m) => m.active === false)}
-				<p class="muted small">
+				<p class="muted text-sm">
 					Pending means they haven't signed in to {appName} since you shared it; they get the {nouns.singular} the first time
 					they do.
 				</p>
 			{/if}
 		{:else if list}
-			<p class="muted small">Not shared with anyone yet.</p>
+			<p class="muted text-sm">Not shared with anyone yet.</p>
 		{/if}
 	{/if}
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
 
 	{#snippet footer()}
 		<Button onclick={close}>Done</Button>
@@ -242,12 +242,6 @@
 	p {
 		margin: 0;
 		line-height: 1.5;
-	}
-	.small {
-		font-size: 0.9rem;
-	}
-	.error {
-		color: var(--danger);
 	}
 	.invite {
 		display: flex;
@@ -295,14 +289,6 @@
 	}
 	.email {
 		overflow-wrap: anywhere;
-	}
-	select {
-		font: inherit;
-		color: inherit;
-		padding: 0.35rem 0.5rem;
-		border: 1px solid var(--border-strong);
-		border-radius: var(--radius);
-		background: var(--surface);
 	}
 	.role {
 		color: var(--muted);

@@ -16,7 +16,9 @@
 	} = $props();
 </script>
 
-<div class="boards selectable" role="region" aria-label={label}>
+<!-- Focusable so the keyboard can scroll it sideways. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<div class="boards selectable" role="region" aria-label={label} tabindex="0">
 	{#each boards as board (board.title)}
 		<section class="board card">
 			<h2>{board.title}</h2>

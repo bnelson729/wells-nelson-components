@@ -21,6 +21,7 @@ export {
 	type DraggableOptions,
 	type DropZoneOptions
 } from './dnd.js';
+export { focusFirstInvalid } from './forms.js';
 export { LONG_PRESS_MS, longpress } from './longpress.js';
 export { watchPress, type PressOptions } from './press.js';
 export { UndoStack, type UndoEntry, type UndoStackOptions } from './undo.svelte.js';

@@ -230,6 +230,7 @@ describe('LocalItemsPrompt', () => {
 			onmakecloud,
 			onprompted
 		});
+		expect(button(document, 'Make selected cloud-enabled').disabled).toBe(true);
 		document.querySelector<HTMLInputElement>('input[type=checkbox]')!.click();
 		flushSync();
 		button(document, 'Make selected cloud-enabled').click();

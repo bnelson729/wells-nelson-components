@@ -87,7 +87,7 @@
 				class="profile"
 				class:labeled={profileShowLabel}
 				href={profileHref}
-				aria-label={profileLabel}
+				aria-label={unsynced ? `${profileLabel} (${unsyncedLabel})` : profileLabel}
 				title={profileShowLabel ? undefined : profileLabel}
 				class:active={profileActive}
 			>
@@ -131,6 +131,10 @@
 		padding: 0 0.25rem 0 1rem;
 	}
 	.brand {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--tap, 2.75rem);
+		min-width: var(--tap, 2.75rem);
 		font-weight: 800;
 		font-size: 1.35rem;
 		letter-spacing: 0.02em;
@@ -144,7 +148,7 @@
 	}
 	/* labels="active": labeled buttons other than the current one show just their icon. */
 	.labels-active :global(.icon-btn.labeled:not(.active)) {
-		width: 2.5rem;
+		width: var(--tap, 2.75rem);
 		padding: 0;
 		justify-content: center;
 		border-radius: 50%;
@@ -158,9 +162,9 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.4rem;
-		min-width: 2.5rem;
-		height: 2.5rem;
-		border-radius: 1.25rem;
+		min-width: var(--tap, 2.75rem);
+		height: var(--tap, 2.75rem);
+		border-radius: calc(var(--tap, 2.75rem) / 2);
 		color: inherit;
 		text-decoration: none;
 	}
@@ -174,8 +178,8 @@
 		position: relative;
 		display: grid;
 		place-items: center;
-		width: 2.5rem;
-		height: 2.5rem;
+		width: var(--tap, 2.75rem);
+		height: var(--tap, 2.75rem);
 	}
 	.text {
 		font-size: 0.92rem;

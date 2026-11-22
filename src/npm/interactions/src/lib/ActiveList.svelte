@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends { id: string; active: boolean }">
-	import { Icon, IconButton } from '@wells-nelson/displays';
+	import { Badge, Icon, IconButton } from '@wells-nelson/displays';
 	import Checkbox from './Checkbox.svelte';
 
 	/**
@@ -87,10 +87,11 @@
 		{#if collapsibleActive && !columns}
 			<button type="button" class="toggle strong" aria-expanded={activeOpen} onclick={() => (activeOpen = !activeOpen)}>
 				<span class="chev" class:collapsed={!activeOpen}><Icon name="chevron" size={20} /></span>
-				Active {noun.toLowerCase()} <span class="count">{active.length}</span>
+				Active {noun.toLowerCase()}
+				<Badge tone="count">{active.length}</Badge>
 			</button>
 		{:else}
-			<h2>Active {noun.toLowerCase()} <span class="count">{active.length}</span></h2>
+			<h2>Active {noun.toLowerCase()} <Badge tone="count">{active.length}</Badge></h2>
 		{/if}
 		{#if showActive}
 			<ul>
@@ -106,7 +107,7 @@
 	{#if inactive.length > 0 || columns}
 		<section class={sectionClass}>
 			{#if columns}
-				<h2 class="muted-heading">Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span></h2>
+				<h2 class="muted-heading">Inactive {noun.toLowerCase()} <Badge tone="count">{inactive.length}</Badge></h2>
 			{:else}
 				<button
 					type="button"
@@ -115,7 +116,8 @@
 					onclick={() => (inactiveOpen = !inactiveOpen)}
 				>
 					<span class="chev" class:collapsed={!inactiveOpen}><Icon name="chevron" size={20} /></span>
-					Inactive {noun.toLowerCase()} <span class="count">{inactive.length}</span>
+					Inactive {noun.toLowerCase()}
+					<Badge tone="count">{inactive.length}</Badge>
 				</button>
 			{/if}
 			{#if showInactive}
@@ -177,17 +179,6 @@
 	.chev.collapsed {
 		transform: rotate(-90deg);
 	}
-	.count {
-		min-width: 1.6rem;
-		padding: 0 0.45rem;
-		border-radius: 1rem;
-		background: var(--surface-2);
-		color: var(--muted);
-		font-size: 0.8rem;
-		text-align: center;
-		line-height: 1.5rem;
-		font-weight: 600;
-	}
 	ul {
 		list-style: none;
 		margin: 0;
@@ -204,7 +195,7 @@
 	.state {
 		display: grid;
 		place-items: center;
-		width: 2.5rem;
+		width: var(--tap, 2.75rem);
 		color: var(--muted);
 	}
 	.state.on {

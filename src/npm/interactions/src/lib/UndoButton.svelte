@@ -2,16 +2,31 @@
 	import { Icon } from '@wells-nelson/displays';
 	import type { UndoStack } from './undo.svelte.js';
 
-	/** Floating Undo button, bottom left (above a `SearchBar` and any `TabBar`), shown while `stack.visible`. */
+	/**
+	 * Floating Undo button, bottom left (above a `SearchBar` and any `TabBar`), shown while
+	 * `stack.visible`. It sits in a status region, so what it would undo ("Got Milk. Undo") is read
+	 * out when it appears, and it stays up while hovered or focused.
+	 */
 	let { stack, label = 'Undo' }: { stack: UndoStack; label?: string } = $props();
 </script>
 
-{#if stack.visible}
-	<button type="button" class="undo" onclick={() => stack.undo()}>
-		<Icon name="undo" size={18} />
-		{label}
-	</button>
-{/if}
+<div class="region" role="status">
+	{#if stack.visible}
+		<button
+			type="button"
+			class="undo"
+			onclick={() => stack.undo()}
+			onpointerenter={() => stack.pause()}
+			onpointerleave={() => stack.resume()}
+			onfocus={() => stack.pause()}
+			onblur={() => stack.resume()}
+		>
+			{#if stack.message}<span class="what">{stack.message}<span class="visually-hidden">.</span></span>{/if}
+			<Icon name="undo" size={18} />
+			{label}
+		</button>
+	{/if}
+</div>
 
 <style>
 	.undo {
@@ -22,7 +37,9 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0.6rem 1rem;
+		max-width: calc(100vw - 2rem);
+		min-height: var(--tap, 2.75rem);
+		padding: 0 1rem;
 		border: none;
 		border-radius: 2rem;
 		background: var(--text);
@@ -31,6 +48,15 @@
 		box-shadow: var(--shadow-lg);
 		cursor: pointer;
 		animation: pop 0.15s ease-out;
+	}
+	.what {
+		min-width: 0;
+		max-width: 14rem;
+		margin-right: 0.35rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 400;
 	}
 	@keyframes pop {
 		from {

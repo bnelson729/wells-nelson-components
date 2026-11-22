@@ -106,9 +106,9 @@
 	}
 </script>
 
-<section class="card section" aria-labelledby="device-data-title">
+<section class="card card-section" aria-labelledby="device-data-title">
 	<h2 id="device-data-title">Data on this device</h2>
-	<p class="small storage">
+	<p class="text-sm storage">
 		<Icon name={persisted ? 'check' : 'alert'} size={18} />
 		<span>
 			{#if persisted}
@@ -121,13 +121,13 @@
 		</span>
 	</p>
 	{#if !persisted && iosBrowserTab}
-		<p class="muted small">Add the app to your Home Screen (Share → Add to Home Screen) to keep it for good.</p>
+		<p class="muted text-sm">Add the app to your Home Screen (Share → Add to Home Screen) to keep it for good.</p>
 	{/if}
 	{#if persisted === false && onpersist}
 		<Button icon="check" onclick={persist} disabled={asking}>{asking ? 'Asking…' : 'Keep data on this device'}</Button>
 	{/if}
 
-	<p class="muted small">
+	<p class="muted text-sm">
 		A backup file holds every {nouns.singular} you choose. Importing one adds its {nouns.plural} as new
 		{nouns.plural} on this device only; nothing is replaced.
 	</p>
@@ -140,7 +140,7 @@
 	</div>
 	{#if items.length > 1}
 		<details>
-			<summary class="small">Export one {nouns.singular}</summary>
+			<summary class="text-sm">Export one {nouns.singular}</summary>
 			<ul class="items">
 				{#each items as item (item.id)}
 					<li>
@@ -160,32 +160,14 @@
 		</details>
 	{/if}
 	{#if message}
-		<p class="small" class:error={message.error} role="status">{message.text}</p>
+		<p class="text-sm" class:error-text={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</p>
 	{/if}
 	{#if items.length === 0}
-		<p class="muted small">No {nouns.plural} to export yet. {capitalize(nouns.plural)} you add will appear here.</p>
+		<p class="muted text-sm">No {nouns.plural} to export yet. {capitalize(nouns.plural)} you add will appear here.</p>
 	{/if}
 </section>
 
 <style>
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 1rem;
-	}
-	.section p {
-		margin: 0;
-		line-height: 1.5;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.05rem;
-	}
-	.small {
-		font-size: 0.9rem;
-	}
 	.storage {
 		display: flex;
 		align-items: flex-start;
@@ -202,7 +184,7 @@
 	}
 	summary {
 		cursor: pointer;
-		min-height: 2.5rem;
+		min-height: var(--tap, 2.75rem);
 		display: flex;
 		align-items: center;
 	}
@@ -223,8 +205,5 @@
 	.items li span {
 		min-width: 0;
 		overflow-wrap: anywhere;
-	}
-	.error {
-		color: var(--danger);
 	}
 </style>

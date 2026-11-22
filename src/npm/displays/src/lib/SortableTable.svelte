@@ -52,7 +52,9 @@
 	{#if rows.length === 0}
 		<p class="muted empty-row">{emptyText}</p>
 	{:else}
-		<div class="scroll">
+		<!-- Focusable so the keyboard can scroll it sideways on a small screen. -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<div class="scroll" tabindex="0" role="region" aria-label={title ?? 'Table'}>
 			<table>
 				<thead>
 					<tr>
@@ -120,6 +122,7 @@
 	}
 	thead button {
 		width: 100%;
+		min-height: var(--tap, 2.75rem);
 		padding: 0.5rem 0.6rem;
 		border: none;
 		background: none;

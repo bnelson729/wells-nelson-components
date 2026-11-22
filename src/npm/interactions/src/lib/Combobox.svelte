@@ -26,7 +26,8 @@
 		placeholder = 'Select or type to create…',
 		createLabel = 'Create',
 		error,
-		hideLabel = false
+		hideLabel = false,
+		required = false
 	}: {
 		label: string;
 		options: ComboOption[];
@@ -35,10 +36,14 @@
 		createLabel?: string;
 		error?: string | null;
 		hideLabel?: boolean;
+		/** Adds "(required)" to the label and marks the field required. */
+		required?: boolean;
 	} = $props();
 
 	const id = $props.id();
 	const listId = `${id}-list`;
+	const errorId = `${id}-error`;
+	const optionId = (i: number) => `${id}-opt-${i}`;
 
 	function labelFor(c: ComboChoice) {
 		if (!c) return '';
@@ -149,17 +154,22 @@
 </script>
 
 <div class="combo" bind:this={combo}>
-	<label for={id} class:visually-hidden={hideLabel}>{label}</label>
+	<label for={id} class:visually-hidden={hideLabel}
+		>{label}{#if required}<span class="required">{' (required)'}</span>{/if}</label
+	>
 	<div class="control">
 		<input
 			{id}
 			type="text"
 			role="combobox"
+			aria-required={required || undefined}
 			autocomplete="off"
-			aria-expanded={open}
+			aria-expanded={open && rows.length > 0}
 			aria-controls={listId}
 			aria-autocomplete="list"
+			aria-activedescendant={open && rows[highlighted] ? optionId(highlighted) : undefined}
 			aria-invalid={error ? 'true' : undefined}
+			aria-describedby={error ? errorId : undefined}
 			{placeholder}
 			bind:value={text}
 			oninput={onInput}
@@ -172,8 +182,9 @@
 			<ul id={listId} role="listbox" class="options" bind:this={list}>
 				{#each rows as row, i (row.kind === 'option' ? row.option.id : '__create')}
 					<li
+						id={optionId(i)}
 						role="option"
-						aria-selected={i === highlighted}
+						aria-selected={row.kind === 'option' && !!choice && 'id' in choice && choice.id === row.option.id}
 						class:highlighted={i === highlighted}
 						class:create={row.kind === 'create'}
 						onmousedown={(e) => {
@@ -188,7 +199,7 @@
 			</ul>
 		{/if}
 	</div>
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error}<p id={errorId} class="error" role="alert">{error}</p>{/if}
 	{#if reserve > 0}<div class="reserve" style:height="{reserve}px" aria-hidden="true"></div>{/if}
 </div>
 
@@ -203,6 +214,10 @@
 	}
 	.reserve {
 		flex: none;
+	}
+	.required {
+		font-weight: 400;
+		color: var(--muted);
 	}
 	label {
 		font-weight: 600;
@@ -220,7 +235,7 @@
 		max-height: 14rem;
 		overflow-y: auto;
 		background: var(--surface);
-		border: 1px solid var(--border-strong);
+		border: 1px solid var(--control-border);
 		border-radius: var(--radius);
 		box-shadow: var(--shadow-lg);
 	}
@@ -231,6 +246,9 @@
 	}
 	li.highlighted {
 		background: var(--surface-hover);
+	}
+	li[aria-selected='true'] {
+		font-weight: 600;
 	}
 	li.create {
 		color: var(--accent-text);

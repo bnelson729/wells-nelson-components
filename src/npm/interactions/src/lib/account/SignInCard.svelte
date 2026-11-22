@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Icon } from '@wells-nelson/displays';
+	import { Button, Notice } from '@wells-nelson/displays';
 	import { EMAIL_PATTERN, errorText, type AccountActions, type CloudStatus } from './types.js';
 
 	/**
@@ -58,9 +58,9 @@
 	}
 </script>
 
-<section class="card section">
+<section class="card card-section">
 	{#if cloud.sessionExpired}
-		<div class="notice"><Icon name="alert" /> Your session expired. Sign in again to resume syncing.</div>
+		<Notice role="status">Your session expired. Sign in again to resume syncing.</Notice>
 	{/if}
 	<h2>Sign in</h2>
 	<p class="muted">{pitch}</p>
@@ -90,13 +90,12 @@
 		<div class="or muted">or</div>
 
 		{#if linkSentTo}
-			<div class="sent">
-				<Icon name="mail" />
+			<Notice tone="info" icon="mail" role="status">
 				<p>
 					Check your email for a sign-in link. We sent it to <strong>{linkSentTo}</strong>. Open it in this browser.
 					<button type="button" class="link" onclick={() => (linkSentTo = null)}>Use a different email</button>
 				</p>
-			</div>
+			</Notice>
 		{:else}
 			<form class="email" onsubmit={sendLink}>
 				<label for={inputId}>Email me a sign-in link</label>
@@ -107,29 +106,11 @@
 			</form>
 		{/if}
 	{/if}
-	{#if !cloud.online}<p class="muted small">You're offline. Connect to sign in.</p>{/if}
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if !cloud.online}<p class="muted text-sm">You're offline. Connect to sign in.</p>{/if}
+	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
 </section>
 
 <style>
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 1rem;
-	}
-	.section p {
-		margin: 0;
-		line-height: 1.5;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.05rem;
-	}
-	.small {
-		font-size: 0.9rem;
-	}
 	.or {
 		text-align: center;
 		font-size: 0.9rem;
@@ -151,28 +132,14 @@
 		flex: 1;
 		min-width: 0;
 	}
-	.sent {
-		display: flex;
-		gap: 0.6rem;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius);
-		background: var(--accent-soft);
-	}
-	.sent :global(.icon) {
-		color: var(--accent-text);
-		margin-top: 0.15rem;
-	}
 	.link {
 		display: block;
-		margin-top: 0.35rem;
+		min-height: var(--tap, 2.75rem);
 		padding: 0;
 		border: none;
 		background: none;
 		color: var(--accent-text);
 		text-decoration: underline;
 		cursor: pointer;
-	}
-	.error {
-		color: var(--danger);
 	}
 </style>
