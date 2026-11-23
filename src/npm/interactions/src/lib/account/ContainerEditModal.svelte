@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { Button, ConfirmDialog, Icon, Modal } from '@wells-nelson/displays';
+	import { Button, ConfirmDialog, ErrorMessage, Icon, Modal } from '@wells-nelson/displays';
 	import { untrack } from 'svelte';
 	import TextField from '../TextField.svelte';
 	import Toggle from '../Toggle.svelte';
 	import {
 		capitalize,
-		errorText,
 		type CloudStatus,
 		type ContainerLocation,
 		type Member,
@@ -77,7 +76,8 @@
 	let open = $state(true);
 	// svelte-ignore state_referenced_locally
 	let name = $state(currentName);
-	let error = $state<string | null>(null);
+	let error = $state<unknown>(null);
+	let errorAction = $state('');
 	let busy = $state(false);
 
 	function close() {
@@ -121,13 +121,14 @@
 		if (!confirmLocal && !busy) cloudToggle = isCloud;
 	});
 
-	async function run(fn: () => Promise<unknown>) {
+	async function run(fn: () => Promise<unknown>, action: string) {
 		busy = true;
 		error = null;
 		try {
 			await fn();
 		} catch (err) {
-			error = errorText(err);
+			error = err;
+			errorAction = action;
 		} finally {
 			busy = false;
 		}
@@ -135,11 +136,11 @@
 
 	const localMessage = $derived(
 		`This disconnects “${currentName}” from the copies on your other devices` +
-			(others.length > 0 ? ' and from everyone it’s shared with' : '') +
-			'. From then on, changes made here won’t reach them and theirs won’t reach you.\n\n' +
+			(others.length > 0 ? " and from everyone it's shared with" : '') +
+			". From then on, changes made here won't reach them and theirs won't reach you.\n\n" +
 			(others.length > 0
-				? `Because it’s shared, the cloud ${nouns.singular} stays for the others; you get a separate local-only copy and leave it.`
-				: 'The cloud copy is deleted, so it also disappears from your other devices. This device keeps it.')
+				? `Because it's shared, the synced ${nouns.singular} stays for the others; you get a separate local-only copy and leave it.`
+				: 'The copy in your account is deleted, so it also disappears from your other devices. This device keeps it.')
 	);
 
 	// ------------------------------------------------ delete / leave
@@ -152,12 +153,12 @@
 		run(async () => {
 			await ondelete();
 			close();
-		});
+		}, `delete the ${nouns.singular}`);
 	const doLeave = () =>
 		run(async () => {
 			await onleave();
 			close();
-		});
+		}, `leave the ${nouns.singular}`);
 </script>
 
 <Modal bind:open title={`Edit ${nouns.singular}`} {onclose}>
@@ -186,13 +187,15 @@
 				label="Cloud-enabled"
 				bind:checked={cloudToggle}
 				disabled={busy}
-				onchange={(on) => (on ? run(onmakecloud) : (confirmLocal = true))}
+				onchange={(on) => (on ? run(onmakecloud, `make the ${nouns.singular} cloud-enabled`) : (confirmLocal = true))}
 			/>
 			<p class="muted text-sm">
 				{#if isCloud}
-					Synced to your account{cloud.hasPending(containerId) ? ' — changes are waiting to upload' : ''}.
+					Synced to your account{cloud.hasPending(containerId) ? ' — changes waiting to sync' : ''}.
 				{:else}
-					Only on this device. Turn on to sync{cloud.online ? '' : ' (uploads once you are back online)'}.
+					Only on this device. Turn on to sync it to your account, so it's on your other devices and can be shared{cloud.online
+						? ''
+						: " (it syncs once you're back online)"}.
 				{/if}
 			</p>
 		{:else}
@@ -202,7 +205,7 @@
 		{/if}
 	</section>
 
-	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
+	<ErrorMessage {error} action={errorAction} />
 
 	{#if leaveOnly}
 		<Button
@@ -215,7 +218,7 @@
 		</Button>
 		{#if isOwner}
 			<p class="muted text-sm">
-				{roles ? 'Other owners remain' : 'It’s shared'}, so the {nouns.singular} stays for them.
+				{roles ? 'Other owners remain' : "It's shared"}, so the {nouns.singular} stays for them.
 			</p>
 		{/if}
 	{:else}
@@ -230,7 +233,9 @@
 		</Button>
 	{/if}
 	{#if isCloud && !cloud.online}
-		<p class="muted text-sm">Reconnect to delete or leave a cloud-enabled {nouns.singular}.</p>
+		<p class="muted text-sm">
+			You're offline. You can delete or leave a cloud-enabled {nouns.singular} once you're back online.
+		</p>
 	{/if}
 
 	{#snippet footer()}
@@ -241,18 +246,18 @@
 
 <ConfirmDialog
 	bind:open={confirmLocal}
-	title={`Disconnect this ${nouns.singular}?`}
+	title={`Make “${currentName}” local-only?`}
 	message={localMessage}
 	confirmLabel="Make local-only"
-	busyLabel="Disconnecting…"
+	busyLabel="Making local-only…"
 	danger
-	onconfirm={() => run(onmakelocal)}
+	onconfirm={() => run(onmakelocal, `make the ${nouns.singular} local-only`)}
 />
 
 <ConfirmDialog
 	bind:open={confirmDelete}
 	title={`Delete this ${nouns.singular}?`}
-	message={`“${currentName}” and ${contentsLabel} will be permanently deleted${others.length ? ' for everyone it is shared with' : ''}.`}
+	message={`“${currentName}” and ${contentsLabel} will be deleted${others.length ? " for everyone it's shared with" : ''}. This can't be undone.`}
 	confirmLabel={`Delete ${nouns.singular}`}
 	busyLabel="Deleting…"
 	danger

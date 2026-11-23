@@ -79,7 +79,5 @@ export function capitalize(word: string) {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-/** An error as one line for the UI: an Error's message, or the value as text. */
-export function errorText(err: unknown) {
-	return err instanceof Error ? err.message : String(err);
-}
+/** An error as a sentence for the UI (`@wells-nelson/displays`'s `errorText`, kept here for existing imports). */
+export { errorText } from '@wells-nelson/displays';

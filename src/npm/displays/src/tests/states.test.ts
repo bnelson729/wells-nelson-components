@@ -7,9 +7,11 @@ import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import Button from '../lib/Button.svelte';
 import ConfirmDialog from '../lib/ConfirmDialog.svelte';
+import ErrorMessage from '../lib/ErrorMessage.svelte';
 import FatalError from '../lib/FatalError.svelte';
 import IconButton from '../lib/IconButton.svelte';
 import Splash from '../lib/Splash.svelte';
+import { userError } from '../lib/text.js';
 import { text } from './snippet.js';
 
 let cleanup: (() => void)[] = [];
@@ -105,7 +107,7 @@ describe('ConfirmDialog', () => {
 
 	it('says why confirming failed, and stays open to try again', async () => {
 		const onconfirm = vi.fn(async (): Promise<void> => {
-			throw new Error('You are offline.');
+			throw userError("You're offline.");
 		});
 		const el = render(ConfirmDialog, {
 			open: true,
@@ -118,7 +120,8 @@ describe('ConfirmDialog', () => {
 		confirm.click();
 		await settle();
 		expect(el.querySelector('dialog')!.hasAttribute('open')).toBe(true);
-		expect(el.querySelector('[role="alert"]')!.textContent).toBe('You are offline.');
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe("You're offline.");
+		expect(el.querySelector('details')).toBeNull();
 		expect(confirm.disabled).toBe(false);
 
 		// Trying again clears the old error first.
@@ -174,8 +177,10 @@ describe('start-up screens', () => {
 		const reload = vi.fn();
 		vi.stubGlobal('location', { ...window.location, reload });
 		const el = render(FatalError, { error: 'QuotaExceededError' });
-		expect(el.querySelector('h1')!.textContent).toBe('Something went wrong');
-		expect(el.textContent).toContain("The local database couldn't be opened: QuotaExceededError");
+		expect(el.querySelector('h1')!.textContent).toBe("This app can't start");
+		expect(el.textContent).toContain("This app couldn't open its storage on this device.");
+		// The browser's own text is kept for support, behind Details.
+		expect(el.querySelector('details')!.textContent).toContain('QuotaExceededError');
 		byText(el, 'Try again').click();
 		expect(reload).toHaveBeenCalled();
 		vi.unstubAllGlobals();
@@ -198,5 +203,26 @@ describe('Button variants', () => {
 		expect(el.querySelector('button')!.type).toBe('submit');
 		const plain = render(Button, { children: text('Cancel') });
 		expect(plain.querySelector('button')!.type).toBe('button');
+	});
+});
+
+describe('ErrorMessage', () => {
+	it('says what failed in plain words, with the technical text behind Details', () => {
+		const el = render(ErrorMessage, { error: new Error('Saving item_stores failed'), action: 'save the item' });
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe("Couldn't save the item. Try again in a moment.");
+		expect(el.querySelector('details')!.textContent).toContain('Saving item_stores failed');
+	});
+
+	it('shows a message written for people without Details, and nothing for no error', () => {
+		const el = render(ErrorMessage, { error: userError('That email already has access.') });
+		expect(el.textContent!.trim()).toBe('That email already has access.');
+		expect(el.querySelector('details')).toBeNull();
+		expect(render(ErrorMessage, { error: null }).textContent!.trim()).toBe('');
+	});
+
+	it('can say it in its own words', () => {
+		const el = render(ErrorMessage, { error: 'Failed to fetch', text: "Couldn't save your changes." });
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe("Couldn't save your changes.");
+		expect(el.querySelector('details')!.textContent).toContain('Failed to fetch');
 	});
 });

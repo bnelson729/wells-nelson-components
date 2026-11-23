@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Icon } from '@wells-nelson/displays';
+	import { Button, ErrorMessage, Icon, plural } from '@wells-nelson/displays';
 	import { capitalize, type ContainerLocation, type Nouns } from './types.js';
 
 	/**
@@ -33,7 +33,8 @@
 	} = $props();
 
 	let busy = $state(false);
-	let message = $state<{ text: string; error: boolean } | null>(null);
+	let message = $state<string | null>(null);
+	let error = $state<{ err: unknown; action: string } | null>(null);
 	let fileInput = $state<HTMLInputElement>();
 	let asking = $state(false);
 
@@ -53,6 +54,7 @@
 	async function download(which: typeof items, label: string) {
 		busy = true;
 		message = null;
+		error = null;
 		try {
 			const data = await onexport(which.map(({ id, location }) => ({ id, location })));
 			const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
@@ -65,7 +67,7 @@
 			a.remove();
 			setTimeout(() => URL.revokeObjectURL(url), 1000);
 		} catch (err) {
-			message = { text: `Export failed: ${err instanceof Error ? err.message : String(err)}`, error: true };
+			error = { err, action: 'export' };
 		} finally {
 			busy = false;
 		}
@@ -78,18 +80,18 @@
 		if (!file) return;
 		busy = true;
 		message = null;
+		error = null;
 		try {
 			let data: unknown;
 			try {
 				data = JSON.parse(await file.text());
 			} catch {
-				throw new Error('This file is not a backup of this app.');
+				throw Object.assign(new Error('This file is not a backup of this app.'), { userFacing: true });
 			}
 			const added = await onimport(data);
-			const noun = added.length === 1 ? nouns.singular : nouns.plural;
-			message = { text: `Added ${added.length} ${noun} to this device (only on this device).`, error: false };
+			message = `Added ${plural(added.length, nouns.singular, nouns.plural)} to this device.`;
 		} catch (err) {
-			message = { text: err instanceof Error ? err.message : String(err), error: true };
+			error = { err, action: 'import the backup' };
 		} finally {
 			busy = false;
 		}
@@ -124,7 +126,9 @@
 		<p class="muted text-sm">Add the app to your Home Screen (Share → Add to Home Screen) to keep it for good.</p>
 	{/if}
 	{#if persisted === false && onpersist}
-		<Button icon="check" onclick={persist} disabled={asking}>{asking ? 'Asking…' : 'Keep data on this device'}</Button>
+		<Button icon="check" onclick={persist} disabled={asking}
+			>{asking ? 'Asking the browser…' : 'Keep data on this device'}</Button
+		>
 	{/if}
 
 	<p class="muted text-sm">
@@ -160,8 +164,9 @@
 		</details>
 	{/if}
 	{#if message}
-		<p class="text-sm" class:error-text={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</p>
+		<p class="text-sm" role="status">{message}</p>
 	{/if}
+	{#if error}<ErrorMessage error={error.err} action={error.action} />{/if}
 	{#if items.length === 0}
 		<p class="muted text-sm">No {nouns.plural} to export yet. {capitalize(nouns.plural)} you add will appear here.</p>
 	{/if}

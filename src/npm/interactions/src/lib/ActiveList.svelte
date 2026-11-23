@@ -17,7 +17,7 @@
 		ontoggle,
 		readOnly = false,
 		inactiveOpen = $bindable(false),
-		emptyText = 'None yet.',
+		emptyText,
 		appearance = 'card',
 		collapsibleActive = false,
 		sideBySide = false
@@ -67,7 +67,7 @@
 		{:else}
 			<Checkbox
 				checked={item.active}
-				label={`${label(item)} active`}
+				label={`${label(item)} is active`}
 				hideLabel
 				onchange={(checked) => ontoggle(item, checked)}
 			/>
@@ -98,7 +98,7 @@
 				{#each active as item (item.id)}
 					{@render row(item)}
 				{:else}
-					<li class="muted empty-row">{emptyText}</li>
+					<li class="muted empty-row">{emptyText ?? `No ${noun.toLowerCase()} yet.`}</li>
 				{/each}
 			</ul>
 		{/if}
@@ -125,7 +125,7 @@
 					{#each inactive as item (item.id)}
 						{@render row(item)}
 					{:else}
-						<li class="muted empty-row">None.</li>
+						<li class="muted empty-row">No inactive {noun.toLowerCase()}.</li>
 					{/each}
 				</ul>
 			{/if}

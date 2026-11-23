@@ -26,7 +26,7 @@ describe('AppVersion', () => {
 		const el = render(AppVersion, { version: '1.4.2', updateAvailable: true, onupdate });
 		expect(el.textContent).toContain('Version 1.4.2');
 		expect(el.textContent).toContain('A new version is available.');
-		button(el, 'Update').click();
+		button(el, 'Update now').click();
 		expect(onupdate).toHaveBeenCalled();
 	});
 
@@ -43,7 +43,7 @@ describe('AppVersion', () => {
 		const el = render(AppVersion, { version: '1.4.2', oncheck: async () => true });
 		button(el, 'Check for updates').click();
 		await settle();
-		expect(button(el, 'Update')).toBeTruthy();
+		expect(button(el, 'Update now')).toBeTruthy();
 	});
 });
 
@@ -216,6 +216,7 @@ describe('ActiveList', () => {
 		expect(el.textContent).toContain('Bo');
 
 		const box = el.querySelector<HTMLInputElement>('input[type=checkbox]')!;
+		expect(box.getAttribute('aria-label')).toBe('Ann is active');
 		box.click();
 		flushSync();
 		expect(ontoggle).toHaveBeenCalledWith(items[0], false);
@@ -338,6 +339,13 @@ describe('TextField', () => {
 		expect(input.getAttribute('aria-invalid')).toBe('true');
 		expect(el.querySelector('label')!.textContent).toBe('Name (required)');
 	});
+
+	it('marks optional fields in the label, not in a placeholder', async () => {
+		const { default: TextField } = await import('../lib/TextField.svelte');
+		const el = render(TextField, { label: 'Phone number', optional: true });
+		expect(el.querySelector('label')!.textContent).toBe('Phone number (optional)');
+		expect(el.querySelector('input')!.placeholder).toBe('');
+	});
 });
 
 describe('focusFirstInvalid', () => {
@@ -365,7 +373,8 @@ describe('SyncBanners', () => {
 		const app = { writeError: 'Quota exceeded' as string | null };
 		const cloud = { rejectedWrite: null as string | null };
 		const el = render(SyncBanners, { app, cloud });
-		expect(el.textContent).toContain("A change couldn't be saved on this device. Quota exceeded.");
+		expect(el.textContent).toContain("A change couldn't be saved on this device. This device is out of storage space.");
+		expect(el.querySelector('details')!.textContent).toContain('Quota exceeded');
 		expect(el.textContent).not.toContain('cloud');
 		el.querySelector<HTMLButtonElement>('button[aria-label="Dismiss"]')!.click();
 		flushSync();

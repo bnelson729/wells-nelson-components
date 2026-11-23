@@ -3,6 +3,7 @@ export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Chip } from './Chip.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export { default as ErrorMessage } from './ErrorMessage.svelte';
 export { default as FatalError } from './FatalError.svelte';
 export { default as Icon } from './Icon.svelte';
 export { default as IconButton } from './IconButton.svelte';
@@ -15,3 +16,17 @@ export { default as TabBar } from './TabBar.svelte';
 export { PHONE_LAYOUT_QUERY, phoneLayout } from './layout.js';
 export { baseIcons, hasIcon, iconMarkup, registerIcons, type BaseIconName, type IconName } from './icons.js';
 export { sortRows, type Leaderboard, type SortableColumn, type TabItem } from './types.js';
+export {
+	errorText,
+	formatDate,
+	formatDateTime,
+	formatLongDate,
+	formatRecent,
+	formatTime,
+	isUserFacing,
+	knownErrorText,
+	plural,
+	rawErrorText,
+	userError,
+	type UserFacingError
+} from './text.js';

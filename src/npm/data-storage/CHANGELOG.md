@@ -2,6 +2,11 @@
 
 ## Unreleased (minor)
 
+- `userError(message)`: an Error marked `userFacing`, which the UI shows as it is. `friendlyError`'s
+  messages, "You're offline…" and the backup import errors are `userError`s; other errors show as a general
+  sentence with the technical text behind "Details". A malformed backup now says "This backup is damaged, so
+  nothing was imported." (it named the table and field).
+
 - `ownership: 'user'` (store and `generateMigration`): one container per signed-in user, whose id is the user's
   id; no members table, no sharing.
 - `app.restored` (with `restoreTimeoutMs`) and `defaultContainerToOpen(prefs, …)`: start-up state and the

@@ -39,10 +39,9 @@
 
 {#if !cloud.configured}
 	<section class="card card-section">
-		<h2>Cloud sync isn't set up</h2>
+		<h2>Sign-in isn't available</h2>
 		<p class="muted">
-			This copy of {appName} runs local-only: every {nouns.singular} stays on this device, and signing in isn't available.
-			Everything else works as usual.
+			This version of {appName} can't sign in, so every {nouns.singular} stays on this device. Everything else works as usual.
 		</p>
 	</section>
 {:else if !cloud.user || cloud.sessionExpired}

@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { Badge, Button, IconButton, Modal } from '@wells-nelson/displays';
+	import { Badge, Button, ErrorMessage, IconButton, Modal, userError } from '@wells-nelson/displays';
 	import { untrack } from 'svelte';
 	import Segmented from '../Segmented.svelte';
 	import {
 		EMAIL_PATTERN,
 		ROLE_OPTIONS,
-		errorText,
 		type CloudStatus,
 		type ContainerLocation,
 		type Member,
@@ -34,6 +33,7 @@
 		signInPitch,
 		description,
 		localOnlyReason,
+		inviteHint,
 		onmakecloud,
 		onclose
 	}: {
@@ -59,6 +59,8 @@
 		 * is replaced by this text while it is local.
 		 */
 		localOnlyReason?: string;
+		/** Under the email field, e.g. which address to use when sign-in is Google only. */
+		inviteHint?: string;
 		onmakecloud: () => Promise<unknown>;
 		onclose: () => void;
 	} = $props();
@@ -70,7 +72,11 @@
 
 	let open = $state(true);
 	let list = $state<Member[] | null>(null);
-	let error = $state<string | null>(null);
+	let error = $state<unknown>(null);
+	let errorAction = $state('');
+	/** The last address shared with, for the "Shared with …" status. */
+	let sharedWith = $state<string | null>(null);
+	const emailId = $props.id();
 	let email = $state('');
 	let inviteRole = $state<Role>('viewer');
 	let busy = $state(false);
@@ -102,7 +108,7 @@
 	async function load() {
 		if (!isCloud || !signedIn) return;
 		if (!cloud.online) {
-			error = 'You are offline. Sharing details load once you reconnect.';
+			error = userError("You're offline. Sharing details load once you're back online.");
 			return;
 		}
 		try {
@@ -111,7 +117,8 @@
 			const me = list.find((m) => m.email === cloud.email);
 			if (roles && me?.role) cloud.setRole?.(containerId, me.role);
 		} catch (err) {
-			error = errorText(err);
+			error = err;
+			errorAction = "load who it's shared with";
 		}
 	}
 
@@ -122,13 +129,15 @@
 		void untrack(load);
 	});
 
-	async function act(fn: () => Promise<unknown>) {
+	async function act(fn: () => Promise<unknown>, action: string) {
 		busy = true;
 		error = null;
+		sharedWith = null;
 		try {
 			await fn();
 		} catch (err) {
-			error = errorText(err);
+			error = err;
+			errorAction = action;
 		} finally {
 			busy = false;
 			await load();
@@ -138,11 +147,13 @@
 	function invite(e: SubmitEvent) {
 		e.preventDefault();
 		if (!emailValid) return;
+		const address = email.trim();
 		void act(async () => {
 			await api.inviteMember(containerId, email, roles ? inviteRole : undefined);
 			email = '';
 			inviteRole = 'viewer';
-		});
+			sharedWith = address;
+		}, `share with ${address}`);
 	}
 </script>
 
@@ -150,22 +161,34 @@
 	{#if localOnlyReason && !isCloud}
 		<p>{localOnlyReason}</p>
 	{:else if !cloud.configured}
-		<p class="muted">Sharing isn't available because cloud sync isn't set up for this copy of {appName}.</p>
+		<p class="muted">Sharing isn't available because this version of {appName} can't sign in.</p>
 	{:else if !signedIn}
 		<p>{pitch}</p>
-		<a href={signInHref} onclick={close}>Go to sign in</a>
+		<a href={signInHref} onclick={close}>Sign in to share</a>
 	{:else if !isCloud}
 		<p>Only cloud-enabled {nouns.plural} can be shared. This one is only on this device.</p>
-		<Button variant="primary" icon="cloud" onclick={() => act(onmakecloud)} disabled={busy}>Make cloud-enabled</Button>
+		<Button
+			variant="primary"
+			icon="cloud"
+			onclick={() => act(onmakecloud, `make the ${nouns.singular} cloud-enabled`)}
+			disabled={busy}>Make cloud-enabled</Button
+		>
 	{:else}
 		<p class="muted text-sm">{explainer}</p>
 
 		{#if isOwner}
 			{#if !uploaded}
-				<p class="muted text-sm">Sharing is available once this {nouns.singular} has finished uploading.</p>
+				<p class="muted text-sm">Sharing is available once this {nouns.singular} has synced.</p>
 			{:else}
+				<label class="invite-label" for={emailId}>Email address to share with</label>
 				<form class="invite" class:with-role={roles} onsubmit={invite}>
-					<input type="email" placeholder="name@example.com" bind:value={email} aria-label="Email to share with" />
+					<input
+						id={emailId}
+						type="email"
+						placeholder="name@example.com"
+						bind:value={email}
+						aria-describedby={`${emailId}-hint`}
+					/>
 					{#if roles}
 						<Segmented label="Role for the invite" bind:value={inviteRole} options={ROLE_OPTIONS} />
 					{/if}
@@ -173,6 +196,11 @@
 						>Share</Button
 					>
 				</form>
+				<p id={`${emailId}-hint`} class="muted text-sm">
+					They'll see “{name}” the next time they sign in to {appName} with this email. We don't send them an email, so let
+					them know.{inviteHint ? ` ${inviteHint}` : ''}
+				</p>
+				{#if sharedWith}<p class="text-sm" role="status">Shared with {sharedWith}.</p>{/if}
 			{/if}
 		{:else}
 			<p class="muted text-sm">Only owners can change who this {nouns.singular} is shared with.</p>
@@ -200,7 +228,10 @@
 									? `A ${nouns.singular} needs at least one owner. Make someone else an owner first.`
 									: undefined}
 								onchange={(e) =>
-									act(() => api.setMemberRole!(m.id, (e.currentTarget as HTMLSelectElement).value as Role))}
+									act(
+										() => api.setMemberRole!(m.id, (e.currentTarget as HTMLSelectElement).value as Role),
+										`change ${m.email}'s role`
+									)}
 							>
 								{#each ROLE_OPTIONS as r (r.value)}<option value={r.value}>{r.label}</option>{/each}
 							</select>
@@ -210,9 +241,9 @@
 						{#if isOwner && !me}
 							<IconButton
 								icon="x"
-								label={roles ? `Remove ${m.email}` : `Stop sharing with ${m.email}`}
+								label={`Stop sharing with ${m.email}`}
 								disabled={busy || !cloud.online || isLastOwner(m)}
-								onclick={() => act(() => api.removeMember(m.id))}
+								onclick={() => act(() => api.removeMember(m.id), `stop sharing with ${m.email}`)}
 							/>
 						{/if}
 					</li>
@@ -231,7 +262,7 @@
 			<p class="muted text-sm">Not shared with anyone yet.</p>
 		{/if}
 	{/if}
-	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
+	<ErrorMessage {error} action={errorAction} />
 
 	{#snippet footer()}
 		<Button onclick={close}>Done</Button>
@@ -261,6 +292,11 @@
 		height: 1px;
 		overflow: hidden;
 		clip: rect(0 0 0 0);
+	}
+	.invite-label {
+		font-weight: 600;
+		font-size: 0.9rem;
+		margin-bottom: -0.25rem;
 	}
 	.members {
 		list-style: none;

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button, ConfirmDialog } from '@wells-nelson/displays';
-	import { errorText, type AccountActions, type CloudStatus, type Nouns } from './types.js';
+	import { Button, ConfirmDialog, ErrorMessage } from '@wells-nelson/displays';
+	import type { AccountActions, CloudStatus, Nouns } from './types.js';
 
 	/** Sign out, with a warning listing anything that hasn't reached the cloud yet. */
 	let {
@@ -17,7 +17,7 @@
 
 	let busy = $state(false);
 	let confirming = $state(false);
-	let error = $state<string | null>(null);
+	let error = $state<unknown>(null);
 
 	function request() {
 		if (cloud.hasAnyPending) confirming = true;
@@ -30,7 +30,7 @@
 		try {
 			await account.signOut();
 		} catch (err) {
-			error = errorText(err);
+			error = err;
 		} finally {
 			busy = false;
 		}
@@ -42,13 +42,13 @@
 		Signing out removes your cloud-enabled {nouns.plural} from this device. Local-only {nouns.plural} stay.
 	</p>
 	<Button onclick={request} disabled={busy}>Sign out</Button>
-	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
+	<ErrorMessage {error} action="sign out" />
 </section>
 
 <ConfirmDialog
 	bind:open={confirming}
 	title="Sign out with unsynced changes?"
-	message={`These ${nouns.plural} have changes that haven't reached the cloud yet:\n${pending.map((p) => `• ${p.name}`).join('\n')}\n\nIf you sign out now those changes will be lost. Reconnect and use "Force re-sync" first to keep them.`}
+	message={`These ${nouns.plural} have changes that haven't synced yet:\n${pending.map((p) => `• ${p.name}`).join('\n')}\n\nIf you sign out now, those changes will be lost. To keep them, connect to the internet and wait for them to sync (or press Sync now).`}
 	confirmLabel="Sign out anyway"
 	busyLabel="Signing out…"
 	danger

@@ -2,6 +2,21 @@
 
 ## Unreleased (minor)
 
+Content pass (wording that is the same in every app, and errors people can act on):
+
+- New `ErrorMessage`: an error in plain words, read out when it appears, with the technical text behind
+  "Details". New wording helpers: `errorText`, `rawErrorText`, `knownErrorText`, `userError` /
+  `isUserFacing`, `plural`, and `formatTime`, `formatDate`, `formatDateTime`, `formatRecent`,
+  `formatLongDate` (one date and time style).
+- **Breaking:** `ConfirmDialog`'s `confirmLabel` is required (it names the action, e.g. "Delete task"; the
+  generic "Confirm" default is gone). An `onconfirm` failure shows through `ErrorMessage`; `errorAction`
+  words the fallback ("Couldn't delete the task…").
+- `FatalError`: "This app can't start" / "This app couldn't open its storage on this device."; the browser's
+  error text moves behind "Details".
+- `SortableTable`: header buttons are named by the column's full name (`full`), so "PP" is read as "Points
+  played"; the empty text defaults to "Nothing to show yet."
+- `AppHeader` and `TabBar` read the dot label mid-sentence: "Profile (unsynced changes)".
+
 Accessibility and usability pass:
 
 - Theme: `--control-border` (3:1 outlines for fields, checkbox, switch, segmented), `--on-danger`, `--focus`,

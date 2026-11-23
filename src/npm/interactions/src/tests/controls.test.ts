@@ -182,6 +182,23 @@ describe('CollapsibleSection actions', () => {
 		expect(el.textContent).toContain('2');
 	});
 
+	it('counts with the right plural, and names add and edit after the section by default', () => {
+		const one = render(CollapsibleSection, {
+			title: 'Dairy',
+			count: 1,
+			collapsed: false,
+			onadd: () => {},
+			onedit: () => {},
+			children: () => {}
+		});
+		expect(one.querySelector('.badge')!.textContent).toContain('1 item');
+		expect(one.querySelector('.badge')!.textContent).not.toContain('1 items');
+		expect(one.querySelector('button[aria-label="Add to Dairy"]')).toBeTruthy();
+		expect(one.querySelector('button[aria-label="Edit Dairy"]')).toBeTruthy();
+		const three = render(CollapsibleSection, { title: 'Fridge', count: 3, collapsed: false, children: () => {} });
+		expect(three.querySelector('.badge')!.textContent).toContain('3 items');
+	});
+
 	it('hides its rows while collapsed and says so', () => {
 		const el = render(CollapsibleSection, { title: 'Dairy', count: 0, collapsed: true, children: () => {} });
 		expect(el.querySelector('ul')!.hidden).toBe(true);

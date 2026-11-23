@@ -2,7 +2,7 @@ import type { RxCollection } from 'rxdb/plugins/core';
 import type { AppState } from './app.svelte.js';
 import type { CloudSync } from './cloud.svelte.js';
 import type { DataSet } from './dataset.js';
-import { writeFailed } from './errors.js';
+import { userError, writeFailed } from './errors.js';
 import type { DevicePrefs } from './prefs.svelte.js';
 import type { Member, SupabaseApi } from './supabase.js';
 import type { Tombstones } from './tombstones.svelte.js';
@@ -306,13 +306,13 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	/** Keep only the schema's fields, and only with the schema's types; anything else is not a backup. */
 	function cleanRow(name: CollectionName<D>, row: unknown): Record<string, unknown> {
 		const props = (schema.schemas[name] as { properties: Record<string, { type?: unknown }> }).properties;
-		if (!row || typeof row !== 'object') throw new Error('This file is not a backup of this app.');
+		if (!row || typeof row !== 'object') throw userError('This file is not a backup of this app.');
 		const out: Record<string, unknown> = {};
 		for (const [key, prop] of Object.entries(props)) {
 			const value = (row as Record<string, unknown>)[key];
 			const type = prop.type === 'number' ? 'number' : prop.type === 'boolean' ? 'boolean' : 'string';
 			if (typeof value !== type || (type === 'number' && !Number.isFinite(value))) {
-				throw new Error(`This backup has an invalid ${name} row (${key}).`);
+				throw userError('This backup is damaged, so nothing was imported.');
 			}
 			out[key] = value;
 		}
@@ -327,21 +327,21 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	async function importContainers(data: unknown): Promise<string[]> {
 		const file = data as Partial<ContainerExport> | null;
 		if (!file || file.format !== 'wells-nelson-containers' || !Array.isArray(file.containers)) {
-			throw new Error('This file is not a backup of this app.');
+			throw userError('This file is not a backup of this app.');
 		}
 		if (file.version !== 1)
-			throw new Error('This backup was made by a newer version of the app. Update the app first.');
-		if (options.appKey && file.app !== options.appKey) throw new Error('This backup is from a different app.');
+			throw userError('This backup was made by a newer version of the app. Update the app, then try again.');
+		if (options.appKey && file.app !== options.appKey) throw userError('This backup is from a different app.');
 		// Check everything before writing anything.
 		const parsed = file.containers.map((entry) => {
 			const docs = {} as ContainerDocs<D>;
 			for (const name of collections) {
 				const rows = (entry as Record<string, unknown>)[name] ?? [];
-				if (!Array.isArray(rows)) throw new Error('This file is not a backup of this app.');
+				if (!Array.isArray(rows)) throw userError('This file is not a backup of this app.');
 				(docs as Record<string, unknown[]>)[name] = rows.map((r) => cleanRow(name, r));
 			}
 			const head = docs[container][0];
-			if (docs[container].length !== 1 || !head) throw new Error('This file is not a backup of this app.');
+			if (docs[container].length !== 1 || !head) throw userError('This file is not a backup of this app.');
 			return { docs, id: head.id };
 		});
 		const local = app.dataSet('local');
@@ -363,7 +363,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	}
 
 	function requireOnline() {
-		if (!cloud.online) throw new Error('This needs an internet connection. Try again once you are back online.');
+		if (!cloud.online) throw userError("You're offline. Try again once you're back online.");
 	}
 
 	async function otherMembers(containerId: string): Promise<Member[]> {

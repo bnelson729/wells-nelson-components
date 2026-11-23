@@ -3,7 +3,8 @@
 
 	/**
 	 * A labelled text input. `error` and `hint` are tied to the input (`aria-describedby`); an
-	 * error is announced when it appears. `required` adds "(required)" to the label and `aria-required` (not the native attribute, so the
+	 * error is announced when it appears. `optional` adds "(optional)" (use both
+	 * markers in a form that has both kinds of field). `required` adds "(required)" to the label and `aria-required` (not the native attribute, so the
 	 * app's own messages show instead of the browser's).
 	 */
 	let {
@@ -13,6 +14,7 @@
 		hint,
 		hideLabel = false,
 		required = false,
+		optional = false,
 		...rest
 	}: HTMLInputAttributes & {
 		label: string;
@@ -21,6 +23,8 @@
 		hint?: string;
 		/** Keep the label for assistive tech only (when something else on screen says what it's for). */
 		hideLabel?: boolean;
+		/** Marks the label "(optional)", instead of a placeholder that disappears when typing. */
+		optional?: boolean;
 	} = $props();
 
 	const id = $props.id();
@@ -29,7 +33,9 @@
 
 <div class="field">
 	<label for={id} class:visually-hidden={hideLabel}
-		>{label}{#if required}<span class="required">{' (required)'}</span>{/if}</label
+		>{label}{#if required}<span class="marker">{' (required)'}</span>{:else if optional}<span class="marker"
+				>{' (optional)'}</span
+			>{/if}</label
 	>
 	<input
 		{id}
@@ -53,7 +59,7 @@
 		font-weight: 600;
 		font-size: 0.9rem;
 	}
-	.required {
+	.marker {
 		font-weight: 400;
 		color: var(--muted);
 	}

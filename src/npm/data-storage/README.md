@@ -103,6 +103,13 @@ function with a plain `fetch`, so signed-out devices report too, and also catche
 and rejections. `setErrorReporter` swaps in another destination (e.g. Sentry). Table and RPC names default to `<noun>_members` and
 `get_<noun>_members`; override with e.g. `members: { membersRpc: 'get_list_collaborators' }`.
 
+## Errors for people
+
+Errors meant to be shown as they are (the last-owner rule, permissions, an email that already has access,
+being offline, backup problems) are `userError`s: `@wells-nelson/displays`'s `errorText` and
+`ErrorMessage` show their message. Anything else (a Postgres or network message) is shown as a general
+sentence, with the original behind "Details".
+
 ## A schema other than `public`
 
 To keep an app's tables in their own Postgres schema (handy when several apps share one Supabase

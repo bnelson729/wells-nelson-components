@@ -87,14 +87,17 @@ describe('SignInCard', () => {
 		const google = button(el, 'Continue with Google');
 		google.click();
 		await settle();
-		expect(el.querySelector('[role="alert"]')!.textContent).toContain('Popup closed');
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe(
+			"Couldn't sign in with Google. Try again in a moment."
+		);
+		expect(el.querySelector('details')!.textContent).toContain('Popup closed');
 		expect(google.disabled).toBe(false);
 	});
 
 	it("can't sign in offline, and says so", () => {
 		const el = render(SignInCard, { cloud: fakeCloud({ online: false }), account: signIn(), ...base });
 		expect(button(el, 'Continue with Google').disabled).toBe(true);
-		expect(el.textContent).toContain("You're offline. Connect to sign in.");
+		expect(el.textContent).toContain("You're offline. Sign in once you're back online.");
 	});
 
 	it('explains an expired session, and can leave the email link out', () => {
@@ -104,7 +107,7 @@ describe('SignInCard', () => {
 			...base,
 			emailLink: false
 		});
-		expect(el.textContent).toContain('Your session expired. Sign in again to resume syncing.');
+		expect(el.textContent).toContain('Your session expired. Sign in again to keep syncing.');
 		expect(el.querySelector('input[type="email"]')).toBeNull();
 	});
 });
@@ -125,7 +128,7 @@ describe('SyncStatusCard', () => {
 		expect(el.textContent).toContain('me@example.com');
 		expect(el.textContent).toContain('Online');
 		expect(el.textContent).toContain('Everything is synced.');
-		expect(el.textContent).not.toContain('Not yet');
+		expect(el.textContent).not.toContain('Not synced yet');
 	});
 
 	it('lists what is waiting to sync, and the last error with what it means', () => {
@@ -136,22 +139,25 @@ describe('SyncStatusCard', () => {
 			pending: [{ id: 'p1', name: 'Launch' }]
 		});
 		expect(el.textContent).toContain('Online · syncing…');
-		expect(el.textContent).toContain('Projects with changes waiting to sync');
+		expect(el.textContent).toContain('Projects waiting to sync');
 		expect(el.querySelector('.pending')!.textContent).toContain('Launch');
-		expect(el.querySelector('[role="alert"]')!.textContent).toBe('Last sync error: Failed to fetch');
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe(
+			"Couldn't reach the server. Check your connection and try again."
+		);
+		expect(el.querySelector('details')!.textContent).toContain('Failed to fetch');
 		expect(el.textContent).toContain('Your changes are safe on this device.');
 	});
 
 	it('forces a re-sync online, and not offline', async () => {
 		const forceResync = vi.fn(async () => {});
 		const el = render(SyncStatusCard, { cloud: fakeCloud({ user }), account: { forceResync }, nouns, pending: [] });
-		button(el, 'Force re-sync').click();
+		button(el, 'Sync now').click();
 		await settle();
 		expect(forceResync).toHaveBeenCalledOnce();
 		expect(button(el, 'Syncing…').disabled).toBe(true);
 		vi.advanceTimersByTime(700);
 		flushSync();
-		expect(button(el, 'Force re-sync').disabled).toBe(false);
+		expect(button(el, 'Sync now').disabled).toBe(false);
 
 		const offline = render(SyncStatusCard, {
 			cloud: fakeCloud({ user, online: false }),
@@ -160,7 +166,7 @@ describe('SyncStatusCard', () => {
 			pending: []
 		});
 		expect(offline.textContent).toContain('Offline');
-		expect(button(offline, 'Force re-sync').disabled).toBe(true);
+		expect(button(offline, 'Sync now').disabled).toBe(true);
 	});
 });
 
@@ -199,6 +205,7 @@ describe('SignOutCard', () => {
 		const el = render(SignOutCard, { cloud: fakeCloud(), account: { signOut }, nouns, pending: [] });
 		button(el, 'Sign out').click();
 		await settle();
-		expect(el.querySelector('[role="alert"]')!.textContent).toContain('Network down');
+		expect(el.querySelector('[role="alert"]')!.textContent).toBe("Couldn't sign out. Try again in a moment.");
+		expect(el.querySelector('details')!.textContent).toContain('Network down');
 	});
 });

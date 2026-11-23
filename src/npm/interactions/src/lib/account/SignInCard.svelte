@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button, Notice } from '@wells-nelson/displays';
-	import { EMAIL_PATTERN, errorText, type AccountActions, type CloudStatus } from './types.js';
+	import { Button, ErrorMessage, Notice } from '@wells-nelson/displays';
+	import { EMAIL_PATTERN, type AccountActions, type CloudStatus } from './types.js';
 
 	/**
 	 * "Continue with Google" plus, optionally, "Email me a sign-in link". Shows the expired-session
@@ -24,7 +24,8 @@
 		googleLabel?: string;
 	} = $props();
 
-	let error = $state<string | null>(null);
+	let error = $state<unknown>(null);
+	let errorAction = $state('sign in');
 	let busy = $state(false);
 	let email = $state('');
 	let linkSentTo = $state<string | null>(null);
@@ -37,7 +38,8 @@
 		try {
 			await account.signInWithGoogle(returnUrl());
 		} catch (err) {
-			error = errorText(err);
+			error = err;
+			errorAction = 'sign in with Google';
 			busy = false;
 		}
 	}
@@ -51,7 +53,8 @@
 			await account.signInWithEmail(email, returnUrl());
 			linkSentTo = email.trim();
 		} catch (err) {
-			error = errorText(err);
+			error = err;
+			errorAction = 'send the sign-in link';
 		} finally {
 			busy = false;
 		}
@@ -60,7 +63,7 @@
 
 <section class="card card-section">
 	{#if cloud.sessionExpired}
-		<Notice role="status">Your session expired. Sign in again to resume syncing.</Notice>
+		<Notice role="status">Your session expired. Sign in again to keep syncing.</Notice>
 	{/if}
 	<h2>Sign in</h2>
 	<p class="muted">{pitch}</p>
@@ -106,8 +109,8 @@
 			</form>
 		{/if}
 	{/if}
-	{#if !cloud.online}<p class="muted text-sm">You're offline. Connect to sign in.</p>{/if}
-	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
+	{#if !cloud.online}<p class="muted text-sm">You're offline. Sign in once you're back online.</p>{/if}
+	<ErrorMessage {error} action={errorAction} />
 </section>
 
 <style>

@@ -1,11 +1,14 @@
 <script lang="ts">
 	import Button from './Button.svelte';
 
-	/** Full-page error for when the app can't start, e.g. the local database couldn't be opened. */
+	/**
+	 * Full-page error for when the app can't start, e.g. its storage couldn't be opened. The
+	 * browser's own error text sits behind "Details".
+	 */
 	let {
 		error,
-		title = 'Something went wrong',
-		message = "The local database couldn't be opened:",
+		title = "This app can't start",
+		message = "This app couldn't open its storage on this device.",
 		hint = 'Private browsing modes sometimes block storage. Try a normal window.',
 		retryLabel = 'Try again'
 	}: {
@@ -20,8 +23,14 @@
 
 <main class="page">
 	<h1 class="page-title">{title}</h1>
-	<p>{message} {error}</p>
+	<p>{message}</p>
 	{#if hint}<p class="muted">{hint}</p>{/if}
+	{#if error}
+		<details class="muted">
+			<summary>Details</summary>
+			<p>{error}</p>
+		</details>
+	{/if}
 	{#if retryLabel}
 		<Button variant="primary" icon="refresh" onclick={() => location.reload()}>{retryLabel}</Button>
 	{/if}

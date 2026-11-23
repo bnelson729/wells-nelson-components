@@ -122,3 +122,12 @@ export function remoteReporter(options: RemoteReporterOptions): ErrorReporter {
 		});
 	};
 }
+
+/**
+ * An Error whose message is written for people, so the UI shows it as it is. Other errors are
+ * shown as a general sentence with the technical text behind "Details" (`@wells-nelson/displays`
+ * `errorText` / `ErrorMessage` read the same `userFacing` flag).
+ */
+export function userError(message: string): Error & { userFacing: true } {
+	return Object.assign(new Error(message), { userFacing: true as const });
+}

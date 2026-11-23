@@ -14,7 +14,7 @@
 		labelHeader = 'Name',
 		sortKey = $bindable(),
 		descending = $bindable(true),
-		emptyText = 'Nothing recorded yet.'
+		emptyText = 'Nothing to show yet.'
 	}: {
 		title?: string;
 		rows: T[];
@@ -64,7 +64,13 @@
 						<th scope="col" class="name">{labelHeader}</th>
 						{#each columns as col (col.key)}
 							<th scope="col" aria-sort={col.key === activeKey ? (descending ? 'descending' : 'ascending') : undefined}>
-								<button type="button" onclick={() => sortBy(col.key)} title={`Sort by ${col.full ?? col.title}`}>
+								<!-- Named in full ("Points played", not "PP"); the sort order is on the header (aria-sort). -->
+								<button
+									type="button"
+									onclick={() => sortBy(col.key)}
+									aria-label={col.full ?? col.title}
+									title={`Sort by ${col.full ?? col.title}`}
+								>
 									{col.title}
 									{#if col.key === activeKey}<span aria-hidden="true">{descending ? '▼' : '▲'}</span>{/if}
 								</button>

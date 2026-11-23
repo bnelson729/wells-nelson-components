@@ -97,7 +97,24 @@ registerIcons({ calendar: '<rect …/>', folder: '<path …/>' }); // 24x24, str
 <Notice tone="danger" role="alert" ondismiss={clear}>Couldn't save.</Notice>
 <Splash text="MA" />
 <FatalError error={app.fatal} />
+
+<!-- An error in plain words, with the technical text behind "Details". -->
+<ErrorMessage {error} action="save the task" />
 ```
+
+## Wording helpers
+
+What every app says the same way (see [docs/content-style.md](../../../docs/content-style.md)):
+
+- `errorText(err, action)`: an error as a sentence. A `userError(message)` (or any error with
+  `userFacing: true`, which `@wells-nelson/data-storage` sets on its own messages) shows as it is; known
+  technical ones (network, expired session, rate limit, permission, storage full) are translated; anything
+  else reads "Couldn't {action}. Try again in a moment." `rawErrorText(err)` keeps the original for Details,
+  logs and reports. `ErrorMessage` and `ConfirmDialog` use these.
+- `plural(n, 'task')`: "1 task", "3 tasks".
+- Dates and times, US English: `formatTime` ("9:00 AM"), `formatDate` ("Sat, Jun 7", with the year when it
+  isn't this year), `formatDateTime` ("Sat, Jun 7, 9:00 AM"), `formatRecent` ("Today at 3:04 PM") and
+  `formatLongDate` ("November 22, 2026", for policy pages).
 
 Nav buttons with `showLabel` show their label to the right of the icon. `AppHeader`'s `labels` decides
 which: `always` (default) all of them, `active` only the current one. `profileShowLabel` does the same

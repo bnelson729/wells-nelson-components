@@ -10,7 +10,8 @@ npm install @wells-nelson/displays @wells-nelson/interactions
 
 ## Inputs
 
-`TextField` (label, error, hint, `hideLabel`, `required` adds "(required)"; the error or hint is tied to
+`TextField` (label, error, hint, `hideLabel`, `required` adds "(required)" and `optional` "(optional)"
+(rather than a placeholder that disappears when typing); the error or hint is tied to
 the input with `aria-describedby`, and an error is announced), `Checkbox` (optionally hidden label,
 `disabled`, `tone="muted"` for a gray tick), `Toggle` (a switch for settings that apply at once),
 `Combobox` (type to filter, offers "Create …"; plus `sameName`. It follows the WAI-ARIA combobox
@@ -76,7 +77,9 @@ For apps, in the root layout's `onMount` (each returns a function that undoes it
 - `preventZoom()`: stops pinch and double-tap zoom (iPad and iPhone Safari, the home-screen app and
   Android). People who rely on zooming lose it, so keep text and controls big enough without.
 
-`errorText(err)` turns an error into one line for the UI: show it where an awaited action failed.
+`errorText(err, action)` (from `@wells-nelson/displays`, re-exported here) turns an error into a sentence
+for the UI; `ErrorMessage` shows it with the technical text behind "Details". Use them where an awaited
+action failed.
 
 `focusFirstInvalid(form)`: after a submit that failed validation, moves focus to the first field marked
 `aria-invalid` once the messages are rendered.
@@ -131,7 +134,9 @@ shape. Wording comes from `nouns` (`{ singular: 'project', plural: 'projects' }`
 	signInHref={resolve('/profile')} onmakecloud={() => store.ops.makeCloud(id)} {onclose} />
 ```
 
-With `roles`, `ShareModal` shows a role picker and protects the last owner, and
+`ShareModal` tells people that sharing sends no email ("We don't send them an email, so let them know"); give
+`inviteHint` to add which address to use (for example when sign-in is Google only). With `roles`, `ShareModal`
+shows a role picker and protects the last owner, and
 `ContainerEditModal` offers "Leave" instead of "Delete" while other owners remain. Without roles
 every member counts as an owner. `localOnlyReason` keeps a container local-only (e.g. built-in
 sample data): both modals show that text instead of offering to make it cloud-enabled. A member's

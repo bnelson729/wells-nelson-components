@@ -55,6 +55,9 @@
 		profileShowLabel?: boolean;
 	} = $props();
 
+	/** "Unsynced changes" → "unsynced changes", for reading after the profile label. */
+	const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
 	let scrolledAway = $state(false);
 	let lastY = 0;
 	const hidden = $derived(hideOnScroll && scrolledAway);
@@ -87,7 +90,7 @@
 				class="profile"
 				class:labeled={profileShowLabel}
 				href={profileHref}
-				aria-label={unsynced ? `${profileLabel} (${unsyncedLabel})` : profileLabel}
+				aria-label={unsynced ? `${profileLabel} (${lowerFirst(unsyncedLabel)})` : profileLabel}
 				title={profileShowLabel ? undefined : profileLabel}
 				class:active={profileActive}
 			>

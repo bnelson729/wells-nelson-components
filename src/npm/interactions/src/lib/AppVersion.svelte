@@ -22,6 +22,7 @@
 
 	let checking = $state(false);
 	let found = $state(false);
+	let offline = $state(false);
 	let status = $state<'latest' | 'failed' | null>(null);
 	const available = $derived(updateAvailable || found);
 
@@ -34,6 +35,7 @@
 			if (!found) status = 'latest';
 		} catch {
 			status = 'failed';
+			offline = typeof navigator !== 'undefined' && navigator.onLine === false;
 		} finally {
 			checking = false;
 		}
@@ -45,7 +47,7 @@
 		Version {version}{#if available}<span class="new"> · A new version is available.</span>{/if}
 	</p>
 	{#if available}
-		<Button variant="primary" icon="refresh" onclick={() => onupdate()}>Update</Button>
+		<Button variant="primary" icon="refresh" onclick={() => onupdate()}>Update now</Button>
 	{:else if oncheck}
 		<Button variant="ghost" icon="refresh" onclick={check} disabled={checking}>
 			{checking ? 'Checking…' : 'Check for updates'}
@@ -53,7 +55,11 @@
 		{#if status === 'latest'}
 			<p class="status" role="status">You have the latest version.</p>
 		{:else if status === 'failed'}
-			<p class="status" role="status">Couldn't check for updates. Try again when you're online.</p>
+			<p class="status" role="status">
+				{offline
+					? "You're offline. Check for updates once you're back online."
+					: "Couldn't check for updates. Try again later."}
+			</p>
 		{/if}
 	{/if}
 </section>

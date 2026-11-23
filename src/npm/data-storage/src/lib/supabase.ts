@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { EnvConfig } from './env.js';
+import { userError } from './errors.js';
 import type { Role } from './types.js';
 
 export interface MembersConfig {
@@ -90,15 +91,18 @@ export function schemaNotExposed(
 	return `Expose the ${schema} schema in Supabase (Project Settings → Data API).`;
 }
 
-/** Turn Postgres errors from triggers / RLS into messages a person can act on. */
+/**
+ * Turn Postgres errors from triggers / RLS into messages a person can act on (`userError`s). Any
+ * other error keeps its technical message, which the UI shows only behind "Details".
+ */
 export function friendlyError(error: { message: string; code?: string }, noun: string, schema = 'public'): Error {
 	const unexposed = schemaNotExposed(error, schema);
 	if (unexposed) return new Error(unexposed);
 	if (error.message.includes('last owner')) {
-		return new Error(`A ${noun} must always have at least one owner. Make someone else an owner first.`);
+		return userError(`A ${noun} must always have at least one owner. Make someone else an owner first.`);
 	}
-	if (error.code === '42501') return new Error(`You don't have permission to do that on this ${noun}.`);
-	if (error.code === '23505') return new Error(`That email already has access to this ${noun}.`);
+	if (error.code === '42501') return userError(`You don't have permission to do that on this ${noun}.`);
+	if (error.code === '23505') return userError(`That email already has access to this ${noun}.`);
 	return new Error(error.message);
 }
 

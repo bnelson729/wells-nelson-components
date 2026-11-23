@@ -53,7 +53,7 @@ describe('export and import', () => {
 			app: store.config.appKey,
 			containers: [{ projects: [{ id: 'p', name: 'X', created_at: 1, updated_at: 1 }], tasks: [{ id: 't', title: 5 }] }]
 		};
-		await expect(store.ops.importContainers(bad)).rejects.toThrow('invalid tasks row');
+		await expect(store.ops.importContainers(bad)).rejects.toThrow('This backup is damaged, so nothing was imported.');
 		expect(await store.app.local!.db.collections.projects.find().exec()).toHaveLength(0);
 	});
 });

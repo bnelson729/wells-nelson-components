@@ -59,6 +59,33 @@ describe('ShareModal', () => {
 		expect(api.removeMember).toHaveBeenCalledWith('m2');
 	});
 
+	it('says nobody is emailed, and confirms who it was shared with', async () => {
+		const api = fakeApi([{ id: 'm1', email: 'me@x.com', active: true }]);
+		render(ShareModal, {
+			...base,
+			location: 'cloud',
+			cloud: fakeCloud(),
+			members: api,
+			inviteHint: 'Use the address they sign in with.',
+			onmakecloud: vi.fn()
+		});
+		await settle();
+		const dialog = [...document.querySelectorAll('dialog')].at(-1)!;
+		const input = dialog.querySelector<HTMLInputElement>('input[type=email]')!;
+		expect(dialog.querySelector(`label[for="${input.id}"]`)!.textContent).toBe('Email address to share with');
+		const hint = document.getElementById(input.getAttribute('aria-describedby')!)!;
+		expect(hint.textContent).toContain("We don't send them an email");
+		expect(hint.textContent).toContain('Use the address they sign in with.');
+
+		input.value = ' Friend@x.com ';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		dialog.querySelector<HTMLFormElement>('form.invite')!.requestSubmit();
+		await settle();
+		expect(api.inviteMember).toHaveBeenCalledWith('t1', 'Friend@x.com', undefined);
+		expect(dialog.querySelector('[role="status"]')!.textContent).toBe('Shared with Friend@x.com.');
+	});
+
 	it('with roles protects the last owner and records my role', async () => {
 		const api = fakeApi([
 			{ id: 'm1', email: 'me@x.com', active: true, role: 'owner' },

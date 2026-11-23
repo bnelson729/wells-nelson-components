@@ -15,13 +15,13 @@
 	let {
 		title,
 		count,
-		countLabel = (n: number) => `${n} items`,
+		countLabel = (n: number) => (n === 1 ? '1 item' : `${n} items`),
 		collapsed,
 		ontogglecollapse,
 		onedit,
-		editLabel = 'Edit',
+		editLabel,
 		onadd,
-		addLabel = 'Add item',
+		addLabel,
 		dragData,
 		ondragstart,
 		ondragend,
@@ -112,10 +112,10 @@
 		</svelte:element>
 		<Badge tone="count" label={countLabel(count)}>{count}</Badge>
 		{#if onadd}
-			<IconButton icon="plus" label={addLabel} onclick={onadd} />
+			<IconButton icon="plus" label={addLabel ?? `Add to ${title}`} onclick={onadd} />
 		{/if}
 		{#if onedit}
-			<IconButton icon="pencil" label={editLabel} size={20} onclick={onedit} />
+			<IconButton icon="pencil" label={editLabel ?? `Edit ${title}`} size={20} onclick={onedit} />
 		{/if}
 	</div>
 	<ul class="items" hidden={collapsed}>

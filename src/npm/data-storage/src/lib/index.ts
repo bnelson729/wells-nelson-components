@@ -31,6 +31,7 @@ export {
 	reportError,
 	resetErrorReports,
 	setErrorReporter,
+	userError,
 	writeFailed,
 	type ErrorKind,
 	type ErrorReport,

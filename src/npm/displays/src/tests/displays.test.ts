@@ -83,7 +83,7 @@ describe('TabBar', () => {
 	it('links each tab, marks the current one and disables tabs without a link', () => {
 		const el = render(TabBar, { items });
 		const links = [...el.querySelectorAll('a')];
-		expect(links.map((a) => a.textContent?.trim())).toEqual(['Home', 'Profile (Unsynced changes)']);
+		expect(links.map((a) => a.textContent?.trim())).toEqual(['Home', 'Profile (unsynced changes)']);
 		expect(links[0].getAttribute('aria-current')).toBe('page');
 		expect(links[1].getAttribute('aria-current')).toBeNull();
 		expect(el.querySelector('[aria-disabled="true"]')!.textContent).toContain('List');
@@ -313,7 +313,7 @@ describe('AppHeader', () => {
 			profileHref: '/profile',
 			unsynced: true
 		});
-		expect(el.querySelector('.profile')!.getAttribute('aria-label')).toBe('Profile (Unsynced changes)');
+		expect(el.querySelector('.profile')!.getAttribute('aria-label')).toBe('Profile (unsynced changes)');
 	});
 });
 

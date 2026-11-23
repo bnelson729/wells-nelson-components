@@ -34,7 +34,9 @@
 		{/if}
 	</span>
 	<span class="label">{item.label}</span>
-	{#if item.dot && item.dotLabel}<span class="visually-hidden">({item.dotLabel})</span>{/if}
+	{#if item.dot && item.dotLabel}<span class="visually-hidden"
+			>({item.dotLabel.charAt(0).toLowerCase() + item.dotLabel.slice(1)})</span
+		>{/if}
 {/snippet}
 
 <div class="spacer" aria-hidden="true"></div>

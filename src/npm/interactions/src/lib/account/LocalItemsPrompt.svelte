@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button, Modal } from '@wells-nelson/displays';
+	import { Button, ErrorMessage, Modal } from '@wells-nelson/displays';
 	import Checkbox from '../Checkbox.svelte';
-	import { errorText, type Nouns } from './types.js';
+	import type { Nouns } from './types.js';
 
 	/**
 	 * Shown after sign-in for local-only containers that were never offered before. Whatever isn't
@@ -25,7 +25,7 @@
 	let open = $state(true);
 	let selected = $state<Record<string, boolean>>({});
 	let busy = $state(false);
-	let error = $state<string | null>(null);
+	let error = $state<unknown>(null);
 	const anySelected = $derived(items.some((i) => selected[i.id]));
 
 	async function submit() {
@@ -36,7 +36,7 @@
 			onprompted(items.map((i) => i.id));
 			open = false;
 		} catch (err) {
-			error = errorText(err);
+			error = err;
 		} finally {
 			busy = false;
 		}
@@ -54,8 +54,8 @@
 		be shared.
 	</p>
 	<p class="muted text-sm">
-		The rest stay on this device and you won't be asked again. You can change this later in each {nouns.singular}'s edit
-		menu (the pencil).
+		The rest stay on this device and you won't be asked again. You can change this later with the pencil next to each
+		{nouns.singular}.
 	</p>
 	<div class="items">
 		{#each items as item (item.id)}
@@ -63,7 +63,7 @@
 			<Checkbox label={item.name} bind:checked={() => selected[item.id] ?? false, (on) => (selected[item.id] = on)} />
 		{/each}
 	</div>
-	{#if error}<p class="error-text" role="alert">{error}</p>{/if}
+	<ErrorMessage {error} action={`make the ${nouns.plural} cloud-enabled`} />
 	{#snippet footer()}
 		<Button onclick={skip} disabled={busy}>Keep them on this device</Button>
 		<Button variant="primary" onclick={submit} disabled={!anySelected} {busy}>Make selected cloud-enabled</Button>

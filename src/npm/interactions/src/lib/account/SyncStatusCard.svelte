@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Icon } from '@wells-nelson/displays';
+	import { Button, ErrorMessage, Icon, formatRecent } from '@wells-nelson/displays';
 	import { capitalize, type AccountActions, type CloudStatus, type Nouns } from './types.js';
 
 	/** Signed-in summary: who, connection, last sync, what's waiting to upload, force re-sync. */
@@ -20,7 +20,7 @@
 	const user = $derived(cloud.user);
 	const meta = $derived((user?.user_metadata ?? {}) as Record<string, string | undefined>);
 	const displayName = $derived(meta.full_name ?? meta.name ?? user?.email);
-	const lastSync = $derived(cloud.lastSync ? new Date(cloud.lastSync).toLocaleString() : 'Not yet');
+	const lastSync = $derived(cloud.lastSync ? formatRecent(cloud.lastSync) : 'Not synced yet');
 
 	async function resync() {
 		resyncing = true;
@@ -54,7 +54,7 @@
 	</dl>
 	{#if pending.length > 0}
 		<div>
-			<p class="text-sm"><strong>{capitalize(nouns.plural)} with changes waiting to sync</strong></p>
+			<p class="text-sm"><strong>{capitalize(nouns.plural)} waiting to sync</strong></p>
 			<ul class="pending">
 				{#each pending as p (p.id)}
 					<li><Icon name="cloud-pending" size={16} /> {p.name}</li>
@@ -65,13 +65,13 @@
 		<p class="muted text-sm">Everything is synced.</p>
 	{/if}
 	{#if cloud.error}
-		<p class="error-text text-sm" role="alert">Last sync error: {cloud.error}</p>
+		<ErrorMessage error={cloud.error} action="sync" />
 		<p class="muted text-sm">
-			Your changes are safe on this device. They sync when the connection is back, or press Force re-sync to try now.
+			Your changes are safe on this device. They sync when the connection is back, or press Sync now.
 		</p>
 	{/if}
 	<Button icon="refresh" onclick={resync} disabled={!cloud.online || resyncing}>
-		{resyncing ? 'Syncing…' : 'Force re-sync'}
+		{resyncing ? 'Syncing…' : 'Sync now'}
 	</Button>
 </section>
 
