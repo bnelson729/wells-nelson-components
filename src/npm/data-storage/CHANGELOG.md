@@ -2,6 +2,10 @@
 
 ## Unreleased (minor)
 
+- `createSyncedStore` throws when an app declares more than `MAX_COLLECTIONS` (6) collections. The
+  open-source RxDB keeps at most 13 collections open across every database, and the local and cloud data
+  sets each open every collection: a 7th made start-up wait about 2 seconds while signed in, and an 8th
+  failed with RxDB error COL23 (shown as "This app can't start"). Keep new data in an existing collection.
 - Schema versions: `flatSchema(properties, version)` and `field.added(spec, default)` add fields to a table
   that already has rows on people's devices. The database migrates saved rows on start (filling in the
   defaults), and a backup made before the field existed imports with the default. `fieldDefaults` and

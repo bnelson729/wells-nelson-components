@@ -41,7 +41,7 @@ export {
 export { Persisted } from './persisted.svelte.js';
 export { DevicePrefs, defaultContainerToOpen, defaultPrefsKeys, type DevicePrefsKeys } from './prefs.svelte.js';
 export { field, fieldDefaults, flatSchema, migrationStrategies, type FieldSpec } from './schema.js';
-export { createSyncedStore, type SyncedStore, type SyncedStoreConfig } from './store.js';
+export { MAX_COLLECTIONS, createSyncedStore, type SyncedStore, type SyncedStoreConfig } from './store.js';
 export {
 	adoptSession,
 	createSupabaseApi,

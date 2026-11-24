@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { lastWriteWins, openDatabase } from '../lib/database.js';
 import { envConfig } from '../lib/env.js';
 import { Persisted } from '../lib/persisted.svelte.js';
+import { MAX_COLLECTIONS, createSyncedStore } from '../lib/store.js';
 import { field, flatSchema, migrationStrategies } from '../lib/schema.js';
 import { DevicePrefs, defaultContainerToOpen, defaultPrefsKeys } from '../lib/prefs.svelte.js';
 import { Tombstones } from '../lib/tombstones.svelte.js';
@@ -166,6 +167,15 @@ describe('containerIdOf', () => {
 });
 
 describe('createSyncedStore', () => {
+	it('refuses more collections than open-source RxDB can keep open for both data sets', () => {
+		const { config } = makeStore();
+		const names = [...config.collections];
+		while (names.length <= MAX_COLLECTIONS) names.push(`extra${names.length}` as (typeof names)[number]);
+		expect(() => createSyncedStore({ ...config, collections: names })).toThrow(
+			`declares ${MAX_COLLECTIONS + 1} collections, but at most ${MAX_COLLECTIONS} fit`
+		);
+	});
+
 	it('opens the local data set and runs local-only without Supabase', async () => {
 		const store = makeStore();
 		let seeded = false;

@@ -22,7 +22,7 @@ export const store = createSyncedStore<Docs, 'projects'>({
 	env: envConfig(import.meta.env),
 	storage: getRxStorageDexie,
 	roles: true,
-	collections: ['projects', 'tasks', 'task_links', 'notes'], // parents first
+	collections: ['projects', 'tasks', 'task_links', 'notes'], // parents first; at most MAX_COLLECTIONS (6)
 	schemas, // flatSchema<ProjectDoc>({ id: field.id, name: field.string, … }) per collection
 	container: 'projects',
 	containerField: 'project_id',

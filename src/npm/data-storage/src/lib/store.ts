@@ -74,13 +74,29 @@ export interface SyncedStoreConfig<
 }
 
 /**
+ * The most collections an app can declare. The open-source RxDB keeps at most 13 collections open
+ * at once, across every database (the 14th waits about 2 seconds, the 15th fails), and the local
+ * and cloud data sets are open together, each with every collection.
+ */
+export const MAX_COLLECTIONS = 6;
+
+/**
  * Wire the whole storage layer for an app from one config: app state (local + cloud data
  * sets), cloud sync, tombstones, device prefs, the Supabase members API and container
  * operations. Create it once in a module and import it where needed.
+ *
+ * Throws when `collections` has more than `MAX_COLLECTIONS` names: keep new data in an existing
+ * collection instead (new fields, or rows of a new kind).
  */
 export function createSyncedStore<D extends DocMap<D>, C extends CollectionName<D> = CollectionName<D>>(
 	config: SyncedStoreConfig<D, C>
 ) {
+	if (config.collections.length > MAX_COLLECTIONS) {
+		throw new Error(
+			`${config.appKey} declares ${config.collections.length} collections, but at most ${MAX_COLLECTIONS} fit: ` +
+				'open-source RxDB opens 13 at once, and the local and cloud data sets each open all of them.'
+		);
+	}
 	const roles = config.roles ?? false;
 	const supabase = createSupabaseApi(
 		config.env,
