@@ -1,6 +1,8 @@
 export { default as AccountPanel } from './AccountPanel.svelte';
 export { default as ContainerEditModal } from './ContainerEditModal.svelte';
+export { default as DataRiskButton } from './DataRiskButton.svelte';
 export { default as DeviceDataCard } from './DeviceDataCard.svelte';
+export { deviceMayClearData, installHint } from './storage-risk.js';
 export { default as LocalItemsPrompt } from './LocalItemsPrompt.svelte';
 export { default as ShareModal } from './ShareModal.svelte';
 export { default as SignInCard } from './SignInCard.svelte';

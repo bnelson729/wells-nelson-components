@@ -20,6 +20,11 @@ interface UserSyncState {
 	/** containerId -> this user's role, cached so permissions work offline (roles only). */
 	roles: Record<string, Role>;
 	lastSync: number | null;
+	/**
+	 * New cloud containers whose own row hasn't reached Supabase yet. Kept across restarts, so a
+	 * container created (or made cloud-enabled) just before the app closed still goes first.
+	 */
+	unsent?: string[];
 }
 
 const emptyState = (): UserSyncState => ({ pending: {}, blocked: [], revoked: [], roles: {}, lastSync: null });
@@ -259,6 +264,8 @@ export class CloudSync<D extends DocMap<D>> {
 
 		this.#state.rekey(this.#stateKey(user.id), emptyState());
 		this.#writeVersion = Math.max(0, ...Object.values(this.#state.value.pending));
+		// Containers still on their way from the last session: their rows keep waiting for them.
+		for (const id of this.#state.value.unsent ?? []) this.#waitForContainer(id);
 		const db = await openDatabase<D>(
 			`${this.#appKey}_cloud_${user.id.replace(/[^a-z0-9]/gi, '').toLowerCase()}`,
 			this.#schema,
@@ -280,16 +287,28 @@ export class CloudSync<D extends DocMap<D>> {
 	 */
 	expectNewContainer(containerId: string) {
 		if (this.#unsent.has(containerId)) return;
+		this.#update((s) => {
+			s.unsent = [...(s.unsent ?? []).filter((id) => id !== containerId), containerId];
+		});
+		this.#waitForContainer(containerId);
+	}
+
+	#waitForContainer(containerId: string) {
+		if (this.#unsent.has(containerId)) return;
 		let release!: () => void;
 		const sent = new Promise<void>((resolve) => (release = resolve));
 		this.#unsent.set(containerId, release);
 		this.#unsentWaits.set(containerId, sent);
 	}
 
-	#containerSent(containerId: string) {
+	/** `forget`: it reached Supabase (or won't), so a restart doesn't wait for it again. */
+	#containerSent(containerId: string, forget = true) {
 		this.#unsent.get(containerId)?.();
 		this.#unsent.delete(containerId);
 		this.#unsentWaits.delete(containerId);
+		if (forget && this.#state.value.unsent?.includes(containerId)) {
+			this.#update((s) => (s.unsent = (s.unsent ?? []).filter((id) => id !== containerId)));
+		}
 	}
 
 	/** Waits while the container's own row is still on its way (bounded: if it's refused, the server decides). */
@@ -344,7 +363,11 @@ export class CloudSync<D extends DocMap<D>> {
 					else this.#activeReps.delete(index);
 					this.active = this.#activeReps.size > 0;
 				}),
-				rep.received$.subscribe(() => this.#scheduleSettle()),
+				rep.received$.subscribe((doc) => {
+					// Pulled back from Supabase: it got there (possibly in an earlier session).
+					if (isContainer && this.#unsent.has(doc.id)) this.#containerSent(doc.id);
+					this.#scheduleSettle();
+				}),
 				rep.sent$.subscribe((doc) => {
 					if (isContainer) this.#containerSent(doc.id);
 					this.#scheduleSettle();
@@ -361,7 +384,8 @@ export class CloudSync<D extends DocMap<D>> {
 		this.#replications = [];
 		this.#activeReps.clear();
 		this.active = false;
-		for (const id of [...this.#unsent.keys()]) this.#containerSent(id);
+		// Release anything still waiting; the persisted list stays for this user's next session.
+		for (const id of [...this.#unsent.keys()]) this.#containerSent(id, false);
 		await Promise.allSettled(reps.map((r) => r.cancel()));
 
 		const ds = this.#app.cloud;

@@ -2,6 +2,9 @@
 
 ## Unreleased (minor)
 
+- Dropdowns (`select`) look like the text fields: the same height and box, with the arrow drawn by the
+  theme. Phones (iOS especially) drew a smaller native control that ignored the height.
+
 Content pass (wording that is the same in every app, and errors people can act on):
 
 - New `ErrorMessage`: an error in plain words, read out when it appears, with the technical text behind

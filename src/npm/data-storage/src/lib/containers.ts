@@ -309,7 +309,8 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		if (!row || typeof row !== 'object') throw userError('This file is not a backup of this app.');
 		const out: Record<string, unknown> = {};
 		for (const [key, prop] of Object.entries(props)) {
-			const value = (row as Record<string, unknown>)[key];
+			// A field added since the backup was made gets its default (field.added).
+			const value = (row as Record<string, unknown>)[key] ?? (prop as { default?: unknown }).default;
 			const type = prop.type === 'number' ? 'number' : prop.type === 'boolean' ? 'boolean' : 'string';
 			if (typeof value !== type || (type === 'number' && !Number.isFinite(value))) {
 				throw userError('This backup is damaged, so nothing was imported.');

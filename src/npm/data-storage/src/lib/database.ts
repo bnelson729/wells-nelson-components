@@ -1,11 +1,17 @@
 import {
+	addRxPlugin,
 	createRxDatabase,
 	type RxCollection,
 	type RxConflictHandler,
 	type RxDatabase,
 	type RxStorage
 } from 'rxdb/plugins/core';
+import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
+import { migrationStrategies } from './schema.js';
 import type { CollectionName, DocMap, StoreSchema } from './types.js';
+
+// Schemas past version 0 migrate saved rows on start (see flatSchema).
+addRxPlugin(RxDBMigrationSchemaPlugin);
 
 export type Collections<D extends DocMap<D>> = { [N in CollectionName<D>]: RxCollection<D[N]> };
 export type Database<D extends DocMap<D>> = RxDatabase<Collections<D>>;
@@ -63,7 +69,14 @@ export async function openDatabase<D extends DocMap<D>>(
 	});
 	await db.addCollections(
 		Object.fromEntries(
-			schema.collections.map((n) => [n, { schema: schema.schemas[n], conflictHandler: lastWriteWins }])
+			schema.collections.map((n) => [
+				n,
+				{
+					schema: schema.schemas[n],
+					migrationStrategies: migrationStrategies(schema.schemas[n] as never),
+					conflictHandler: lastWriteWins
+				}
+			])
 		) as any
 	);
 	return db;

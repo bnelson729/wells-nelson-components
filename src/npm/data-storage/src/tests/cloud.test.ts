@@ -6,18 +6,19 @@ import type { SupabaseApi } from '../lib/supabase.js';
 import { collections, schemas, type Docs } from './fixture.js';
 
 /** Each collection's replication options, captured instead of talking to Supabase. */
-const replications = vi.hoisted(() => new Map<string, { options: any; sent: any }>());
+const replications = vi.hoisted(() => new Map<string, { options: any; sent: any; received: any }>());
 
 vi.mock('rxdb/plugins/replication-supabase', async () => {
 	const { Subject } = await import('rxjs');
 	return {
 		replicateSupabase: (options: any) => {
 			const sent = new Subject();
-			replications.set(options.tableName, { options, sent });
+			const received = new Subject();
+			replications.set(options.tableName, { options, sent, received });
 			return {
 				error$: new Subject(),
 				active$: new Subject(),
-				received$: new Subject(),
+				received$: received,
 				sent$: sent,
 				cancel: async () => {},
 				reSync: () => {},
@@ -27,7 +28,7 @@ vi.mock('rxdb/plugins/replication-supabase', async () => {
 	};
 });
 
-function signedInCloud() {
+function signedInCloud(appKey = `c${Math.random().toString(36).slice(2, 8)}`, app = new AppState<Docs>()) {
 	const client = {
 		auth: {
 			getSession: async () => ({ data: { session: { user: { id: 'u1', email: 'me@example.com' } } } }),
@@ -42,9 +43,9 @@ function signedInCloud() {
 		getClient: () => client
 	} as unknown as SupabaseApi;
 	return new CloudSync<Docs>({
-		appKey: `c${Math.random().toString(36).slice(2, 8)}`,
+		appKey,
 		schema: { collections, schemas, container: 'projects', containerField: 'project_id' },
-		app: new AppState<Docs>(),
+		app,
 		supabase: api,
 		roles: true,
 		storage: getRxStorageMemory
@@ -79,6 +80,27 @@ describe('pushing a new cloud container', () => {
 		expect(await settled(push('notes', { id: 'n1', project_id: 'p1', seq: 1, mentions: '', updated_at: 1 }))).toBe(
 			'done'
 		);
+	});
+
+	it('keeps holding them back after a restart, until the container row comes back from Supabase', async () => {
+		const apps = [new AppState<Docs>(), new AppState<Docs>(), new AppState<Docs>()];
+		const first = signedInCloud('restart', apps[0]);
+		await first.init();
+		first.expectNewContainer('p1');
+
+		// The app closes before the container row is sent, then starts again.
+		const cloud = signedInCloud('restart', apps[1]);
+		await cloud.init();
+		const pending = push('tasks', { id: 't1', project_id: 'p1' });
+		expect(await settled(pending)).toBe('waiting');
+		replications.get('projects')!.received.next({ id: 'p1' });
+		expect(await pending).toMatchObject({ id: 't1' });
+
+		// Forgotten once it arrived: the next start doesn't wait for it.
+		const again = signedInCloud('restart', apps[2]);
+		await again.init();
+		expect(await settled(push('tasks', { id: 't2', project_id: 'p1' }))).toBe('done');
+		for (const app of apps) await app.cloud?.db.remove();
 	});
 
 	it('stops waiting after a while, so a refused container row never blocks the rest', async () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, ConfirmDialog, ErrorMessage, Icon, Modal } from '@wells-nelson/displays';
-	import { untrack } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import TextField from '../TextField.svelte';
 	import Toggle from '../Toggle.svelte';
 	import {
@@ -38,7 +38,8 @@
 		onmakelocal,
 		ondelete,
 		onleave,
-		onclose
+		onclose,
+		children
 	}: {
 		containerId: string;
 		name: string;
@@ -66,6 +67,8 @@
 		ondelete: () => Promise<unknown>;
 		onleave: () => Promise<unknown>;
 		onclose: () => void;
+		/** The app's own settings for this container, shown under "Open … when the app starts". */
+		children?: Snippet;
 	} = $props();
 
 	const Singular = $derived(capitalize(nouns.singular));
@@ -177,6 +180,8 @@
 		checked={isDefault}
 		onchange={(on) => ondefaultchange(on)}
 	/>
+
+	{@render children?.()}
 
 	<section class="group">
 		<h3>Sync</h3>

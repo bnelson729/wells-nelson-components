@@ -26,6 +26,7 @@ again: if it still installs local tarballs, the check fails instead.
   **ci / Check, test and build** status check. Allow squash merging.
 - **Pages** (Settings → Pages): Source **GitHub Actions**.
 - **Actions variables:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `BASE_PATH` only for a custom domain.
+  Optional: `PRIVACY_URL` and `TERMS_URL`, the policies an app links to from its Profile (the app has defaults).
 - **Actions secret `PAT`:** a fine-grained personal access token for this repository with **Contents: read and
   write**. CI pushes the package swap with it, because a push made with the workflow's own token starts no
   workflow runs (the new commit would go unchecked and undeployed). To swap on `main` too, its owner must be
@@ -49,7 +50,9 @@ own rules added at the end. A file that has been applied is never edited; change
   `create or replace function`) and wrap it in `begin; … commit;`.
 - Keep the deployed site working: add columns with defaults, and only drop what no deployed version uses.
 - A new column goes in the migration (`alter table <schema>.<table> add column if not exists …`) and in the
-  RxDB schema in the same pull request; the site's `schema.test.ts` fails until both have it.
+  RxDB schema in the same pull request; the site's `schema.test.ts` fails until both have it. In the RxDB
+  schema it's `field.added(spec, default)` with the table's `flatSchema` version bumped by one, so rows
+  already on devices are migrated (see the data-storage README, "Adding a field later").
 - When a library release changes the generated SQL, carry the difference over into a new migration (the
   package's CHANGELOG says what changed).
 - Apply it in the Supabase **SQL Editor**, then run the Database workflow by hand (**Actions → Database → Run

@@ -134,6 +134,10 @@ shape. Wording comes from `nouns` (`{ singular: 'project', plural: 'projects' }`
 	signInHref={resolve('/profile')} onmakecloud={() => store.ops.makeCloud(id)} {onclose} />
 ```
 
+`DataRiskButton` (with `deviceMayClearData()`) warns, next to a local-only container, that this browser
+deletes site data after 7 days without a visit, and says how to keep it. `AppVersion`'s `links` puts the
+privacy policy and terms under the version. `ContainerEditModal`'s `children` adds the app's own settings.
+
 `ShareModal` tells people that sharing sends no email ("We don't send them an email, so let them know"); give
 `inviteHint` to add which address to use (for example when sign-in is Google only). With `roles`, `ShareModal`
 shows a role picker and protects the last owner, and

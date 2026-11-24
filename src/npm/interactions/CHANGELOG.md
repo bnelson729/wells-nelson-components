@@ -2,6 +2,16 @@
 
 ## Unreleased (minor)
 
+- New `DataRiskButton` and `deviceMayClearData()` (`/account`): Safari, and every browser on iPhone and
+  iPad, deletes a site's data after 7 days without a visit unless the app is installed. Show the button
+  next to each local-only container there; it explains the risk and the ways out (install the app, sign in
+  and make it cloud-enabled, or use another browser). `installHint()` says how to install on the device.
+- `AppVersion` `links`: a line of links under the version, e.g. the privacy policy and terms (new tab).
+- `Combobox` shows a choice set from outside (an app filling in a likely option): the box used to stay
+  empty until it was focused and left.
+- `ContainerEditModal` takes `children`: the app's own settings for the container, under "Open … when the
+  app starts".
+
 Content pass (one vocabulary for sync, errors people can act on):
 
 - Errors in the account cards, `ShareModal`, `ContainerEditModal`, `LocalItemsPrompt`, `DeviceDataCard`

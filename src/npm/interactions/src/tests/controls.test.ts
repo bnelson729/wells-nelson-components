@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AddRow from '../lib/AddRow.svelte';
 import CollapsibleSection from '../lib/CollapsibleSection.svelte';
 import Combobox from '../lib/Combobox.svelte';
+import { ChoiceProps } from './reactive-api.svelte.js';
 import { DRAG_PRESS_MS, draggable, dropZone, type DragData } from '../lib/dnd.js';
 import SearchBar from '../lib/SearchBar.svelte';
 import Segmented from '../lib/Segmented.svelte';
@@ -357,5 +358,26 @@ describe('drag and drop', () => {
 		window.dispatchEvent(pointer('pointerup', 400, 210));
 		expect(onOther).toHaveBeenCalledWith({ type: 'row', id: 'a' }, 0);
 		destroy();
+	});
+});
+
+describe('Combobox choice set from outside', () => {
+	it('shows a choice the app fills in, and leaves typed text alone', async () => {
+		const props = new ChoiceProps('Section', [
+			{ id: 'd1', label: 'Produce' },
+			{ id: 'd2', label: 'Dairy and eggs' }
+		]);
+		const el = render(Combobox, props as unknown as Record<string, unknown>);
+		const input = el.querySelector('input')!;
+		expect(input.value).toBe('');
+
+		props.choice = { id: 'd2' };
+		flushSync();
+		expect(input.value).toBe('Dairy and eggs');
+
+		// Typing in another case keeps what was typed (it still means the same option).
+		type(input, 'produce');
+		flushSync();
+		expect(input.value).toBe('produce');
 	});
 });

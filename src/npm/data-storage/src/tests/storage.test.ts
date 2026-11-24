@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { lastWriteWins, openDatabase } from '../lib/database.js';
 import { envConfig } from '../lib/env.js';
 import { Persisted } from '../lib/persisted.svelte.js';
+import { field, flatSchema, migrationStrategies } from '../lib/schema.js';
 import { DevicePrefs, defaultContainerToOpen, defaultPrefsKeys } from '../lib/prefs.svelte.js';
 import { Tombstones } from '../lib/tombstones.svelte.js';
 import { containerIdOf, type DocMap } from '../lib/types.js';
@@ -102,6 +103,56 @@ describe('openDatabase', () => {
 	it('creates one collection per schema', async () => {
 		const db = await openDatabase<Docs>(`db${Date.now()}`, { collections, schemas }, { storage: getRxStorageMemory });
 		expect(Object.keys(db.collections).sort()).toEqual([...collections].sort());
+		await db.remove();
+	});
+});
+
+describe('schema versions', () => {
+	type V0 = { id: string; name: string; updated_at: number };
+	type V1 = V0 & { done: boolean; note: string };
+	const v0 = flatSchema<V0>({ id: field.id, name: field.string, updated_at: field.number });
+	const v1 = flatSchema<V1>(
+		{
+			id: field.id,
+			name: field.string,
+			updated_at: field.number,
+			done: field.added(field.boolean, false),
+			note: field.added(field.string, '')
+		},
+		1
+	);
+
+	it('fills fields added since a row was saved with their defaults', () => {
+		const strategies = migrationStrategies(v1 as never);
+		expect(Object.keys(strategies)).toEqual(['1']);
+		expect(strategies[1]({ id: 'a', name: 'A', updated_at: 1 })).toEqual({
+			id: 'a',
+			name: 'A',
+			updated_at: 1,
+			done: false,
+			note: ''
+		});
+		expect(migrationStrategies(v0 as never)).toEqual({});
+	});
+
+	it('migrates rows saved under an older version when the database opens', async () => {
+		const name = `migrate${Date.now()}`;
+		const storage = getRxStorageMemory();
+		const old = await openDatabase<{ items: V0 }>(
+			name,
+			{ collections: ['items'], schemas: { items: v0 } },
+			{ storage: () => storage, multiInstance: false }
+		);
+		await old.items.insert({ id: 'a', name: 'A', updated_at: 1 });
+		await old.close();
+
+		const db = await openDatabase<{ items: V1 }>(
+			name,
+			{ collections: ['items'], schemas: { items: v1 } },
+			{ storage: () => storage, multiInstance: false }
+		);
+		const doc = await db.items.findOne('a').exec();
+		expect(doc?.toJSON()).toMatchObject({ id: 'a', name: 'A', done: false, note: '' });
 		await db.remove();
 	});
 });

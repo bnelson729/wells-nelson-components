@@ -15,3 +15,12 @@ export class ReactiveApi implements MembersApi {
 	async inviteMember() {}
 	async removeMember() {}
 }
+
+/** Props whose `choice` a test can change from outside, as an app's form state would. */
+export class ChoiceProps {
+	choice = $state<{ id: string } | { newName: string } | null>(null);
+	constructor(
+		readonly label: string,
+		readonly options: { id: string; label: string }[]
+	) {}
+}

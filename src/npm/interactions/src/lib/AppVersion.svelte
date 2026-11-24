@@ -4,13 +4,15 @@
 	/**
 	 * The running version, with an Update button once a newer deploy is out. Feed it the app's
 	 * update signal (in SvelteKit: `updated.current` from `$app/state`, with `updated.check` as
-	 * `oncheck`). Without an update, `oncheck` adds a "Check for updates" button.
+	 * `oncheck`). Without an update, `oncheck` adds a "Check for updates" button. `links` adds a
+	 * line of links under it, such as the privacy policy and terms (opened in a new tab).
 	 */
 	let {
 		version,
 		updateAvailable = false,
 		onupdate = () => location.reload(),
-		oncheck
+		oncheck,
+		links = []
 	}: {
 		version: string;
 		updateAvailable?: boolean;
@@ -18,6 +20,8 @@
 		onupdate?: () => void;
 		/** Look for a new version now; resolves true when there is one. */
 		oncheck?: () => Promise<boolean>;
+		/** Links under the version: [{ label: 'Privacy policy', href }, { label: 'Terms of service', href }]. */
+		links?: { label: string; href: string }[];
 	} = $props();
 
 	let checking = $state(false);
@@ -62,6 +66,15 @@
 			</p>
 		{/if}
 	{/if}
+	{#if links.length}
+		<p class="links">
+			{#each links as link, i (link.href)}{#if i > 0}<span aria-hidden="true">{' · '}</span>{/if}<a
+					href={link.href}
+					target="_blank"
+					rel="noopener">{link.label}<span class="visually-hidden">{' (opens in a new tab)'}</span></a
+				>{/each}
+		</p>
+	{/if}
 </section>
 
 <style>
@@ -77,6 +90,11 @@
 		margin: 0;
 		color: var(--muted);
 		font-size: 0.85rem;
+	}
+	.links {
+		margin: 0.25rem 0 0;
+		font-size: 0.85rem;
+		color: var(--muted);
 	}
 	.new {
 		color: var(--text);

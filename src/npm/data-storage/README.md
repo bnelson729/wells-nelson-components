@@ -103,6 +103,25 @@ function with a plain `fetch`, so signed-out devices report too, and also catche
 and rejections. `setErrorReporter` swaps in another destination (e.g. Sentry). Table and RPC names default to `<noun>_members` and
 `get_<noun>_members`; override with e.g. `members: { membersRpc: 'get_list_collaborators' }`.
 
+## Adding a field later
+
+A table whose rows are already on people's devices gets a new field in three places, in one change:
+
+```ts
+projects: flatSchema<ProjectDoc>(
+	{ id: field.id, name: field.string, updated_at: field.number, archived: field.added(field.boolean, false) },
+	1 // was 0
+);
+```
+
+- `field.added(spec, default)` marks the new field; bump the schema's version by one. On start, the database
+  migrates the saved rows, filling in the default; backups made before the field existed import with it too.
+- Add the column, with the same default, in a new Supabase migration
+  (`alter table <schema>.projects add column if not exists archived boolean not null default false;`).
+- Older app versions still running elsewhere keep working: their rows get the column's default.
+
+A new table needs no version bump: add the collection and its migration.
+
 ## Errors for people
 
 Errors meant to be shown as they are (the last-owner rule, permissions, an email that already has access,

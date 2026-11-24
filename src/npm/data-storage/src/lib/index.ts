@@ -40,7 +40,7 @@ export {
 } from './errors.js';
 export { Persisted } from './persisted.svelte.js';
 export { DevicePrefs, defaultContainerToOpen, defaultPrefsKeys, type DevicePrefsKeys } from './prefs.svelte.js';
-export { field, flatSchema, type FieldSpec } from './schema.js';
+export { field, fieldDefaults, flatSchema, migrationStrategies, type FieldSpec } from './schema.js';
 export { createSyncedStore, type SyncedStore, type SyncedStoreConfig } from './store.js';
 export {
 	adoptSession,

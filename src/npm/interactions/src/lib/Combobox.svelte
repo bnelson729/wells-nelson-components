@@ -69,6 +69,23 @@
 		...(canCreate ? [{ kind: 'create' as const }] : [])
 	]);
 
+	/**
+	 * A choice set from outside (e.g. the app filling in a likely option) shows in the box. Typing
+	 * keeps the choice in step with the text, so the text only changes when the two disagree.
+	 */
+	$effect.pre(() => {
+		const c = choice;
+		untrack(() => {
+			const typed: ComboChoice = exact ? { id: exact.id } : query ? { newName: query } : null;
+			const same =
+				(!c && !typed) ||
+				(!!c &&
+					!!typed &&
+					('id' in c ? 'id' in typed && typed.id === c.id : 'newName' in typed && sameName(typed.newName, c.newName)));
+			if (!same) text = labelFor(c);
+		});
+	});
+
 	function select(row: (typeof rows)[number]) {
 		if (row.kind === 'option') {
 			choice = { id: row.option.id };

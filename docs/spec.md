@@ -36,6 +36,7 @@ sandbox (`npm run sandbox`) shows every group against mock data.
 | Component | What it does | Options |
 | --- | --- | --- |
 | `TextField` | Labeled input with error and hint text tied to it; errors are announced | `hideLabel`, `required`, `optional` |
+| `DataRiskButton` | A warning next to a local-only container on a browser that deletes site data after 7 days without a visit (`deviceMayClearData()`), explaining how to keep it | `signedIn`, `cloudConfigured`, `signInHref`, `profileHref` |
 | `Checkbox` | Custom checkbox (a real input stretched over the control) with an optional hidden label | `hideLabel`, `disabled`, `tone` |
 | `Toggle` | Switch (`role="switch"`) for settings that apply immediately | |
 | `Combobox` | Type-to-filter dropdown that offers "Create “…”" when there's no exact match | `createLabel` |
@@ -52,7 +53,7 @@ sandbox (`npm run sandbox`) shows every group against mock data.
 | Sign-in panel (`AccountPanel` and its cards) | "Continue with Google" plus "Email me a sign-in link", offline and not-configured states, and the signed-in summary with sync status and sign-out (warning about unsynced changes) | Composable cards, email link optional |
 | `LocalItemsPrompt` | After sign-in, offers to make never-asked-about local-only containers cloud-enabled | Nouns, callbacks |
 | `ShareModal` | Invite by email (saying that no email is sent), list active / pending members, stop sharing; offers sign-in or cloud-enable first | Optional roles (role picker, last-owner rules) |
-| `ContainerEditModal` | Rename, "open when the app starts", cloud-enabled toggle with a disconnect warning, delete / leave | Nouns, role-aware delete vs leave |
+| `ContainerEditModal` | Rename, "open when the app starts", the app's own settings, cloud-enabled toggle with a disconnect warning, delete / leave | Nouns, role-aware delete vs leave, `children` |
 
 The account and sharing components take the sync layer through plain interfaces, so this package
 has no storage dependency.

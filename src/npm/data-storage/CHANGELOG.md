@@ -2,6 +2,14 @@
 
 ## Unreleased (minor)
 
+- Schema versions: `flatSchema(properties, version)` and `field.added(spec, default)` add fields to a table
+  that already has rows on people's devices. The database migrates saved rows on start (filling in the
+  defaults), and a backup made before the field existed imports with the default. `fieldDefaults` and
+  `migrationStrategies` are exported for custom schemas.
+- A new cloud container's rows wait for the container row across restarts too: the wait was kept in memory
+  only, so a container created just before the app closed could have its first rows pushed ahead of it and
+  refused by row level security ("new row violates row-level security policy") until the next retry. The
+  wait ends once the container row is sent or pulled back from Supabase.
 - `userError(message)`: an Error marked `userFacing`, which the UI shows as it is. `friendlyError`'s
   messages, "You're offline…" and the backup import errors are `userError`s; other errors show as a general
   sentence with the technical text behind "Details". A malformed backup now says "This backup is damaged, so

@@ -35,7 +35,9 @@ name: Site deploy
 #         base-path: /my-site
 #
 # It reads the site repository's variables: SUPABASE_URL and SUPABASE_ANON_KEY (unset: a build
-# without sign-in), and BASE_PATH, which overrides `base-path` (e.g. "/" for a custom domain).
+# without sign-in), BASE_PATH, which overrides `base-path` (e.g. "/" for a custom domain), and
+# PRIVACY_URL and TERMS_URL, the privacy policy and terms the site links to (unset: the site's
+# own defaults).
 
 on:
   workflow_call:
@@ -99,6 +101,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           BASE_PATH: ${{ vars.BASE_PATH || inputs.base-path }}
+          VITE_PRIVACY_URL: ${{ vars.PRIVACY_URL }}
+          VITE_TERMS_URL: ${{ vars.TERMS_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build
