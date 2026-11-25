@@ -5,6 +5,7 @@ export { default as Checkbox } from './Checkbox.svelte';
 export { default as CollapsibleSection } from './CollapsibleSection.svelte';
 export { default as Combobox, sameName, type ComboChoice, type ComboOption } from './Combobox.svelte';
 export { default as DevWipeButton } from './DevWipeButton.svelte';
+export { default as NameModal } from './NameModal.svelte';
 export { default as SearchBar } from './SearchBar.svelte';
 export { default as SyncBanners } from './SyncBanners.svelte';
 export { default as Segmented } from './Segmented.svelte';

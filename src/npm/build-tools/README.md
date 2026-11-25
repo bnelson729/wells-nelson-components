@@ -34,6 +34,17 @@ import { siteEslint } from '@wells-nelson/build-tools/eslint';
 export default siteEslint();
 ```
 
+```ts
+// e2e/*.spec.ts: nothing printed outside its page column, modal or the screen; a phone-sized app's
+// columns and modals no wider than a phone, on any screen
+import { layoutProblems } from '@wells-nelson/build-tools/playwright';
+expect(await layoutProblems(page, { phoneWidth: 480 })).toEqual([]);
+```
+
+`layoutProblems` names each element (or list marker) that reaches outside its frame (`.page` or an open
+`dialog`, or the screen); add `data-may-overflow` to an element that's meant to. With `phoneWidth`, a frame
+wider than that is a problem too: pair it with `--content-w` and `--modal-max-w` no wider than a phone.
+
 In package.json, `"prettier": "@wells-nelson/build-tools/prettier"` (tabs, single quotes, 120 columns, Svelte).
 The site installs the tools these use: `@sveltejs/adapter-static`, `@sveltejs/vite-plugin-svelte`, `vitest`,
 `eslint`, `typescript-eslint`, `eslint-plugin-svelte`, `prettier`, `prettier-plugin-svelte`.

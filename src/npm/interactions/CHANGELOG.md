@@ -2,6 +2,10 @@
 
 ## Unreleased (minor)
 
+- New `NameModal`: create something by name (one field, Cancel and Create, optional extra fields, `validate`,
+  async `onsubmit` with its error shown). Opened from a "+ New …" button by the page or section title.
+- `AddRow` `onempty`: with it, the + (or Enter) on an empty field opens the full form (e.g. a `NameModal`)
+  instead of doing nothing; the + is no longer disabled.
 - New `DataRiskButton` and `deviceMayClearData()` (`/account`): Safari, and every browser on iPhone and
   iPad, deletes a site's data after 7 days without a visit unless the app is installed. Show the button
   next to each local-only container there; it explains the risk and the ways out (install the app, sign in

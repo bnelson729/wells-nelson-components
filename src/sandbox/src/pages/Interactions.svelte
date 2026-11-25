@@ -8,6 +8,7 @@
 		CollapsibleSection,
 		Combobox,
 		DevWipeButton,
+		NameModal,
 		SearchBar,
 		SyncBanners,
 		Segmented,
@@ -43,6 +44,8 @@
 	let tagOptions = $state(tags.map((t) => ({ id: t.id, label: t.label })));
 	let priority = $state<'low' | 'normal' | 'high'>('normal');
 	const nameError = $derived(name && name.trim().length < 3 ? 'At least 3 characters.' : null);
+	/** NameModal: opened by "+ New person", or by the AddRow's + with nothing typed. */
+	let naming = $state(false);
 
 	function createTag() {
 		if (tagChoice && 'newName' in tagChoice) {
@@ -256,13 +259,29 @@
 	{/snippet}
 </Modal>
 
-<Panel title="AddRow">
+<Panel title="AddRow and NameModal" note="The + with nothing typed opens the modal, as does New person.">
+	<div class="row">
+		<Button icon="plus" onclick={() => (naming = true)}>New person</Button>
+	</div>
 	<AddRow
 		placeholder="Add a person"
 		label="Add person"
 		onadd={(n) => (people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }])}
+		onempty={() => (naming = true)}
 	/>
 </Panel>
+
+{#if naming}
+	<NameModal
+		title="New person"
+		label="Name"
+		validate={(n) => (people.some((p) => p.name === n) ? 'Someone already has that name.' : null)}
+		onsubmit={(n) => {
+			people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }];
+		}}
+		onclose={() => (naming = false)}
+	/>
+{/if}
 
 <Panel title="longpress" note="Hold the button still for half a second. The click after a long press is swallowed.">
 	<div class="row">

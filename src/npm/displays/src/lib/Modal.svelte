@@ -103,16 +103,17 @@
 		border-radius: var(--radius-lg);
 		background: var(--surface);
 		color: var(--text);
-		width: min(34rem, calc(100vw - 2rem));
+		/* --modal-max-w caps every size: a phone-sized app keeps its modals phone sized. */
+		width: min(34rem, var(--modal-max-w, 100vw), calc(100vw - 2rem));
 		max-height: min(46rem, calc(100dvh - 2rem));
 		box-shadow: var(--shadow-lg);
 	}
 	.modal.lg {
-		width: min(64rem, calc(100vw - 2rem));
+		width: min(64rem, var(--modal-max-w, 100vw), calc(100vw - 2rem));
 		max-height: calc(100dvh - 2rem);
 	}
 	.modal.sm {
-		width: min(24rem, calc(100vw - 2rem));
+		width: min(24rem, var(--modal-max-w, 100vw), calc(100vw - 2rem));
 	}
 	.modal::backdrop {
 		background: rgb(0 0 0 / 0.45);

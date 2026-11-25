@@ -2,6 +2,11 @@
 
 ## Unreleased (minor)
 
+- `insertDoc` and `bulkWrite` show a row again when its id was deleted in the last week. A deleted id stays
+  hidden for a week (so a sync can't bring an old copy back), and ids built from other ids (e.g.
+  `${taskId}:${tagId}`) come back when the same pair is added again: the new row was saved but stayed
+  hidden. Rows written straight to a TanStack collection (`ds.<name>.insert`) still need
+  `tombstones.unhide(ds.location, ids)`.
 - `createSyncedStore` throws when an app declares more than `MAX_COLLECTIONS` (6) collections. The
   open-source RxDB keeps at most 13 collections open across every database, and the local and cloud data
   sets each open every collection: a 7th made start-up wait about 2 seconds while signed in, and an 8th

@@ -31,6 +31,10 @@
 			"types": "./dist/vitest.d.ts",
 			"default": "./dist/vitest.js"
 		},
+		"./playwright": {
+			"types": "./dist/playwright.d.ts",
+			"default": "./dist/playwright.js"
+		},
 		"./eslint": {
 			"types": "./dist/eslint.d.ts",
 			"default": "./dist/eslint.js"

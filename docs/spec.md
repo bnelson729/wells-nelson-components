@@ -40,7 +40,8 @@ sandbox (`npm run sandbox`) shows every group against mock data.
 | `Checkbox` | Custom checkbox (a real input stretched over the control) with an optional hidden label | `hideLabel`, `disabled`, `tone` |
 | `Toggle` | Switch (`role="switch"`) for settings that apply immediately | |
 | `Combobox` | Type-to-filter dropdown that offers "Create “…”" when there's no exact match | `createLabel` |
-| `AddRow` | Inline "name + plus" creator that refocuses after adding | |
+| `AddRow` | Inline "name + plus" creator that refocuses after adding | `onempty`: the + on an empty field opens the full form |
+| `NameModal` | Create something by name: one field, Cancel and Create, opened by a "+ New …" button by the title | `validate`, async `onsubmit`, `type: 'email'`, extra fields as children |
 | `Segmented` | Joined radio buttons for one-of-a-few choices | |
 | `CollapsibleSection` | Section with a sticky header (chevron, title, count, add and edit actions) that collapses in place and scrolls back into view when collapsed while pinned | Optional drag and drop, `variant`, `appearance`: card / lines |
 | `ActiveList` | Active rows plus a collapsible "inactive" section, with an active checkbox and a pencil per row | Generic over the row type, `appearance`: card / lines |

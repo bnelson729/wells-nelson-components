@@ -210,6 +210,36 @@ describe('createSyncedStore', () => {
 		expect(stored.every((t) => t.updated_at > 0)).toBe(true);
 		await ds.db.remove();
 	});
+
+	it('shows a row again when one with a deleted row id is written', async () => {
+		const store = makeStore();
+		await store.init();
+		const ds = store.app.local!;
+		const id = store.ops.createContainer(ds, { name: 'Plan' });
+		const task = (taskId: string) => ({
+			id: taskId,
+			project_id: id,
+			title: 'Task',
+			external_ref: '',
+			done: false,
+			updated_at: 0
+		});
+
+		// A composite id, deleted and then added again (one row at a time, then in bulk).
+		store.ops.insertDoc(ds, 'tasks', task('a:b'), id);
+		await eventually(() => store.ops.docsWhere(ds, 'tasks', { id: 'a:b' }).then((r) => r.length === 1));
+		await store.ops.removeDocs(ds, 'tasks', ['a:b']);
+		expect(store.tombstones.has(ds.location, 'a:b')).toBe(true);
+		store.ops.insertDoc(ds, 'tasks', task('a:b'), id);
+		expect(store.tombstones.has(ds.location, 'a:b')).toBe(false);
+		await eventually(() => store.ops.docsWhere(ds, 'tasks', { id: 'a:b' }).then((r) => r.length === 1));
+
+		await store.ops.removeDocs(ds, 'tasks', ['a:b']);
+		await store.ops.bulkWrite(ds, 'tasks', [task('a:b')], id);
+		expect(store.tombstones.has(ds.location, 'a:b')).toBe(false);
+		expect(await store.ops.docsWhere(ds, 'tasks', { id: 'a:b' })).toHaveLength(1);
+		await ds.db.remove();
+	});
 });
 
 describe('defaultContainerToOpen', () => {

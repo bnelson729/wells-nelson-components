@@ -18,7 +18,8 @@ the input with `aria-describedby`, and an error is announced), `Checkbox` (optio
 pattern: the field points at the highlighted option. Inside something that scrolls, like a `Modal`,
 opening it near the end adds room below so its options aren't cut off),
 `AddRow` (inline "name + plus" that refocuses; the field is named by its `placeholder`, the button by
-`label`), `Segmented` (one of a few) and `SearchBar`
+`label`; with `onempty`, the + on an empty field opens the full form), `NameModal` (create something by name:
+one field, Cancel and Create, optional extra fields; opened by a "+ New …" button by the title), `Segmented` (one of a few) and `SearchBar`
 (fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
 does `UndoButton`).
 

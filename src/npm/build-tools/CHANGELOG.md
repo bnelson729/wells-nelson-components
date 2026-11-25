@@ -2,6 +2,9 @@
 
 ## Unreleased (minor)
 
+- `/playwright` `layoutProblems(page, { phoneWidth })`: for end-to-end tests, the elements (and list markers)
+  printed outside their page column, modal or the screen, unless marked `data-may-overflow`; with `phoneWidth`,
+  page columns and modals wider than a phone, on any screen.
 - `/kit` `siteKit()`: the SvelteKit options every site shares (static SPA, base path, CSP, runes, version).
 - `/vitest` `siteVitest()`, `/eslint` `siteEslint()` and `/prettier`: a site's test, lint and format configs.
 - Workflow templates are now short callers of the library's reusable workflows at `@v2`; the database SQL

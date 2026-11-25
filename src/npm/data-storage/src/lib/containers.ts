@@ -143,6 +143,7 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 	async function bulkWrite<N extends CollectionName<D>>(ds: DataSet<D>, name: N, docs: D[N][], containerId: string) {
 		if (docs.length === 0) return;
 		const t = now();
+		unhideWritten(ds, docs);
 		const result = await rx(ds, name).bulkUpsert(docs.map((d) => ({ ...d, updated_at: t })) as never[]);
 		touch(ds, containerId);
 		if (result.error.length) {
@@ -150,9 +151,20 @@ export function createContainerOps<D extends DocMap<D>, C extends CollectionName
 		}
 	}
 
+	/**
+	 * A row written on purpose is visible again, even with the id of one deleted this week: ids
+	 * built from other ids (e.g. `${taskId}:${tagId}`) come back when the same pair is added again.
+	 * Rows written straight to a TanStack collection skip this: unhide those yourself.
+	 */
+	function unhideWritten(ds: DataSet<D>, docs: { id: string }[]) {
+		const ids = docs.map((d) => d.id);
+		tombstones.unhide(ds.location, ids);
+	}
+
 	/** Insert one row through TanStack DB (optimistic) and mark its container changed. */
 	function insertDoc<N extends CollectionName<D>>(ds: DataSet<D>, name: N, doc: D[N], containerId: string) {
 		const coll = ds[name] as unknown as { insert(doc: D[N]): { when(s: 'settled'): Promise<unknown> } };
+		unhideWritten(ds, [doc as { id: string }]);
 		persist(coll.insert(doc));
 		touch(ds, containerId);
 	}

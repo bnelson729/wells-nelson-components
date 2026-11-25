@@ -4,18 +4,25 @@
 	/**
 	 * A text field with a + button, for adding something by name. The field is named by its
 	 * placeholder (the text people see, e.g. "New list name"), the button by `label` (the action,
-	 * e.g. "Create list"). Blank names can't be added; the field clears and keeps focus after adding.
+	 * e.g. "Create list"). The field clears and keeps focus after adding.
+	 *
+	 * With `onempty`, the + works while the field is empty too: it opens the full form instead
+	 * (usually a modal with the thing's other fields, e.g. `NameModal`). Without it, blank names
+	 * can't be added and the + is disabled until something is typed.
 	 */
 	let {
 		placeholder,
 		label,
-		onadd
+		onadd,
+		onempty
 	}: {
 		/** Shown in the empty field, and its accessible name. */
 		placeholder: string;
 		/** The button's accessible name and tooltip. */
 		label: string;
 		onadd: (name: string) => void;
+		/** The + (or Enter) with nothing typed: open the full form. */
+		onempty?: () => void;
 	} = $props();
 
 	let value = $state('');
@@ -24,7 +31,11 @@
 	function submit(e: SubmitEvent) {
 		e.preventDefault();
 		const name = value.trim();
-		if (!name) return;
+		if (!name) {
+			value = '';
+			onempty?.();
+			return;
+		}
 		onadd(name);
 		value = '';
 		// Ready for the next one, whether Enter or the plus button was used.
@@ -34,7 +45,7 @@
 
 <form class="add-row" onsubmit={submit}>
 	<input type="text" bind:this={input} bind:value {placeholder} aria-label={placeholder} enterkeyhint="done" />
-	<button type="submit" aria-label={label} title={label} disabled={!value.trim()}>
+	<button type="submit" aria-label={label} title={label} disabled={!onempty && !value.trim()}>
 		<Icon name="plus" />
 	</button>
 </form>

@@ -2,6 +2,8 @@
 
 ## Unreleased (minor)
 
+- `Modal`: `--modal-max-w` caps the width of every size, so a phone-sized app (with a narrow `--content-w`)
+  keeps its modals phone sized on a tablet or desktop too.
 - Dropdowns (`select`) look like the text fields: the same height and box, with the arrow drawn by the
   theme. Phones (iOS especially) drew a smaller native control that ignored the height.
 

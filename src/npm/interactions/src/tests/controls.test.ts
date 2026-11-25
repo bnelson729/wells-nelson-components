@@ -7,6 +7,7 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AddRow from '../lib/AddRow.svelte';
 import CollapsibleSection from '../lib/CollapsibleSection.svelte';
+import NameModal from '../lib/NameModal.svelte';
 import Combobox from '../lib/Combobox.svelte';
 import { ChoiceProps } from './reactive-api.svelte.js';
 import { DRAG_PRESS_MS, draggable, dropZone, type DragData } from '../lib/dnd.js';
@@ -54,6 +55,76 @@ describe('AddRow', () => {
 		type(el.querySelector('input')!, '   ');
 		el.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 		expect(onadd).not.toHaveBeenCalled();
+	});
+
+	it('with onempty, the + on an empty field opens the full form instead', () => {
+		const onadd = vi.fn();
+		const onempty = vi.fn();
+		const el = render(AddRow, { placeholder: 'New', label: 'Create', onadd, onempty });
+		const submit = el.querySelector('button')!;
+		expect(submit.disabled).toBe(false);
+		type(el.querySelector('input')!, '  ');
+		submit.click();
+		flushSync();
+		expect(onempty).toHaveBeenCalledOnce();
+		expect(onadd).not.toHaveBeenCalled();
+		type(el.querySelector('input')!, 'Milk');
+		submit.click();
+		flushSync();
+		expect(onadd).toHaveBeenCalledWith('Milk');
+		expect(onempty).toHaveBeenCalledOnce();
+	});
+});
+
+describe('NameModal', () => {
+	const dialog = () => document.querySelector('dialog')!;
+	const field = () => dialog().querySelector('input')!;
+	const submitButton = () => [...dialog().querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Create')!;
+
+	it('refuses a blank name and what validate turns down, then submits the trimmed value and closes', async () => {
+		const onsubmit = vi.fn();
+		const onclose = vi.fn();
+		render(NameModal, {
+			title: 'New list',
+			label: 'List name',
+			validate: (v: string) => (v === 'Taken' ? 'That name is taken.' : null),
+			onsubmit,
+			onclose
+		});
+		submitButton().click();
+		await settle();
+		expect(field().getAttribute('aria-invalid')).toBe('true');
+		expect(dialog().textContent).toContain('Add a name.');
+
+		type(field(), 'Taken');
+		submitButton().click();
+		await settle();
+		expect(dialog().textContent).toContain('That name is taken.');
+		expect(onsubmit).not.toHaveBeenCalled();
+
+		type(field(), '  Groceries ');
+		submitButton().click();
+		await settle();
+		expect(onsubmit).toHaveBeenCalledWith('Groceries');
+		expect(onclose).toHaveBeenCalled();
+	});
+
+	it('stays open with the error when submitting fails', async () => {
+		const onclose = vi.fn();
+		render(NameModal, {
+			title: 'Add admin',
+			label: 'Email address',
+			type: 'email',
+			value: 'a@b.co',
+			errorAction: 'add the admin',
+			onsubmit: () => Promise.reject(new Error('offline')),
+			onclose
+		});
+		expect(field().value).toBe('a@b.co');
+		submitButton().click();
+		await settle();
+		expect(onclose).not.toHaveBeenCalled();
+		expect(dialog().textContent).toContain("Couldn't add the admin");
 	});
 });
 
