@@ -71,33 +71,66 @@ export function gitTags() {
 
 const INCREMENTS = ['patch', 'minor', 'major'];
 
+export const changelogPath = (pkg) => join(packageDir(pkg), 'CHANGELOG.md');
+
+const UNRELEASED = /^## Unreleased\b(.*)$/m;
+
 /**
- * The version part to bump, from commit messages: a line `Release: minor` or `Release: major`
- * (any case) in any of them asks for that bump; the biggest one wins; patch otherwise.
+ * The `## Unreleased (patch|minor|major)` section of a changelog: the bump it asks for (null when
+ * the heading names none), its entries (top-level `- ` lines) and whether any of them starts with
+ * `**Breaking:**`. `found` is false when there's no Unreleased heading at all.
  */
-export function incrementFromMessages(messages) {
-	let level = 0;
-	for (const message of messages) {
-		for (const m of message.matchAll(/^\s*release:\s*(patch|minor|major)\b/gim)) {
-			level = Math.max(level, INCREMENTS.indexOf(m[1].toLowerCase()));
-		}
-	}
-	return INCREMENTS[level];
+export function readUnreleased(text) {
+	const m = UNRELEASED.exec(text);
+	if (!m) return { found: false, level: null, entries: [], breaking: false };
+	const level = /^\s*\((patch|minor|major)\)\s*$/i.exec(m[1])?.[1].toLowerCase() ?? null;
+	const rest = text.slice(m.index + m[0].length);
+	const next = rest.search(/^## /m);
+	const body = next === -1 ? rest : rest.slice(0, next);
+	const entries = body
+		.split(/\r?\n/)
+		.filter((line) => line.startsWith('- '))
+		.map((line) => line.slice(2));
+	const breaking = entries.some((e) => e.startsWith('**Breaking:**'));
+	return { found: true, level, entries, breaking };
 }
 
-/** Full messages of the commits since `tag` (or all) that touched the package's shipped files. */
-export function commitMessagesSince(pkg, tag) {
-	const dir = packageDir(pkg).replaceAll('\\', '/');
-	const range = tag ? [`${tag}..HEAD`] : ['HEAD'];
-	const out = execFileSync(
-		'git',
-		['log', '--format=%B%x00', ...range, '--', dir, `:(exclude)${dir}/src/tests`, `:(exclude,glob)${dir}/**/*.md`],
-		{ encoding: 'utf8' }
-	);
-	return out
-		.split('\0')
-		.map((s) => s.trim())
-		.filter(Boolean);
+/**
+ * Why a changed package can't be released, or [] when it can. The changelog is the source of
+ * truth: its Unreleased heading names the bump, an entry marked **Breaking:** needs `major`, and a
+ * package whose shipped files changed needs entries. `manual` is a bump chosen on a manual run;
+ * it overrides the heading but not the Breaking rule.
+ */
+export function releaseProblems(pkg, changelog, manual = '') {
+	const { found, level, entries, breaking } = readUnreleased(changelog);
+	const file = `src/npm/${pkg}/CHANGELOG.md`;
+	if (!found || entries.length === 0)
+		return [`${pkg}: its shipped files changed, but ${file} has no entries under "## Unreleased (patch|minor|major)".`];
+	const problems = [];
+	if (!manual && !level)
+		problems.push(`${pkg}: the Unreleased heading in ${file} must name the bump: "## Unreleased (patch|minor|major)".`);
+	const bump = manual || level;
+	if (breaking && bump && bump !== 'major')
+		problems.push(`${pkg}: ${file} lists a **Breaking:** change, so the release must be major, not ${bump}.`);
+	return problems;
+}
+
+/** The bump for a package: the manual choice, else its changelog's Unreleased heading. */
+export function incrementFor(changelog, manual = '') {
+	if (manual) return manual;
+	const { level } = readUnreleased(changelog);
+	if (!level || !INCREMENTS.includes(level)) throw new Error('The changelog names no bump.');
+	return level;
+}
+
+/**
+ * The changelog with its Unreleased heading turned into the release's: `## <version> (<date>)`.
+ * null when there's no Unreleased heading (e.g. it was already cut).
+ */
+export function cutChangelog(text, version, date) {
+	const m = UNRELEASED.exec(text);
+	if (!m) return null;
+	return `${text.slice(0, m.index)}## ${version} (${date})${text.slice(m.index + m[0].length)}`;
 }
 
 /** True when the package's shipped files changed since `tag` (tests and Markdown don't count). */

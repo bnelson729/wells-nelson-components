@@ -71,7 +71,7 @@
 		{#if cloudConfigured && !signedIn && signInHref}
 			<Button href={signInHref}>Sign in</Button>
 		{/if}
-		<Button variant="primary" onclick={() => (open = false)}>Got it</Button>
+		<Button variant="solid" tone="accent" onclick={() => (open = false)}>Got it</Button>
 	{/snippet}
 </Modal>
 
@@ -84,11 +84,11 @@
 		color: var(--warning);
 	}
 	p {
-		margin: 0 0 0.75rem;
+		margin: 0 0 var(--space-3);
 		line-height: 1.5;
 	}
 	ul {
-		margin: 0 0 0.75rem;
+		margin: 0 0 var(--space-3);
 		padding-left: 1.2rem;
 		line-height: 1.5;
 	}

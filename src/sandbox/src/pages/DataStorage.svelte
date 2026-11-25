@@ -2,7 +2,7 @@
 	import { Badge, Button, IconButton } from '@wells-nelson/displays';
 	import type { DataSet, Location } from '@wells-nelson/data-storage';
 	import { generateMigration, tablesFromSchemas } from '@wells-nelson/data-storage/sql';
-	import { AddRow, Checkbox, Toggle } from '@wells-nelson/interactions';
+	import { Checkbox, NameModal, Overlay, Toggle } from '@wells-nelson/interactions';
 	import { AccountPanel } from '@wells-nelson/interactions/account';
 	import seed from 'virtual:seed';
 	import { onMount } from 'svelte';
@@ -114,6 +114,9 @@
 		selectedId = copyId;
 	}
 
+	const newProject = new Overlay();
+	const newTask = new Overlay();
+
 	function addTask(title: string) {
 		const entry = selected!;
 		const ds = app.dataSet(entry.location);
@@ -169,15 +172,18 @@
 		{/if}
 	</p>
 	<div class="row">
-		<Button variant="primary" icon="plus" onclick={() => run(seedProjects)} disabled={!app.ready}
+		<Button variant="solid" tone="accent" icon="plus" onclick={() => run(seedProjects)} disabled={!app.ready}
 			>Add mock projects</Button
 		>
 		{#if !seed}<span class="muted">The mock seed is only served by the dev server.</span>{/if}
 	</div>
-	<AddRow
-		placeholder="New project"
-		label="Add project"
-		onadd={(name) => run(() => (selectedId = ops.createContainer(app.dataSet('local'), { name })))}
+	<div class="row"><Button icon="plus" onclick={() => newProject.show()}>New project</Button></div>
+	<NameModal
+		bind:open={newProject.isOpen}
+		onclosed={newProject.closed}
+		title="New project"
+		label="Project name"
+		onsubmit={(name) => run(() => (selectedId = ops.createContainer(app.dataSet('local'), { name })))}
 	/>
 	{#if error}<p class="error">{error}</p>{/if}
 </Panel>
@@ -198,7 +204,7 @@
 				<IconButton
 					icon="check"
 					label="Make default"
-					active={prefs.defaultContainerId === e.container.id}
+					current={prefs.defaultContainerId === e.container.id}
 					onclick={() => (
 						prefs.setDefaultContainer(prefs.defaultContainerId === e.container.id ? null : e.container.id),
 						storageTick++
@@ -242,7 +248,8 @@
 				</li>
 			{/each}
 		</ul>
-		<AddRow placeholder="New task" label="Add task" onadd={addTask} />
+		<div class="row"><Button icon="plus" onclick={() => newTask.show()}>New task</Button></div>
+		<NameModal bind:open={newTask.isOpen} onclosed={newTask.closed} title="New task" label="Task" onsubmit={addTask} />
 		{#each links as link (link.id)}
 			<p class="small">
 				Link <code>{short(link.from_id)}:{short(link.to_id)}</code>: {taskTitle(link.from_id)} → {taskTitle(link.to_id)}

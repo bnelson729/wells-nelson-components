@@ -10,18 +10,56 @@ npm install @wells-nelson/displays @wells-nelson/interactions
 
 ## Inputs
 
-`TextField` (label, error, hint, `hideLabel`, `required` adds "(required)" and `optional` "(optional)"
-(rather than a placeholder that disappears when typing); the error or hint is tied to
-the input with `aria-describedby`, and an error is announced), `Checkbox` (optionally hidden label,
-`disabled`, `tone="muted"` for a gray tick), `Toggle` (a switch for settings that apply at once),
-`Combobox` (type to filter, offers "Create …"; plus `sameName`. It follows the WAI-ARIA combobox
-pattern: the field points at the highlighted option. Inside something that scrolls, like a `Modal`,
-opening it near the end adds room below so its options aren't cut off),
-`AddRow` (inline "name + plus" that refocuses; the field is named by its `placeholder`, the button by
-`label`; with `onempty`, the + on an empty field opens the full form), `NameModal` (create something by name:
-one field, Cancel and Create, optional extra fields; opened by a "+ New …" button by the title), `Segmented` (one of a few) and `SearchBar`
-(fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
-does `UndoButton`).
+Every form control shares `FieldProps`: `label` (required; `hideLabel` keeps it for assistive tech only),
+`hint`, `error`, `required` ("(required)" and `aria-required`), `optional` ("(optional)", rather than a
+placeholder that disappears when typing) and `disabled`. The hint or error is tied to the control with
+`aria-describedby`, an error sets `aria-invalid` and is announced.
+
+- `TextField`: text. Other attributes go to the `<input>`; `readonly` shows the value as plain text.
+- `SelectField`: one of a fixed list (`options: { value, label }[]`, `bind:value`, `onchange`).
+- `Field`: label, hint and error around any other control, which gets its id and ARIA attributes from the
+  snippet's argument:
+
+  ```svelte
+  <Field label="Starts" {error}>
+  	{#snippet children(control)}<input type="datetime-local" {...control} bind:value={start} />{/snippet}
+  </Field>
+  ```
+
+- `Checkbox`: `description` (a second line), `children` (rich content for the label), `block` (the whole
+  row is the checkbox, box in the row's first column), `tone="muted"` for a gray tick.
+- `Toggle`: a switch for settings that apply at once.
+- `Segmented`: one of a few, all visible; `size="sm"` for a compact choice inside a row.
+- `Combobox`: type to filter, offers "Create …"; `onchange(choice)`; plus `sameName`. It follows the
+  WAI-ARIA combobox pattern. Inside something that scrolls, like a `Modal`, opening it near the end adds
+  room below so its options aren't cut off.
+- `NameModal`: create something by name: one field, Cancel and Create, optional extra fields, async
+  `onsubmit` with its error shown. Opened by a "+ New …" button by the title; keep it mounted and bind
+  `open` (each time it opens, the field starts again from `value`).
+- `SearchBar`: fixed at the bottom, with a clear button; it sits above a `TabBar` via `--footer-offset`, as
+  does `UndoButton`.
+
+## Modals: `Overlay`
+
+Keep a modal mounted and hold what it's about in an `Overlay`, which clears it only after the dialog has
+finished closing, so nothing inside reads a value that was cleared mid-close:
+
+```svelte
+<script lang="ts">
+	const editTask = new Overlay<Task>();
+</script>
+
+<IconButton icon="pencil" label="Edit task" onclick={() => editTask.show(task)} />
+
+<Modal bind:open={editTask.isOpen} onclosed={editTask.closed} title="Edit task">
+	{#if editTask.value}{#key editTask.value.id}<TaskForm task={editTask.value} />{/key}{/if}
+</Modal>
+
+<!-- Nothing in particular: -->
+<NameModal bind:open={newTask.isOpen} onclosed={newTask.closed} title="New task" label="Task" {onsubmit} />
+```
+
+## Lists and sections
 
 ```svelte
 <ActiveList
@@ -29,15 +67,17 @@ does `UndoButton`).
 	noun="People"
 	label={(p) => p.name}
 	onopen={edit}
-	ontoggle={(p, on) => setActive(p, on)}
-	bind:inactiveOpen={() => !prefs.isCollapsed('people-inactive', true), (open) => prefs.setCollapsed('people-inactive', !open)}
+	onactivechange={(p, on) => setActive(p, on)}
+	bind:inactiveExpanded={() => !prefs.isCollapsed('people-inactive', true), (open) => prefs.setCollapsed('people-inactive', !open)}
 	collapsibleActive
 	sideBySide
 />
 
-<CollapsibleSection title={status.name} count={rows.length} collapsed={…} ontogglecollapse={…}
+<CollapsibleSection title={status.name} count={rows.length} expanded={!collapsed.has(status.id)}
+	onexpandedchange={(open) => setCollapsed(status.id, !open)}
 	onadd={…} onedit={…} dragData={{ type: 'section', id: status.id }} drop={{ accepts, ondrop, ordered: true }}>
-	{#each rows as row (row.id)}<li data-dnd-item>…</li>{/each}
+	{#each rows as row (row.id)}<ListRow data-dnd-item>…</ListRow>{/each}
+	{#snippet empty()}Nothing here yet.{/snippet}
 </CollapsibleSection>
 ```
 
@@ -48,9 +88,11 @@ the active and inactive sections sit side by side, both always expanded.
 A CollapsibleSection's title is a heading (`headingLevel`, default 2) holding the button that collapses
 it, so screen readers can jump between sections; use 3 for sections inside another section.
 
-Both take `appearance`: `card` (default) draws rounded cards; `lines` fills the container edge to
-edge with rules between rows, like lines on paper. A `lines` CollapsibleSection's pinned header
-needs an opaque background: set `--section-header-bg` to whatever it sits on (default `--bg`).
+Both take `layout`: `card` (default) draws rounded cards; `lines` fills the container edge to edge with
+rules between rows, like lines on paper. A `lines` CollapsibleSection's pinned header needs an opaque
+background: set `--section-header-bg` to whatever it sits on (default `--bg`). A CollapsibleSection's
+`emphasis="subtle"` gives its header a muted background. Both take an `empty` snippet; rows inside a
+CollapsibleSection get small, muted icon buttons (as in a `ListRow`).
 
 ## Actions
 
@@ -120,7 +162,7 @@ reloading the page.
 
 ## Account and sharing (`@wells-nelson/interactions/account`)
 
-`AccountPanel` (or the `SignInCard`, `SyncStatusCard`, `SignOutCard` it's made of),
+`AccountPanel` (sign-in, sync status and sign-out), `SignInCard` on its own (e.g. for a website),
 `LocalItemsPrompt`, `ShareModal`, `ContainerEditModal`. Pass `store.cloud` as `cloud`/`account`
 and `store.supabase` as `members` from `@wells-nelson/data-storage`, or anything with the same
 shape. Wording comes from `nouns` (`{ singular: 'project', plural: 'projects' }`) and `appName`.

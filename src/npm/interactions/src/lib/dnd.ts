@@ -191,7 +191,7 @@ function begin(node: HTMLElement, options: DraggableOptions, x: number, y: numbe
 		width: `${rect.width}px`,
 		transform: `translate(${rect.left}px, ${rect.top}px)`,
 		pointerEvents: 'none',
-		zIndex: '1000'
+		zIndex: 'var(--z-overlay, 1000)'
 	});
 	const indicator = document.createElement('div');
 	indicator.className = 'dnd-indicator';

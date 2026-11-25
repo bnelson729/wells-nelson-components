@@ -5,8 +5,10 @@ name: Packages
 # Pushes to main (and manual runs) then publish to npm. Each package has its own semver,
 # tracked by git tags named after the package, e.g. `@wells-nelson/displays@1.4.2`. A package
 # is released when its shipped files changed since its last tag; its next version comes from
-# reecetech/version-increment. The bump is a patch unless a commit since the package's last release
-# has a line `Release: minor` or `Release: major` (the biggest wins); a manual run can choose one.
+# reecetech/version-increment. The bump comes from the package's CHANGELOG.md heading
+# `## Unreleased (patch|minor|major)`; an entry marked **Breaking:** must be in a major. A manual run
+# can choose the bump. After publishing, the Unreleased heading becomes the version's and is
+# committed to main.
 # Setup (npm org, auth, GitHub settings): see PUBLISHING.md.
 
 on:
@@ -20,10 +22,14 @@ on:
         type: string
         default: ''
       increment:
-        description: "Version part to increment (auto: from the commits' Release: lines, else patch)"
+        description: "Version part to increment (auto: from each changelog's Unreleased heading)"
         type: choice
         options: [auto, patch, minor, major]
         default: auto
+      update-visual-baselines:
+        description: 'Only update the visual test baselines (screenshots) and commit them; nothing is released'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -90,6 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          # Tags, to check the changelogs of the packages changed since their last release.
+          fetch-depth: 0
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
@@ -109,11 +118,64 @@ jobs:
         run: npm run bundle -w src/sandbox
       - name: Release script tests
         run: npm run test:release
+      # Every changed package has Unreleased entries with a bump, and Breaking means major.
+      - name: Changelogs ready to release
+        run: node scripts/release/plan.mjs --check
+
+  visual:
+    name: accessibility and visual tests (sandbox)
+    needs: package
+    if: ${{ !inputs.update-visual-baselines }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      # axe over the sandbox in light and dark; screenshots of the States page in every palette and
+      # mode, and in forced colors, against tests/visual/__screenshots__.
+      - run: npm run test:visual
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: visual-test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+  # Manual: when a change is meant to look different, write new baselines and commit them.
+  visual-baselines:
+    name: update visual baselines
+    if: ${{ inputs.update-visual-baselines }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:visual:update
+      - name: Commit the baselines
+        run: |
+          git add tests/visual/__screenshots__
+          if git diff --cached --quiet; then echo "The baselines are up to date."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update visual baselines"
+          git push
 
   plan:
     name: plan releases
-    needs: [package, compat]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [package, compat, visual]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.update-visual-baselines
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.plan.outputs.packages }}
@@ -228,6 +290,28 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "$TAG"
           git push origin "refs/tags/$TAG"
+
+      # The release's changelog heading: "## Unreleased (…)" becomes "## <version> (<date>)", on
+      # main's latest commit (an earlier package in this run may have cut its own). The tag stays on
+      # the commit that was built, which is also what npm records. A push with GITHUB_TOKEN starts
+      # no workflow run. If main is protected, let GitHub Actions bypass it.
+      - name: Cut the changelog
+        env:
+          PKG: ${{ matrix.package }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git reset --hard
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B changelog-cut origin/main
+            node scripts/release/cut-changelog.mjs "$PKG" "$VERSION"
+            if git diff --quiet; then exit 0; fi
+            git commit -am "Changelog: $TAG"
+            if git push origin HEAD:main; then exit 0; fi
+            git reset --hard origin/main
+          done
+          echo "::warning::Couldn't push the changelog for $TAG; move its Unreleased heading by hand."
 
       - name: Summary
         run: echo "Published [\`${{ steps.version.outputs.tag }}\`](https://www.npmjs.com/package/${{ steps.meta.outputs.name }}/v/${{ steps.version.outputs.version }})" >> "$GITHUB_STEP_SUMMARY"

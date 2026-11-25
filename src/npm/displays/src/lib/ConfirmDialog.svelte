@@ -18,8 +18,9 @@
 		confirmLabel,
 		busyLabel,
 		errorAction,
-		danger = false,
-		onconfirm
+		tone = 'accent',
+		onconfirm,
+		onclosed
 	}: {
 		open?: boolean;
 		title: string;
@@ -31,8 +32,11 @@
 		busyLabel?: string;
 		/** What failed, for an error without a message of its own: "delete the store". */
 		errorAction?: string;
-		danger?: boolean;
+		/** `danger` for a destructive action (delete, reset): the confirm button is red. */
+		tone?: 'accent' | 'danger';
 		onconfirm: () => void | Promise<void>;
+		/** It has finished closing, by any route (see `Modal`). */
+		onclosed?: () => void;
 	} = $props();
 
 	let busy = $state(false);
@@ -57,7 +61,7 @@
 	}
 </script>
 
-<Modal bind:open {title} size="sm">
+<Modal bind:open {title} size="sm" {onclosed}>
 	{#if children}
 		{@render children()}
 	{:else if message}
@@ -66,7 +70,7 @@
 	<ErrorMessage {error} action={errorAction} />
 	{#snippet footer()}
 		<Button onclick={() => (open = false)}>Cancel</Button>
-		<Button variant={danger ? 'danger' : 'primary'} onclick={confirm} {busy}>
+		<Button variant="solid" {tone} onclick={confirm} {busy}>
 			{busy && busyLabel ? busyLabel : confirmLabel}
 		</Button>
 	{/snippet}

@@ -148,26 +148,26 @@ describe('longpress', () => {
 	});
 });
 
-describe('appearance', () => {
+describe('layout', () => {
 	const rows = createRawSnippet(() => ({ render: () => '<li>Row</li>' }));
 	const section = (props: Record<string, unknown>) =>
 		render(CollapsibleSection, {
 			title: 'To do',
 			count: 1,
-			ontogglecollapse: () => {},
+			onexpandedchange: () => {},
 			children: rows,
 			...props
 		}).querySelector('section')!;
 
 	it('renders CollapsibleSection as a card by default, marking it collapsed', () => {
-		const open = section({ collapsed: false });
+		const open = section({ expanded: true });
 		expect([...open.classList]).toEqual(expect.arrayContaining(['card', 'default']));
 		expect(open.classList.contains('collapsed')).toBe(false);
-		expect(section({ collapsed: true }).classList.contains('collapsed')).toBe(true);
+		expect(section({ expanded: false }).classList.contains('collapsed')).toBe(true);
 	});
 
 	it('renders CollapsibleSection as lines on request', () => {
-		const lines = section({ collapsed: false, appearance: 'lines' });
+		const lines = section({ expanded: true, layout: 'lines' });
 		expect(lines.classList.contains('lines')).toBe(true);
 		expect(lines.classList.contains('card')).toBe(false);
 	});
@@ -182,11 +182,11 @@ describe('appearance', () => {
 			noun: 'Members',
 			label: (i: { name: string }) => i.name,
 			onopen: () => {},
-			ontoggle: () => {}
+			onactivechange: () => {}
 		};
 		const cards = [...render(ActiveList, props).querySelectorAll('section')];
 		expect(cards.every((s) => s.classList.contains('card'))).toBe(true);
-		const lines = [...render(ActiveList, { ...props, appearance: 'lines' }).querySelectorAll('section')];
+		const lines = [...render(ActiveList, { ...props, layout: 'lines' }).querySelectorAll('section')];
 		expect(lines).toHaveLength(2);
 		expect(lines.every((s) => s.classList.contains('lines') && !s.classList.contains('card'))).toBe(true);
 	});
@@ -199,13 +199,13 @@ describe('ActiveList', () => {
 	];
 
 	it('lists active rows and toggles the inactive section', () => {
-		const ontoggle = vi.fn();
+		const onactivechange = vi.fn();
 		const el = render(ActiveList, {
 			items,
 			noun: 'Members',
 			label: (i: { name: string }) => i.name,
 			onopen: () => {},
-			ontoggle
+			onactivechange
 		});
 		expect(el.textContent).toContain('Active members');
 		expect(el.textContent).toContain('Ann');
@@ -219,7 +219,7 @@ describe('ActiveList', () => {
 		expect(box.getAttribute('aria-label')).toBe('Ann is active');
 		box.click();
 		flushSync();
-		expect(ontoggle).toHaveBeenCalledWith(items[0], false);
+		expect(onactivechange).toHaveBeenCalledWith(items[0], false);
 	});
 
 	const props = {
@@ -227,7 +227,7 @@ describe('ActiveList', () => {
 		noun: 'Members',
 		label: (i: { name: string }) => i.name,
 		onopen: () => {},
-		ontoggle: () => {}
+		onactivechange: () => {}
 	};
 
 	it('collapses the active section on request, starting expanded every time', () => {

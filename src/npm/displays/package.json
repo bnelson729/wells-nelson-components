@@ -36,6 +36,9 @@
 		"test": "vitest run",
 		"lint:package": "publint"
 	},
+	"dependencies": {
+		"esm-env": "^1.2.2"
+	},
 	"peerDependencies": {
 		"svelte": "^5.40.0"
 	},

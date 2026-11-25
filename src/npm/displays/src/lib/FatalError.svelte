@@ -32,6 +32,6 @@
 		</details>
 	{/if}
 	{#if retryLabel}
-		<Button variant="primary" icon="refresh" onclick={() => location.reload()}>{retryLabel}</Button>
+		<Button variant="solid" tone="accent" icon="refresh" onclick={() => location.reload()}>{retryLabel}</Button>
 	{/if}
 </main>

@@ -66,7 +66,9 @@
 	<ErrorMessage {error} action={`make the ${nouns.plural} cloud-enabled`} />
 	{#snippet footer()}
 		<Button onclick={skip} disabled={busy}>Keep them on this device</Button>
-		<Button variant="primary" onclick={submit} disabled={!anySelected} {busy}>Make selected cloud-enabled</Button>
+		<Button variant="solid" tone="accent" onclick={submit} disabled={!anySelected} {busy}
+			>Make selected cloud-enabled</Button
+		>
 	{/snippet}
 </Modal>
 

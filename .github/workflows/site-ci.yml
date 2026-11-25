@@ -7,7 +7,9 @@ name: Site CI
 #      from local tarballs (the tarballs only exist on the machine that packed them), they're
 #      swapped for the latest published versions (a lock-only leftover for package.json's range), on
 #      the branch itself (the pull request's branch, or main).
-#   2. Type-check, lint, formatting, unit tests and a production build.
+#   2. Type-check, lint, formatting, the design check (`check:design`, e.g. wn-check-design), unit
+#      tests, a production build and, when the site has a `test:e2e` script, its end-to-end tests
+#      (Playwright, Chromium).
 #   3. After a swap that passed, package.json and package-lock.json are committed to that branch
 #      with a `Published-packages: …` trailer and pushed with the `token` secret (the site's PAT
 #      repository secret), so GitHub runs the checks again on the new commit. The `committed`
@@ -123,8 +125,17 @@ jobs:
       - run: npm run check --if-present
       - run: npm run lint --if-present
       - run: npm run format:check --if-present
+      - run: npm run check:design --if-present
       - run: npm test --if-present
       - run: npm run build
+      - name: End-to-end tests
+        run: |
+          if [ "$(npm pkg get scripts.test:e2e)" = "{}" ]; then
+            echo "No test:e2e script; skipped."
+            exit 0
+          fi
+          npx playwright install --with-deps chromium
+          npm run test:e2e
 
       - name: Commit the published versions
         id: commit

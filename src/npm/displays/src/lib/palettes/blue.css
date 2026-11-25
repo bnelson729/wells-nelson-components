@@ -11,6 +11,7 @@
 	--accent-strong: #184c88;
 	--accent-text: #1d58a0;
 	--accent-soft: #dbe7f6;
+	--on-accent: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -15,43 +15,45 @@ sandbox (`npm run sandbox`) shows every group against mock data.
 
 | Component | What it does | Options |
 | --- | --- | --- |
-| `Button` | Button or link with primary / secondary / danger / ghost / danger-ghost variants, an optional icon, full width, two sizes and a busy state | `variant`, `icon`, `block`, `size`, `href`, `busy` |
-| `IconButton` | Icon-only button or link with a required accessible label, "active" (current page) and "pressed" (on/off) states | `href`, `active`, `pressed`, `size` |
+| `Button` | Button or link: `variant` (solid / outline / ghost) for emphasis, `tone` (neutral / accent / danger / warning / success) for meaning, an optional icon, full width, two sizes and a busy state that keeps focus | `variant`, `tone`, `icon`, `block`, `size`, `href`, `busy` |
+| `IconButton` | Icon-only button or link with a required accessible label, "current" (current page) and "pressed" (on/off) states that stay visible in forced colors | `href`, `current`, `pressed`, `size`: sm / md / lg, `tone`: neutral / muted / accent / danger |
+| `PageHeader` | A page's (or card's) title with its actions on the right and an optional link back | `level`, `actions`, `back` |
+| `ListRow`, `ListHeading` | Lines on paper: a content row and a group heading in a `.lines` list; icon buttons inside are small and muted | Attributes and attachments go to the `<li>` |
 | `Chip` | Pill button: an on/off filter with `pressed`, otherwise an action | `pressed`, `tone`, `dashed` |
-| `Notice` | Something to know (warning, danger, info), with optional actions, a dismiss ✕, or as a link | `tone`, `icon`, `role`, `href` |
-| `Icon` | 24×24 stroke icon set rendered from inline SVG paths | Base set (plus, x, check, pencil, trash, share, chevron, alert, cloud, wifi-off, user, gear, undo, refresh, mail, search, grip…); apps add theirs with `registerIcons` |
-| `Modal` | Native `<dialog>` with title, close button, scrollable body, optional footer. A click outside closes it only until something inside is typed in or changed | `size`: sm / md / lg, `dismissible` |
-| `ConfirmDialog` | Yes/no dialog on top of `Modal`, with a danger variant and a busy state; opens on Cancel; a failure shows as an `ErrorMessage` | `danger`, `confirmLabel` (required: the verb and object), `busyLabel`, `errorAction` |
+| `Notice` | Something to know (warning, danger, info, success), with optional actions, a dismiss ✕, or as a link | `tone`, `icon`, `role`, `href` |
+| `Icon` | 24×24 stroke icon set rendered from inline SVG paths; an unknown name warns in development | Base set (plus, x, check, pencil, trash, share, chevrons in four directions, alert, cloud, wifi-off, user, gear, undo, refresh, mail, search, grip…); apps add theirs with `registerIcons` and declare them in `AppIcons`; `inline` |
+| `Modal` | Native `<dialog>` with title, close button, scrollable body, optional footer. A click outside closes it only until something inside is typed in or changed. Kept mounted and driven by an `Overlay` | `size`: sm / md / lg, `dismissible`, `onclose`, `onclosed` |
+| `ConfirmDialog` | Yes/no dialog on top of `Modal`, with a danger tone and a busy state; opens on Cancel; a failure shows as an `ErrorMessage` | `tone`, `confirmLabel` (required: the verb and object), `busyLabel`, `errorAction` |
 | `ErrorMessage` | An error in plain words, announced, with the technical text behind "Details" | `action`, `text` |
 | Wording helpers | `errorText` / `userError` (errors as sentences), `plural`, and one date and time style (`formatDate`, `formatTime`, `formatDateTime`, `formatRecent`, `formatLongDate`); see [content-style.md](content-style.md) | |
-| `Badge` | Small status pill ("Default", "Pending", "Editor"), or the count beside a heading | `tone`: neutral / accent / warning / danger / count, `label` |
+| `Badge` | Small status pill ("Default", "Pending", "Editor"), or the count beside a heading | `tone`: neutral / accent / warning / danger / success / count, `label` |
 | `AppHeader` | Fixed header: brand on the left, context nav icons, profile avatar with an unsynced-changes dot, and a dev-only slot | `hideOnScroll`, `width`, snippets for brand, nav and dev tools |
 | `SortableTable` | Table with a pinned first column; tap a header to sort or flip, rows without a value sort last | Column config: key, title, value, display |
 | `Leaderboards` | A sideways-scrolling row of "top N" cards | Generic rows and value formatter |
-| Theme CSS | Design tokens (colors, control outlines, focus ring, hit-area size, radius, shadows, header height, light/dark), base element styles (one focus ring, placeholders, `select`), `.page` / `.card` / `.card-section` / `.row-card` / `.text-sm` / `.error-text` / `.notice` / `.empty` helpers, drag-and-drop styles | Blue default; green palette; accent tokens overridable |
+| Theme CSS | Design tokens (colors incl. success, scrim and on-control, control outlines, focus ring, hit-area size, radius, shadows, header height, light/dark) and scales (space, type, weight, z-index, motion), base element styles (one focus ring, placeholders, `select`, read-only fields), `.page` / `.card` / `.card-section` / `.row-card` / `.lines` / `.line…` / `.overline` / `.inline-icon` / `.text-sm` / `.error-text` / `.empty` helpers, reduced motion, drag-and-drop styles | Blue default; green and purple palettes with a checked contract (`palettes/README.md`) |
 | `Splash`, `FatalError` | Startup placeholder, and the "This app can't start" page (the browser's error behind "Details") | Brand text and messages |
 
 ### Node Interactions (`@wells-nelson/interactions`)
 
 | Component | What it does | Options |
 | --- | --- | --- |
-| `TextField` | Labeled input with error and hint text tied to it; errors are announced | `hideLabel`, `required`, `optional` |
+| `TextField`, `SelectField`, `Field` | A labeled text input, a labeled dropdown, and a label / hint / error around any other control; errors and hints are tied to the control and errors announced | `FieldProps`: `label`, `hideLabel`, `hint`, `error`, `required`, `optional`, `disabled` |
 | `DataRiskButton` | A warning next to a local-only container on a browser that deletes site data after 7 days without a visit (`deviceMayClearData()`), explaining how to keep it | `signedIn`, `cloudConfigured`, `signInHref`, `profileHref` |
-| `Checkbox` | Custom checkbox (a real input stretched over the control) with an optional hidden label | `hideLabel`, `disabled`, `tone` |
+| `Checkbox` | Custom checkbox (a real input stretched over the control) with an optional hidden label, a second line, rich content, or the whole row as the control | `FieldProps`, `description`, `children`, `block`, `tone` |
 | `Toggle` | Switch (`role="switch"`) for settings that apply immediately | |
-| `Combobox` | Type-to-filter dropdown that offers "Create “…”" when there's no exact match | `createLabel` |
-| `AddRow` | Inline "name + plus" creator that refocuses after adding | `onempty`: the + on an empty field opens the full form |
+| `Combobox` | Type-to-filter dropdown that offers "Create “…”" when there's no exact match | `FieldProps`, `createLabel`, `onchange` |
+| `Overlay` | What a modal is about, kept until the dialog has finished closing, so a modal can stay mounted | `show`, `hide`, `closed` (for `onclosed`) |
 | `NameModal` | Create something by name: one field, Cancel and Create, opened by a "+ New …" button by the title | `validate`, async `onsubmit`, `type: 'email'`, extra fields as children |
-| `Segmented` | Joined radio buttons for one-of-a-few choices | |
-| `CollapsibleSection` | Section with a sticky header (chevron, title, count, add and edit actions) that collapses in place and scrolls back into view when collapsed while pinned | Optional drag and drop, `variant`, `appearance`: card / lines |
-| `ActiveList` | Active rows plus a collapsible "inactive" section, with an active checkbox and a pencil per row | Generic over the row type, `appearance`: card / lines |
+| `Segmented` | Joined radio buttons for one-of-a-few choices; selected stays visible in forced colors | `FieldProps`, `size`: sm / md |
+| `CollapsibleSection` | Section with a sticky header (chevron, title, count, add and edit actions) that collapses in place and scrolls back into view when collapsed while pinned | Optional drag and drop, `expanded` + `onexpandedchange`, `emphasis`, `layout`: card / lines, `empty` |
+| `ActiveList` | Active rows plus a collapsible "inactive" section, with an active checkbox and a pencil per row | Generic over the row type, `onactivechange`, `inactiveExpanded`, `layout`: card / lines, `empty` |
 | `longpress` action | Fires after a still hold and swallows the click that follows | |
 | Drag and drop (`draggable`, `dropZone`, `reorder`) | Long-press drag for touch and mouse, ordered drop zones with an insertion line, collapse-all during a drag, and scroll restored after the drop | Built on the same press detection as `longpress` |
 | `UndoStack` + `UndoButton` | Stackable undo for quick, reversible actions: the button shows for 8 seconds (longer while hovered or focused) and is announced with what it would undo; history is dropped after 1 minute idle | Generic `{ undo(), label? }` entries |
 | `focusFirstInvalid` | After a failed submit, focuses the first field marked invalid | |
 | `SearchBar` | Fixed bottom search box with a clear button | Matching stays in the app |
 | `DevWipeButton` + `wipeAllData()` | Dev-only "delete every database and setting, then reload" | Message, teardown hook |
-| Sign-in panel (`AccountPanel` and its cards) | "Continue with Google" plus "Email me a sign-in link", offline and not-configured states, and the signed-in summary with sync status and sign-out (warning about unsynced changes) | Composable cards, email link optional |
+| Sign-in panel (`AccountPanel`; `SignInCard` on its own) | "Continue with Google" plus "Email me a sign-in link", offline and not-configured states, and the signed-in summary with sync status and sign-out (warning about unsynced changes) | Composable cards, email link optional |
 | `LocalItemsPrompt` | After sign-in, offers to make never-asked-about local-only containers cloud-enabled | Nouns, callbacks |
 | `ShareModal` | Invite by email (saying that no email is sent), list active / pending members, stop sharing; offers sign-in or cloud-enable first | Optional roles (role picker, last-owner rules) |
 | `ContainerEditModal` | Rename, "open when the app starts", the app's own settings, cloud-enabled toggle with a disconnect warning, delete / leave | Nouns, role-aware delete vs leave, `children` |

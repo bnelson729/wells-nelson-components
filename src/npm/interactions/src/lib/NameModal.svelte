@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { Button, ErrorMessage, Modal } from '@wells-nelson/displays';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { focusFirstInvalid } from './forms.js';
 	import TextField from './TextField.svelte';
 
 	/**
-	 * Create something by name (a list, a team, an invited email): one field, Cancel and the
-	 * create button. Opened by a "+ New …" button next to the page or section title, or by an
-	 * `AddRow`'s + while its field is empty. `children` adds the thing's other choices under the
-	 * field (e.g. a checkbox).
+	 * Create something by name (a list, a project, an invited email): one field, Cancel and the
+	 * create button. Opened by a "+ New …" button next to the page or section title. `children` adds
+	 * the thing's other choices under the field (e.g. a checkbox).
 	 *
 	 * Blank values are refused ("Add a name."), as is anything `validate` turns down. `onsubmit`
 	 * may be async: the button shows `busyLabel` while it runs, and if it throws the error shows
-	 * here and the modal stays open to try again. Mount only while shown; the field starts from
-	 * `value` once.
+	 * here and the modal stays open to try again. Keep it mounted and drive `bind:open` (e.g. from an
+	 * `Overlay`); each time it opens, the field starts again from `value`.
 	 */
 	let {
+		open = $bindable(false),
 		title,
 		label,
 		value = '',
@@ -27,13 +27,15 @@
 		validate,
 		onsubmit,
 		onclose,
+		onclosed,
 		children
 	}: {
+		open?: boolean;
 		/** The modal's title, e.g. "New list". */
 		title: string;
 		/** The field's label, e.g. "List name". */
 		label: string;
-		/** What the field starts with (e.g. what was typed in an `AddRow`). */
+		/** What the field starts with each time it opens. */
 		value?: string;
 		type?: 'text' | 'email';
 		hint?: string;
@@ -45,13 +47,14 @@
 		validate?: (value: string) => string | null;
 		/** Gets the trimmed value. The modal closes once it's done (resolves). */
 		onsubmit: (value: string) => void | Promise<void>;
-		onclose: () => void;
+		/** The person closed it without creating anything. */
+		onclose?: () => void;
+		/** It has finished closing, by any route (see `Modal`). */
+		onclosed?: () => void;
 		children?: Snippet;
 	} = $props();
 
-	let open = $state(true);
-	// svelte-ignore state_referenced_locally
-	let text = $state(value);
+	let text = $state('');
 	let submitted = $state(false);
 	let busy = $state(false);
 	let error = $state<unknown>(null);
@@ -64,9 +67,19 @@
 		return validate?.(text.trim()) ?? null;
 	});
 
-	function close() {
+	// Each time it opens, it starts from `value`, without the last attempt's errors.
+	$effect.pre(() => {
+		if (!open) return;
+		untrack(() => {
+			text = value;
+			submitted = false;
+			error = null;
+		});
+	});
+
+	function cancel() {
 		open = false;
-		onclose();
+		onclose?.();
 	}
 
 	async function submit(e: SubmitEvent) {
@@ -80,7 +93,7 @@
 		error = null;
 		try {
 			await onsubmit(text.trim());
-			close();
+			open = false;
 		} catch (err) {
 			error = err;
 		} finally {
@@ -89,7 +102,7 @@
 	}
 </script>
 
-<Modal bind:open {title} size="sm" {onclose}>
+<Modal bind:open {title} size="sm" {onclose} {onclosed}>
 	<form id={formId} class="form" onsubmit={submit} novalidate>
 		<!-- svelte-ignore a11y_autofocus -->
 		<TextField
@@ -108,8 +121,8 @@
 	<ErrorMessage {error} action={errorAction} />
 
 	{#snippet footer()}
-		<Button onclick={close} disabled={busy}>Cancel</Button>
-		<Button variant="primary" type="submit" form={formId} {busy}>{busy ? busyLabel : submitLabel}</Button>
+		<Button onclick={cancel} disabled={busy}>Cancel</Button>
+		<Button variant="solid" tone="accent" type="submit" form={formId} {busy}>{busy ? busyLabel : submitLabel}</Button>
 	{/snippet}
 </Modal>
 
@@ -117,6 +130,6 @@
 	.form {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: var(--space-4);
 	}
 </style>

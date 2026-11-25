@@ -1,0 +1,18 @@
+/* Purple (plum) palette: accent only, the neutrals stay the theme's. Import after theme.css. */
+:root {
+	--accent: #6b3fa0;
+	--accent-strong: #57328a;
+	--accent-text: #62389a;
+	--accent-soft: #ece3f6;
+	--on-accent: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--accent: #a985d6;
+		--accent-strong: #bd9fe3;
+		--accent-text: #c3a6ea;
+		--accent-soft: #2c2140;
+		--on-accent: #160d22;
+	}
+}

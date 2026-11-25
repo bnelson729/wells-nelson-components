@@ -33,21 +33,21 @@
 		position: fixed;
 		left: max(1rem, calc(50vw - var(--content-w) / 2 + 1rem));
 		bottom: calc(4.75rem + max(env(safe-area-inset-bottom, 0px), var(--footer-offset, 0px)));
-		z-index: 45;
+		z-index: var(--z-floating);
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
 		max-width: calc(100vw - 2rem);
 		min-height: var(--tap, 2.75rem);
-		padding: 0 1rem;
+		padding: 0 var(--space-4);
 		border: none;
 		border-radius: 2rem;
 		background: var(--text);
 		color: var(--bg);
-		font-weight: 600;
+		font-weight: var(--weight-semibold);
 		box-shadow: var(--shadow-lg);
 		cursor: pointer;
-		animation: pop 0.15s ease-out;
+		animation: pop var(--duration-fast) ease-out;
 	}
 	.what {
 		min-width: 0;
@@ -56,7 +56,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		font-weight: 400;
+		font-weight: var(--weight-regular);
 	}
 	@keyframes pop {
 		from {

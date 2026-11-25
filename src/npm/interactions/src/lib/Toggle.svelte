@@ -1,19 +1,57 @@
 <script lang="ts">
+	import type { HTMLInputAttributes } from 'svelte/elements';
+	import FieldMessage from './FieldMessage.svelte';
+	import type { FieldProps } from './forms.js';
+
+	/**
+	 * An on/off switch (`role="switch"`) for a setting that applies right away. For a choice saved with
+	 * a form, or one of several, use `Checkbox`. Other attributes go to the <input>.
+	 */
 	let {
 		checked = $bindable(false),
 		label,
+		hint,
+		error,
 		disabled = false,
-		onchange
-	}: { checked?: boolean; label: string; disabled?: boolean; onchange?: (checked: boolean) => void } = $props();
+		onchange,
+		class: className,
+		...rest
+	}: Omit<HTMLInputAttributes, 'type' | 'checked' | 'onchange' | 'class'> &
+		Omit<FieldProps, 'hideLabel' | 'required' | 'optional'> & {
+			checked?: boolean;
+			onchange?: (checked: boolean) => void;
+			/** Last resort: a class on the root element. */
+			class?: string;
+		} = $props();
+
+	const id = $props.id();
+	const messageId = `${id}-msg`;
 </script>
 
-<label class="toggle" class:disabled>
-	<span class="text">{label}</span>
-	<input type="checkbox" role="switch" bind:checked {disabled} onchange={() => onchange?.(checked)} />
-	<span class="track" aria-hidden="true"><span class="thumb"></span></span>
-</label>
+<div class={['toggle-field', className]}>
+	<label class={['toggle', disabled && 'disabled']}>
+		<span class="text">{label}</span>
+		<input
+			type="checkbox"
+			role="switch"
+			bind:checked
+			{disabled}
+			onchange={() => onchange?.(checked)}
+			aria-describedby={error || hint ? messageId : undefined}
+			aria-invalid={error ? 'true' : undefined}
+			{...rest}
+		/>
+		<span class="track" aria-hidden="true"><span class="thumb"></span></span>
+	</label>
+	<FieldMessage id={messageId} {error} {hint} />
+</div>
 
 <style>
+	.toggle-field {
+		display: inline-flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
 	.toggle {
 		position: relative;
 		display: inline-flex;
@@ -36,7 +74,7 @@
 		margin: 0;
 		opacity: 0;
 		cursor: pointer;
-		z-index: 1;
+		z-index: var(--z-raised);
 	}
 	input:disabled {
 		cursor: not-allowed;
@@ -46,9 +84,9 @@
 		flex: none;
 		width: 2.6rem;
 		height: 1.5rem;
-		border-radius: 1rem;
+		border-radius: var(--radius-full);
 		background: var(--control-border);
-		transition: background-color 0.15s;
+		transition: background-color var(--duration-fast);
 	}
 	.thumb {
 		position: absolute;
@@ -56,10 +94,10 @@
 		left: 0.15rem;
 		width: 1.2rem;
 		height: 1.2rem;
-		border-radius: 50%;
-		background: #fff;
-		box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-		transition: transform 0.15s;
+		border-radius: var(--radius-full);
+		background: var(--on-control);
+		box-shadow: var(--shadow);
+		transition: transform var(--duration-fast);
 	}
 	input:checked + .track {
 		background: var(--accent);

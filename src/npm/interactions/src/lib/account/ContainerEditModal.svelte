@@ -214,7 +214,8 @@
 
 	{#if leaveOnly}
 		<Button
-			variant="danger-ghost"
+			variant="ghost"
+			tone="danger"
 			onclick={() => (confirmLeave = true)}
 			disabled={busy || !cloud.online}
 			style="align-self:flex-start"
@@ -228,7 +229,8 @@
 		{/if}
 	{:else}
 		<Button
-			variant="danger-ghost"
+			variant="ghost"
+			tone="danger"
 			icon="trash"
 			onclick={() => (confirmDelete = true)}
 			disabled={busy || (isCloud && !cloud.online)}
@@ -245,7 +247,7 @@
 
 	{#snippet footer()}
 		<Button onclick={close}>Cancel</Button>
-		<Button variant="primary" type="submit" form={`edit-${containerId}`}>Save</Button>
+		<Button variant="solid" tone="accent" type="submit" form={`edit-${containerId}`}>Save</Button>
 	{/snippet}
 </Modal>
 
@@ -255,7 +257,7 @@
 	message={localMessage}
 	confirmLabel="Make local-only"
 	busyLabel="Making local-only…"
-	danger
+	tone="danger"
 	onconfirm={() => run(onmakelocal, `make the ${nouns.singular} local-only`)}
 />
 
@@ -265,7 +267,7 @@
 	message={`“${currentName}” and ${contentsLabel} will be deleted${others.length ? " for everyone it's shared with" : ''}. This can't be undone.`}
 	confirmLabel={`Delete ${nouns.singular}`}
 	busyLabel="Deleting…"
-	danger
+	tone="danger"
 	onconfirm={doDelete}
 />
 
@@ -276,7 +278,7 @@
 		(roles ? ' Ask an owner to share it again if you need it back.' : '')}
 	confirmLabel={`Leave ${nouns.singular}`}
 	busyLabel="Leaving…"
-	danger
+	tone="danger"
 	onconfirm={doLeave}
 />
 
@@ -284,11 +286,11 @@
 	.group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-2);
 	}
 	h3 {
 		margin: 0;
-		font-size: 0.95rem;
+		font-size: var(--text-sm);
 	}
 	.text-sm {
 		margin: 0;

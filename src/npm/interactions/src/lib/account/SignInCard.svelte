@@ -67,7 +67,7 @@
 	{/if}
 	<h2>Sign in</h2>
 	<p class="muted">{pitch}</p>
-	<Button variant="primary" onclick={google} disabled={busy || !cloud.online}>
+	<Button variant="solid" tone="accent" onclick={google} disabled={busy || !cloud.online}>
 		<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
 			<path
 				fill="#FFC107"
@@ -116,7 +116,7 @@
 <style>
 	.or {
 		text-align: center;
-		font-size: 0.9rem;
+		font-size: var(--text-sm);
 	}
 	.email {
 		display: flex;
@@ -124,12 +124,12 @@
 		gap: 0.35rem;
 	}
 	.email label {
-		font-weight: 600;
-		font-size: 0.9rem;
+		font-weight: var(--weight-semibold);
+		font-size: var(--text-sm);
 	}
 	.row {
 		display: flex;
-		gap: 0.5rem;
+		gap: var(--space-2);
 	}
 	.row input {
 		flex: 1;

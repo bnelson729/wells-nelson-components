@@ -1,11 +1,49 @@
 # Changelog: @wells-nelson/interactions
 
-## Unreleased (minor)
+The heading `## Unreleased (patch|minor|major)` decides the next release's version, and the release
+turns it into `## <version> (<date>)`. See [PUBLISHING.md](../../../PUBLISHING.md).
+
+## Unreleased (major)
+
+2.0: fields share one set of props, modals can stay mounted, and props follow the displays vocabulary.
+Needs `@wells-nelson/displays` 2.0. **Apps:** run `node scripts/codemods/v2.mjs <app folder>` from this
+repository and finish what it lists.
+
+- **Breaking:** `AddRow` is removed: create things with a "+ New …" `Button` that opens `NameModal`.
+- **Breaking:** `CollapsibleSection`: `collapsed` and `ontogglecollapse` are `expanded` (bindable, the
+  opposite) and `onexpandedchange(expanded)`; `variant` is `emphasis`; `appearance` is `layout`.
+- **Breaking:** `ActiveList`: `ontoggle` is `onactivechange`, `inactiveOpen` is `inactiveExpanded`,
+  `appearance` is `layout`. Its rows are `ListRow`s.
+- **Breaking:** `SignOutCard` and `SyncStatusCard` are no longer exported from `/account`; use
+  `AccountPanel`.
+- New `Overlay`: what a modal is about, kept until the dialog has finished closing. The default modal pattern:
+  keep the modal mounted, `bind:open={overlay.isOpen}` and `onclosed={overlay.closed}`, so nothing reads a
+  value that was cleared while the dialog closed.
+- `NameModal` can stay mounted: `open` is bindable, it starts again from `value` each time it opens, and takes
+  `onclosed`; `onclose` is optional and means the person backed out.
+- New `Field` (label, hint and error around any control) and `SelectField` (a labelled dropdown), and a
+  `FieldProps` type every control shares: `label`, `hideLabel`, `hint`, `error`, `required`, `optional`,
+  `disabled`.
+- `Checkbox`: `description`, `children` (rich label content), `block` (the whole row is the checkbox), `hint`
+  and `error`; other attributes go to the input.
+- `Segmented`: `size="sm"` for a compact choice inside a row, `hint`, `error`, `required`, `optional`,
+  `hideLabel`; it's a labelled `radiogroup`, and the chosen option stays visible in forced colors.
+- `Toggle`: `hint` and `error`; the thumb is `--on-control`.
+- `Combobox`: `hint`, `optional`, `disabled` and `onchange(choice)`.
+- `TextField`: other attributes go to the input as before; `readonly` reads as plain text.
+- `CollapsibleSection` and `ActiveList` take an `empty` snippet; icon buttons in a section's rows are small and
+  muted.
+- Every component uses the theme's scales (space, type, layers, motion) and takes `class`.
+
+## 1.2.5 (2026-11-24)
 
 - New `NameModal`: create something by name (one field, Cancel and Create, optional extra fields, `validate`,
   async `onsubmit` with its error shown). Opened from a "+ New …" button by the page or section title.
 - `AddRow` `onempty`: with it, the + (or Enter) on an empty field opens the full form (e.g. a `NameModal`)
   instead of doing nothing; the + is no longer disabled.
+
+## 1.2.4 (2026-11-23)
+
 - New `DataRiskButton` and `deviceMayClearData()` (`/account`): Safari, and every browser on iPhone and
   iPad, deletes a site's data after 7 days without a visit unless the app is installed. Show the button
   next to each local-only container there; it explains the risk and the ways out (install the app, sign in
@@ -15,6 +53,8 @@
   empty until it was focused and left.
 - `ContainerEditModal` takes `children`: the app's own settings for the container, under "Open … when the
   app starts".
+
+## 1.2.3 (2026-11-22)
 
 Content pass (one vocabulary for sync, errors people can act on):
 
@@ -37,13 +77,18 @@ Content pass (one vocabulary for sync, errors people can act on):
 - `AppVersion`: "Update now"; a failed check says whether you're offline.
 - `DeviceDataCard`: "Added 2 projects to this device."; busy "Asking the browser…".
 
-Accessibility and usability pass:
+## 1.2.2 (2026-11-22)
 
 - `CollapsibleSection`: the title is a heading (`headingLevel`, h2 by default) holding the collapse button, so
   screen reader users can move between sections; the chevron is a pointer-only duplicate, out of the tab order
   and hidden from assistive tech.
 - `AddRow`: the field is named by its placeholder (the text people see), the button by `label` (before, both
   had `label`).
+
+## 1.2.1 (2026-11-21)
+
+Accessibility and usability pass:
+
 - `TextField`: error and hint tied to the input (`aria-describedby`), errors announced; `hideLabel`, `required`.
 - `Combobox`: `aria-activedescendant` and option ids; `aria-selected` marks the chosen option; errors tied and announced.
 - `Checkbox`: `disabled`, `tone="muted"`; 44px; states stay visible in forced-colors mode (so does `Toggle`'s).
@@ -58,6 +103,8 @@ Accessibility and usability pass:
 - `LocalItemsPrompt`: "Keep them on this device" (was "Not now", which never asked again) with a note on
   changing it later; the primary button waits until something is ticked.
 
+## 1.2.0 (2026-11-12)
+
 - `SyncBanners`: the rejected-write and write-error banners every site shows, dismissable.
 - `checkForUpdatesOnStart`, `touchFeedback` and `preventZoom`: start-up helpers for apps.
 - `errorText(err)`: an error as one line for the UI.
@@ -66,4 +113,6 @@ Accessibility and usability pass:
 
 ## 1.1.0 and earlier
 
-See the git tags `@wells-nelson/interactions@<version>`.
+See the git tags `@wells-nelson/interactions@<version>`. Versions 1.2.1 to 1.2.5 were released as
+patches (the bump then came from commit messages) although several added features; their headings
+were reconstructed from git history.

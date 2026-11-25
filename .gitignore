@@ -1,6 +1,8 @@
 # Custom files
 docs/todo.md
+docs/to-test.md
 docs/*-review.md
+docs/promotion-log.md
 
 # Logs
 logs
@@ -154,3 +156,7 @@ vite.config.ts.timestamp-*
 
 # Packed workspace tarballs
 packs/
+
+# Playwright output
+test-results/
+playwright-report/

@@ -14,7 +14,7 @@
 		dev,
 		profileHref,
 		profileLabel = 'Profile',
-		profileActive = false,
+		profileCurrent = false,
 		avatarUrl,
 		unsynced = false,
 		unsyncedLabel = 'Unsynced changes',
@@ -37,7 +37,8 @@
 		dev?: Snippet;
 		profileHref: string;
 		profileLabel?: string;
-		profileActive?: boolean;
+		/** The profile page is the current one (`aria-current`), drawn highlighted. */
+		profileCurrent?: boolean;
 		avatarUrl?: string | null;
 		/** Shows a warning dot on the avatar. */
 		unsynced?: boolean;
@@ -47,10 +48,10 @@
 		/** Max width of the header content (CSS length), e.g. a wider value on dashboard screens. */
 		width?: string;
 		/**
-		 * Which nav buttons with `showLabel` show their label: `always` all of them, `active` only the
-		 * current one (the others show just the icon).
+		 * Which nav buttons with `showLabel` show their label: `always` all of them, `current` only the
+		 * current page's (the others show just the icon).
 		 */
-		labels?: 'always' | 'active';
+		labels?: 'always' | 'current';
 		/** Show `profileLabel` next to the avatar, like a nav button with `showLabel`. */
 		profileShowLabel?: boolean;
 	} = $props();
@@ -92,7 +93,8 @@
 				href={profileHref}
 				aria-label={unsynced ? `${profileLabel} (${lowerFirst(unsyncedLabel)})` : profileLabel}
 				title={profileShowLabel ? undefined : profileLabel}
-				class:active={profileActive}
+				class:current={profileCurrent}
+				aria-current={profileCurrent ? 'page' : undefined}
 			>
 				<span class="avatar">
 					{#if avatarUrl}
@@ -116,11 +118,11 @@
 		top: 0;
 		left: 0;
 		right: 0;
-		z-index: 50;
+		z-index: var(--z-fixed);
 		padding-top: env(safe-area-inset-top, 0px);
 		background: var(--surface);
 		border-bottom: 1px solid var(--border);
-		transition: transform 0.2s ease;
+		transition: transform var(--duration-normal) ease;
 	}
 	header.hidden {
 		transform: translateY(-100%);
@@ -131,15 +133,15 @@
 		justify-content: space-between;
 		height: var(--header-h);
 		margin: 0 auto;
-		padding: 0 0.25rem 0 1rem;
+		padding: 0 var(--space-1) 0 var(--space-4);
 	}
 	.brand {
 		display: inline-flex;
 		align-items: center;
 		min-height: var(--tap, 2.75rem);
 		min-width: var(--tap, 2.75rem);
-		font-weight: 800;
-		font-size: 1.35rem;
+		font-weight: var(--weight-heavy);
+		font-size: 1.35rem; /* the brand mark has its own size */
 		letter-spacing: 0.02em;
 		color: var(--accent-text);
 		text-decoration: none;
@@ -149,15 +151,15 @@
 		align-items: center;
 		gap: 0.1rem;
 	}
-	/* labels="active": labeled buttons other than the current one show just their icon. */
-	.labels-active :global(.icon-btn.labeled:not(.active)) {
+	/* labels="current": labeled buttons other than the current page's show just their icon. */
+	.labels-current :global(.icon-btn.labeled:not(.current)) {
 		width: var(--tap, 2.75rem);
 		padding: 0;
 		justify-content: center;
 		border-radius: 50%;
 	}
-	.labels-active :global(.icon-btn.labeled:not(.active) .text),
-	.labels-active .profile.labeled:not(.active) .text {
+	.labels-current :global(.icon-btn.labeled:not(.current) .text),
+	.labels-current .profile.labeled:not(.current) .text {
 		display: none;
 	}
 	.profile {
@@ -174,7 +176,7 @@
 	.profile.labeled {
 		padding: 0 0.85rem 0 0.3rem;
 	}
-	.labels-active .profile.labeled:not(.active) {
+	.labels-current .profile.labeled:not(.current) {
 		padding: 0;
 	}
 	.avatar {
@@ -185,18 +187,24 @@
 		height: var(--tap, 2.75rem);
 	}
 	.text {
-		font-size: 0.92rem;
-		font-weight: 600;
+		font-size: var(--text-sm);
+		font-weight: var(--weight-semibold);
 		white-space: nowrap;
 	}
 	.profile:hover,
-	.profile.active {
+	.profile.current {
 		background: var(--accent-soft);
+	}
+	@media (forced-colors: active) {
+		.profile.current {
+			outline: 2px solid Highlight;
+			outline-offset: -2px;
+		}
 	}
 	.profile img {
 		width: 1.9rem;
 		height: 1.9rem;
-		border-radius: 50%;
+		border-radius: var(--radius-full);
 	}
 	.dot {
 		position: absolute;

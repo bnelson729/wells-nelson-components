@@ -6,7 +6,11 @@
 export const baseIcons = {
 	alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
 	check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+	/** Points down; `chevron-up`, `chevron-left` and `chevron-right` point the other ways. */
 	chevron: '<path d="M6 9l6 6 6-6"/>',
+	'chevron-up': '<path d="M6 15l6-6 6 6"/>',
+	'chevron-left': '<path d="M15 6l-6 6 6 6"/>',
+	'chevron-right': '<path d="M9 6l6 6-6 6"/>',
 	cloud: '<path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18.5z"/>',
 	'cloud-pending':
 		'<path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18.5z"/><path d="M12 10.5v5M9.8 12.7l2.2-2.2 2.2 2.2"/>',
@@ -36,8 +40,21 @@ export const baseIcons = {
 
 export type BaseIconName = keyof typeof baseIcons;
 
-/** A base icon or any name an app registered. `string & {}` keeps editor completion for the base set. */
-export type IconName = BaseIconName | (string & {});
+/**
+ * The icons an app registers with `registerIcons`, declared so their names are type-checked like the
+ * base set's. In the app (e.g. next to its `registerIcons` call):
+ *
+ *   declare module '@wells-nelson/displays' {
+ *     interface AppIcons {
+ *       eye: true;
+ *       'list-add': true;
+ *     }
+ *   }
+ */
+export interface AppIcons {}
+
+/** A base icon or one an app declared in `AppIcons` (and registered). */
+export type IconName = BaseIconName | (keyof AppIcons & string);
 
 const registry = new Map<string, string>(Object.entries(baseIcons));
 
@@ -45,11 +62,11 @@ const registry = new Map<string, string>(Object.entries(baseIcons));
  * Add (or replace) icons. Values are the inner SVG markup for a 24x24 viewBox, stroke-based.
  * Call once at startup, before anything renders them.
  */
-export function registerIcons(icons: Record<string, string>) {
+export function registerIcons(icons: Partial<Record<IconName, string>> & Record<string, string>) {
 	for (const [name, markup] of Object.entries(icons)) registry.set(name, markup);
 }
 
-/** The SVG markup for an icon, or '' when the name isn't registered. */
+/** The SVG markup for an icon, or '' when the name isn't registered (`Icon` warns in development). */
 export function iconMarkup(name: IconName): string {
 	return registry.get(name) ?? '';
 }

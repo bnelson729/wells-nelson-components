@@ -151,6 +151,7 @@
 						<span>{item.name}</span>
 						<Button
 							variant="ghost"
+							tone="accent"
 							icon="download"
 							onclick={() => download([item], slug(item.name))}
 							disabled={busy}
@@ -185,7 +186,7 @@
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: var(--space-2);
 	}
 	summary {
 		cursor: pointer;
@@ -204,7 +205,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
+		gap: var(--space-2);
 		border-top: 1px solid var(--border);
 	}
 	.items li span {

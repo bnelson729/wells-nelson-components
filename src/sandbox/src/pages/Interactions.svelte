@@ -1,15 +1,17 @@
 <script lang="ts">
-	import { Badge, Button, IconButton, Modal } from '@wells-nelson/displays';
+	import { Badge, Button, IconButton, ListRow, Modal } from '@wells-nelson/displays';
 	import {
 		ActiveList,
-		AddRow,
 		AppVersion,
 		Checkbox,
 		CollapsibleSection,
 		Combobox,
 		DevWipeButton,
+		Field,
 		NameModal,
+		Overlay,
 		SearchBar,
+		SelectField,
 		SyncBanners,
 		Segmented,
 		TextField,
@@ -44,8 +46,11 @@
 	let tagOptions = $state(tags.map((t) => ({ id: t.id, label: t.label })));
 	let priority = $state<'low' | 'normal' | 'high'>('normal');
 	const nameError = $derived(name && name.trim().length < 3 ? 'At least 3 characters.' : null);
-	/** NameModal: opened by "+ New person", or by the AddRow's + with nothing typed. */
-	let naming = $state(false);
+	let sortBy = $state<'title' | 'status' | 'assignee'>('status');
+	let due = $state('');
+	let size = $state<'S' | 'M' | 'L'>('M');
+	/** NameModal stays mounted; the Overlay opens it. */
+	const naming = new Overlay();
 
 	function createTag() {
 		if (tagChoice && 'newName' in tagChoice) {
@@ -58,7 +63,7 @@
 	// ------------------------------------------------ tasks grouped by status, with drag and drop
 	let tasks = $state<Task[]>(mockTasks.map((t) => ({ ...t })));
 	let statusOrder = $state<Status[]>(mockStatuses.map((s) => s.id));
-	let collapsed = $state<Record<string, boolean>>({});
+	let expanded = $state<Record<string, boolean>>({});
 	let dragging = $state<'task' | 'section' | null>(null);
 	let query = $state('');
 	const undo = new UndoStack();
@@ -96,7 +101,7 @@
 
 	// ------------------------------------------------ people
 	let people = $state(mockPeople.map((p) => ({ ...p })));
-	let inactiveOpen = $state(false);
+	let inactiveExpanded = $state(false);
 	let opened = $state<string | null>(null);
 	let collapsibleActive = $state(true);
 	let sideBySide = $state(true);
@@ -136,7 +141,31 @@
 			{ value: 'high', label: 'High' }
 		]}
 	/>
-	<p class="muted">Checked: {checked} · toggled: {toggled} · priority: {priority}</p>
+	<SelectField
+		label="Sort tasks by"
+		bind:value={sortBy}
+		options={[
+			{ value: 'title', label: 'Title' },
+			{ value: 'status', label: 'Status' },
+			{ value: 'assignee', label: 'Assignee' }
+		]}
+		hint="Done tasks keep their order."
+	/>
+	<Field label="Due" optional hint="Your local time.">
+		{#snippet children(control)}<input type="datetime-local" {...control} bind:value={due} />{/snippet}
+	</Field>
+	<Segmented
+		label="Size"
+		size="sm"
+		bind:value={size}
+		options={[
+			{ value: 'S', label: 'S' },
+			{ value: 'M', label: 'M' },
+			{ value: 'L', label: 'L' }
+		]}
+	/>
+	<Checkbox label="Write the summary" description="Due Friday · Ann" block />
+	<p class="muted">Checked: {checked} · toggled: {toggled} · priority: {priority} · sort: {sortBy} · size: {size}</p>
 </Panel>
 
 <Panel
@@ -166,13 +195,13 @@
 				title={statusName(status)}
 				count={rows.length}
 				countLabel={(n) => `${n} tasks`}
-				collapsed={!!collapsed[status] || dragging === 'section'}
-				ontogglecollapse={() => (collapsed[status] = !collapsed[status])}
+				expanded={(expanded[status] ?? true) && dragging !== 'section'}
+				onexpandedchange={(open) => (expanded[status] = open)}
 				onadd={() => addTask(status)}
 				addLabel={`Add to ${statusName(status)}`}
 				onedit={() => alert(`Settings for “${statusName(status)}”`)}
-				variant={status === 'done' ? 'subtle' : 'default'}
-				{appearance}
+				emphasis={status === 'done' ? 'subtle' : 'default'}
+				layout={appearance}
 				dragData={{ type: 'section', id: status }}
 				ondragstart={() => (dragging = 'section')}
 				ondragend={() => (dragging = null)}
@@ -183,16 +212,19 @@
 				}}
 			>
 				{#each rows as task (task.id)}
-					<li class="task" data-dnd-item>
+					<ListRow data-dnd-item>
 						<Checkbox
 							label={`${task.title} done`}
 							hideLabel
 							checked={task.status === 'done'}
 							onchange={() => toggleDone(task)}
 						/>
-						<span class="title" class:done={task.status === 'done'}>{task.title}</span>
+						<span class="line-text"
+							><span class="line-name title" class:done={task.status === 'done'}>{task.title}</span></span
+						>
 						<Badge>{personName(task.assignee).split(' ')[0]}</Badge>
-					</li>
+						<IconButton icon="pencil" label={`Edit ${task.title}`} onclick={() => alert(task.title)} />
+					</ListRow>
 				{/each}
 			</CollapsibleSection>
 		{/each}
@@ -205,16 +237,16 @@
 		items={people}
 		noun="People"
 		label={(p) => p.name}
-		bind:inactiveOpen
-		{appearance}
+		bind:inactiveExpanded
+		layout={appearance}
 		{collapsibleActive}
 		{sideBySide}
-		ontoggle={(p, on) => (people.find((x) => x.id === p.id)!.active = on)}
+		onactivechange={(p, on) => (people.find((x) => x.id === p.id)!.active = on)}
 		onopen={(p) => (opened = p.name)}
 	/>
 	<Toggle label="Active section collapses (collapsibleActive)" bind:checked={collapsibleActive} />
 	<Toggle label="Side by side once 40rem wide (sideBySide)" bind:checked={sideBySide} />
-	<p class="muted">Inactive open: {inactiveOpen} · last opened: {opened ?? '—'}</p>
+	<p class="muted">Inactive expanded: {inactiveExpanded} · last opened: {opened ?? '—'}</p>
 </Panel>
 
 <Panel
@@ -255,33 +287,26 @@
 	<TextField label="Title" value="Write the summary" />
 	<Combobox label="Tag" options={tagOptions} bind:choice={modalTag} createLabel="Create tag" />
 	{#snippet footer()}
-		<Button variant="primary" onclick={() => (comboModal = false)}>Done</Button>
+		<Button variant="solid" tone="accent" onclick={() => (comboModal = false)}>Done</Button>
 	{/snippet}
 </Modal>
 
-<Panel title="AddRow and NameModal" note="The + with nothing typed opens the modal, as does New person.">
+<Panel title="NameModal and Overlay" note="Opened by a + New … button by the title; the modal stays mounted.">
 	<div class="row">
-		<Button icon="plus" onclick={() => (naming = true)}>New person</Button>
+		<Button icon="plus" onclick={() => naming.show()}>New person</Button>
 	</div>
-	<AddRow
-		placeholder="Add a person"
-		label="Add person"
-		onadd={(n) => (people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }])}
-		onempty={() => (naming = true)}
-	/>
 </Panel>
 
-{#if naming}
-	<NameModal
-		title="New person"
-		label="Name"
-		validate={(n) => (people.some((p) => p.name === n) ? 'Someone already has that name.' : null)}
-		onsubmit={(n) => {
-			people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }];
-		}}
-		onclose={() => (naming = false)}
-	/>
-{/if}
+<NameModal
+	bind:open={naming.isOpen}
+	onclosed={naming.closed}
+	title="New person"
+	label="Name"
+	validate={(n) => (people.some((p) => p.name === n) ? 'Someone already has that name.' : null)}
+	onsubmit={(n) => {
+		people = [...people, { id: crypto.randomUUID(), name: n, email: '', active: true }];
+	}}
+/>
 
 <Panel title="longpress" note="Hold the button still for half a second. The click after a long press is swallowed.">
 	<div class="row">
@@ -306,19 +331,6 @@
 <UndoButton stack={undo} />
 
 <style>
-	.task {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-height: 3rem;
-		padding: 0 0.75rem 0 0.25rem;
-		border-top: 1px solid var(--border);
-		list-style: none;
-	}
-	.title {
-		flex: 1;
-		min-width: 0;
-	}
 	.title.done {
 		color: var(--muted);
 		text-decoration: line-through;

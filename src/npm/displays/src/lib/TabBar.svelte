@@ -43,7 +43,7 @@
 <nav class="tab-bar" aria-label={label}>
 	{#each items as item (item.label)}
 		{#if item.href}
-			<a class="tab" class:active={item.active} href={item.href} aria-current={item.active ? 'page' : undefined}>
+			<a class="tab" class:current={item.current} href={item.href} aria-current={item.current ? 'page' : undefined}>
 				{@render content(item)}
 			</a>
 		{:else}
@@ -61,7 +61,7 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 50;
+		z-index: var(--z-fixed);
 		display: grid;
 		grid-auto-flow: column;
 		grid-auto-columns: 1fr;
@@ -77,8 +77,8 @@
 		gap: 0.15rem;
 		height: var(--tabbar-h);
 		color: var(--muted);
-		font-size: 0.72rem;
-		font-weight: 600;
+		font-size: var(--text-xs);
+		font-weight: var(--weight-semibold);
 		text-decoration: none;
 		-webkit-touch-callout: none;
 		user-select: none;
@@ -90,13 +90,18 @@
 		width: 3.5rem;
 		height: 1.9rem;
 		border-radius: 1rem;
-		transition: background-color 0.15s;
+		transition: background-color var(--duration-fast);
 	}
-	.active {
+	.current {
 		color: var(--accent-text);
 	}
-	.active .icon {
+	.current .icon {
 		background: var(--accent-soft);
+	}
+	@media (forced-colors: active) {
+		.current .icon {
+			outline: 2px solid Highlight;
+		}
 	}
 	.disabled {
 		opacity: 0.4;

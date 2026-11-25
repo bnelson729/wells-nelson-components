@@ -14,7 +14,7 @@
 		place-items: center;
 		min-height: 100dvh;
 		font-size: 2.5rem;
-		font-weight: 800;
+		font-weight: var(--weight-heavy);
 		color: var(--accent-text);
 	}
 </style>

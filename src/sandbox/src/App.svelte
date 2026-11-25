@@ -1,23 +1,29 @@
 <script lang="ts">
-	import { AppHeader, IconButton, phoneLayout, TabBar } from '@wells-nelson/displays';
+	import { AppHeader, IconButton, phoneLayout, TabBar, type IconName } from '@wells-nelson/displays';
 	import greenPalette from '@wells-nelson/displays/palettes/green.css?inline';
+	import purplePalette from '@wells-nelson/displays/palettes/purple.css?inline';
 	import type { Component } from 'svelte';
 	import Account from './pages/Account.svelte';
 	import BuildTools from './pages/BuildTools.svelte';
 	import DataStorage from './pages/DataStorage.svelte';
 	import Displays from './pages/Displays.svelte';
 	import Interactions from './pages/Interactions.svelte';
+	import States from './pages/States.svelte';
 	import { shell } from './state.svelte';
 
-	const pages: { id: string; label: string; icon: string; component: Component }[] = [
+	const pages: { id: string; label: string; icon: IconName; component: Component }[] = [
 		{ id: 'displays', label: 'Displays', icon: 'layout', component: Displays },
 		{ id: 'interactions', label: 'Interactions', icon: 'cursor', component: Interactions },
+		{ id: 'states', label: 'States', icon: 'grid', component: States },
 		{ id: 'account', label: 'Account and sharing', icon: 'users', component: Account },
 		{ id: 'data-storage', label: 'Data storage', icon: 'database', component: DataStorage },
 		{ id: 'build-tools', label: 'Build tools', icon: 'tool', component: BuildTools }
 	];
 
-	const fromHash = () => location.hash.replace(/^#\/?/, '') || 'displays';
+	// "#/states?palette=green": a page, and optionally the palette to show it in (used by the visual tests).
+	const fromHash = () => location.hash.replace(/^#\/?/, '').split('?')[0] || 'displays';
+	const hashPalette = new URLSearchParams(location.hash.split('?')[1] ?? '').get('palette');
+	if (hashPalette === 'green' || hashPalette === 'purple' || hashPalette === 'blue') shell.palette = hashPalette;
 	let route = $state(fromHash());
 	const page = $derived(pages.find((p) => p.id === route) ?? pages[0]);
 
@@ -29,11 +35,13 @@
 
 	const showTabBar = $derived(shell.tabBar === 'on' || (shell.tabBar === 'auto' && phoneLayout.current));
 
-	// The palette is switched by adding / removing the green stylesheet.
+	// The palette is switched by adding / removing its stylesheet (blue is the theme's own).
+	const paletteCss = { blue: '', green: greenPalette, purple: purplePalette };
 	$effect(() => {
-		if (shell.palette !== 'green') return;
+		const css = paletteCss[shell.palette];
+		if (!css) return;
 		const style = document.createElement('style');
-		style.textContent = greenPalette;
+		style.textContent = css;
 		document.head.append(style);
 		return () => style.remove();
 	});
@@ -47,12 +55,12 @@
 		brandHref="#/displays"
 		brandLabel="Sandbox home"
 		profileHref="#/account"
-		profileActive={route === 'account'}
+		profileCurrent={route === 'account'}
 		avatarUrl={shell.avatar ? AVATAR : null}
 		unsynced={shell.unsynced}
 		hideOnScroll={shell.hideOnScroll}
 		width={shell.wide ? '64rem' : undefined}
-		labels={shell.labels === 'active' ? 'active' : 'always'}
+		labels={shell.labels === 'current' ? 'current' : 'always'}
 		profileShowLabel={shell.profileLabel}
 		profileLabel="Account"
 	>
@@ -63,7 +71,7 @@
 					icon={p.icon}
 					label={p.label.split(' ')[0]}
 					href={`#/${p.id}`}
-					active={route === p.id}
+					current={route === p.id}
 					showLabel={shell.labels !== 'none'}
 				/>
 			{/each}
@@ -75,7 +83,7 @@
 			label: p.label.split(' ')[0],
 			icon: p.icon,
 			href: `#/${p.id}`,
-			active: route === p.id,
+			current: route === p.id,
 			imageUrl: p.id === 'account' && shell.avatar ? AVATAR : null,
 			dot: p.id === 'account' && shell.unsynced,
 			dotLabel: 'Unsynced changes'

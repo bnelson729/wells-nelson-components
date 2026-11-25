@@ -8,6 +8,13 @@ import { MediaQuery } from 'svelte/reactivity';
  */
 export const PHONE_LAYOUT_QUERY = '(max-width: 40rem), (pointer: coarse) and (max-height: 30rem)';
 
+/**
+ * The phone breakpoint, for CSS that can't read a custom property in a media query: write
+ * `@media (max-width: 40rem)` (phone) and `(min-width: 40rem)` (wider), never 40.01rem. A layout
+ * that must match `phoneLayout` exactly also needs PHONE_LAYOUT_QUERY's landscape clause.
+ */
+export const PHONE_MAX_WIDTH = '40rem';
+
 let query: MediaQuery | undefined;
 
 /**

@@ -12,6 +12,7 @@
 		Splash,
 		baseIcons,
 		phoneLayout,
+		type IconName,
 		type SortableColumn
 	} from '@wells-nelson/displays';
 	import { Segmented, Toggle } from '@wells-nelson/interactions';
@@ -19,7 +20,7 @@
 	import Panel from '../Panel.svelte';
 	import { shell } from '../state.svelte';
 
-	const extraIcons = ['layout', 'cursor', 'users', 'database', 'tool'];
+	const extraIcons: IconName[] = ['layout', 'cursor', 'users', 'database', 'tool', 'grid'];
 	let modalOpen = $state(false);
 	let modalSize = $state<'sm' | 'md' | 'lg'>('md');
 	let confirmOpen = $state(false);
@@ -63,21 +64,27 @@
 	];
 </script>
 
-<Panel title="Theme" note="theme.css plus the optional green palette. Dark mode follows the system setting.">
+<Panel title="Theme" note="theme.css plus an optional palette. Dark mode follows the system setting.">
 	<Segmented
 		label="Palette"
 		bind:value={shell.palette}
 		options={[
 			{ value: 'blue', label: 'Blue (default)' },
-			{ value: 'green', label: 'Green' }
+			{ value: 'green', label: 'Green' },
+			{ value: 'purple', label: 'Purple' }
 		]}
 	/>
 	<div class="swatches">
-		{#each ['--bg', '--surface', '--surface-2', '--text', '--muted', '--border-strong', '--accent', '--accent-soft', '--danger', '--danger-soft', '--warning', '--warning-soft'] as token (token)}
+		{#each ['--bg', '--surface', '--surface-2', '--text', '--muted', '--border-strong', '--accent', '--accent-soft', '--danger', '--danger-soft', '--warning', '--warning-soft', '--success', '--success-soft'] as token (token)}
 			<div class="swatch"><span style:background={`var(${token})`}></span><code>{token}</code></div>
 		{/each}
 	</div>
-	<div class="notice"><Icon name="alert" /> A <code>.notice</code> using the warning tokens.</div>
+	<div class="type-scale">
+		{#each ['xs', 'sm', 'md', 'lg', 'xl'] as step (step)}
+			<span style:font-size={`var(--text-${step})`}><code>--text-{step}</code></span>
+		{/each}
+	</div>
+	<p class="overline">An .overline heading</p>
 	<label class="date">
 		<span>A <code>datetime-local</code> input, styled like the text inputs</span>
 		<input type="datetime-local" value="2026-06-07T10:00" step="300" />
@@ -100,7 +107,7 @@
 		options={[
 			{ value: 'none', label: 'None' },
 			{ value: 'always', label: 'Always' },
-			{ value: 'active', label: 'Active only' }
+			{ value: 'current', label: 'Current only' }
 		]}
 	/>
 	<Toggle label="Label the profile (profileShowLabel)" bind:checked={shell.profileLabel} />
@@ -124,26 +131,32 @@
 
 <Panel title="Button and IconButton">
 	<div class="row">
-		<Button variant="primary" icon="plus">Primary</Button>
-		<Button>Secondary</Button>
-		<Button variant="danger" icon="trash">Danger</Button>
-		<Button variant="ghost">Ghost</Button>
-		<Button variant="primary" disabled>Disabled</Button>
+		<Button variant="solid" tone="accent" icon="plus">Solid accent</Button>
+		<Button>Outline (default)</Button>
+		<Button variant="solid" tone="danger" icon="trash">Solid danger</Button>
+		<Button variant="ghost" tone="accent">Ghost accent</Button>
+		<Button variant="ghost" tone="danger" icon="trash">Ghost danger</Button>
+		<Button variant="outline" tone="success">Outline success</Button>
+		<Button variant="solid" tone="accent" disabled>Disabled</Button>
+		<Button variant="solid" tone="accent" busy>Saving…</Button>
 	</div>
+	<p class="muted">Every variant and tone, with disabled, busy and long labels, is on the States page.</p>
 	<Button block icon="share">Block</Button>
 	<div class="row">
 		<IconButton icon="pencil" label="Edit" />
-		<IconButton icon="share" label="Share" active={activeIcon} onclick={() => (activeIcon = !activeIcon)} />
+		<IconButton icon="share" label="Share" current={activeIcon} onclick={() => (activeIcon = !activeIcon)} />
 		<IconButton icon="trash" label="Delete" disabled />
 		<IconButton icon="gear" label="Settings (link)" href="#/displays" />
 		<IconButton icon="home" label="Home" href="#/displays" showLabel />
-		<span class="muted">The share button toggles <code>active</code>.</span>
+		<IconButton icon="x" label="Small" size="sm" />
+		<IconButton icon="pencil" label="Muted" size="md" tone="muted" />
+		<span class="muted">The share button toggles <code>current</code>.</span>
 	</div>
 </Panel>
 
 <Panel title="Icon" note="The base set, then icons registered by this sandbox with registerIcons.">
 	<div class="icons">
-		{#each [...Object.keys(baseIcons), ...extraIcons] as name (name)}
+		{#each [...(Object.keys(baseIcons) as IconName[]), ...extraIcons] as name (name)}
 			<div class="icon-cell" class:extra={extraIcons.includes(name)}>
 				<Icon {name} size={24} />
 				<code>{name}</code>
@@ -207,11 +220,17 @@
 	title="Archive this project?"
 	message={'It disappears from the list.\n\nThe confirm button stays busy for a second to show the busy state.'}
 	confirmLabel="Archive"
-	danger={dangerConfirm}
+	tone={dangerConfirm ? 'danger' : 'accent'}
 	onconfirm={() => new Promise<void>((r) => setTimeout(() => (confirmed++, r()), 1000))}
 />
 
 <style>
+	.type-scale {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--space-3);
+	}
 	.date {
 		display: flex;
 		flex-direction: column;

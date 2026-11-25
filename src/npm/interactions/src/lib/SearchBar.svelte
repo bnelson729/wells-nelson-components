@@ -13,7 +13,7 @@
 		<Icon name="search" />
 		<input type="search" bind:value {placeholder} aria-label={placeholder} enterkeyhint="search" />
 		{#if value}
-			<IconButton icon="x" label={clearLabel} size={18} onclick={() => (value = '')} />
+			<IconButton icon="x" label={clearLabel} size="sm" onclick={() => (value = '')} />
 		{/if}
 	</div>
 </div>
@@ -26,17 +26,18 @@
 		right: 0;
 		/* Above a bottom tab bar when there is one (--footer-offset includes the safe area then). */
 		bottom: var(--footer-offset, 0px);
-		z-index: 40;
-		padding: 0.5rem 1rem calc(0.5rem + max(0px, env(safe-area-inset-bottom, 0px) - var(--footer-offset, 0px)));
+		z-index: var(--z-fixed);
+		padding: var(--space-2) var(--space-4)
+			calc(var(--space-2) + max(0px, env(safe-area-inset-bottom, 0px) - var(--footer-offset, 0px)));
 		background: linear-gradient(to top, var(--bg) 70%, transparent);
 	}
 	.inner {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-2);
 		max-width: var(--content-w);
 		margin: 0 auto;
-		padding: 0 0.25rem 0 0.9rem;
+		padding: 0 var(--space-1) 0 0.9rem;
 		background: var(--surface);
 		border: 1px solid var(--control-border);
 		border-radius: 2rem;

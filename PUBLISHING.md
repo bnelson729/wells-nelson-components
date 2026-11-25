@@ -11,12 +11,16 @@ public npm registry with its own version.
   changed since its latest tag. Changes only to its tests or Markdown don't count. Packages
   that were never released are released.
 - [reecetech/version-increment](https://github.com/reecetech/version-increment) computes the next
-  version from that package's latest tag. The bump comes from the package's commits since that tag
-  ([scripts/release/plan.mjs](scripts/release/plan.mjs)): a line `Release: minor` or `Release: major`
-  in any of them asks for that bump, the biggest wins, and it's a **patch** otherwise. A package with no
-  tag yet starts from 0.0.0, so its first automatic release is 0.0.1.
-- Each package's `CHANGELOG.md` collects changes under **Unreleased**; when releasing, move them under the
-  new version's heading.
+  version from that package's latest tag. The bump comes from the package's `CHANGELOG.md`
+  ([scripts/release/plan.mjs](scripts/release/plan.mjs)): its heading `## Unreleased (patch|minor|major)`.
+  A package with no tag yet starts from 0.0.0, so its first automatic release is 0.0.1.
+- The changelog is checked on every pull request and before releasing: a package whose shipped files
+  changed needs entries under that heading, the heading must name the bump, and an entry starting with
+  `**Breaking:**` can only be released in a major. A failed check stops the release.
+- After publishing, the workflow turns the Unreleased heading into `## <version> (<date>)`
+  ([scripts/release/cut-changelog.mjs](scripts/release/cut-changelog.mjs)) and pushes that commit to
+  `main`. The release tag stays on the commit that was built. If `main` is protected, let GitHub Actions
+  bypass the rule, or move the heading by hand when the run warns that it couldn't.
 - The workflow writes the version into `package.json` only for the publish (in the repo it stays
   `0.0.0`), publishes, then pushes the tag.
 - Packages publish one at a time in dependency order (`displays` before `interactions`).
@@ -30,7 +34,8 @@ Manual releases: **Actions → Packages → Run workflow** (on `main`). Choose:
 
 - **packages:** comma-separated names (`displays, interactions, data-storage, build-tools`),
   `all`, or empty for "changed since last release".
-- **increment:** `auto` (from the commits' `Release:` lines, the default), `patch`, `minor` or `major`.
+- **increment:** `auto` (from each changelog's Unreleased heading, the default), `patch`, `minor` or
+  `major`. An entry marked Breaking still needs `major`.
 
 ## One-time setup
 

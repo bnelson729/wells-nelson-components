@@ -1,17 +1,18 @@
 # wells-nelson-components
 
 Shared components for Wells Nelson projects: Svelte 5 UI, an offline-first storage and sync
-layer, and build tooling for SvelteKit sites (apps and websites).
+layer, and build tooling for SvelteKit sites (apps and websites). How sites should look and behave, and
+which component to use when, is in the [design guide](docs/design-guide.md).
 
 The packages live under [src/npm](src/npm) as npm workspaces. Each one builds, tests and ships
 on its own:
 
 | Package | What's in it |
 | --- | --- |
-| [`@wells-nelson/displays`](src/npm/displays) | `Button`, `IconButton`, `Icon` (+ `registerIcons`), `Modal`, `ConfirmDialog`, `Badge`, `AppHeader`, `SortableTable`, `Leaderboards`, `Splash`, `FatalError`, `theme.css` and palettes |
-| [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `Checkbox`, `Toggle`, `Combobox`, `AddRow`, `NameModal`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `SyncBanners`, `longpress`, drag and drop, start-up helpers (`checkForUpdatesOnStart`, `touchFeedback`, `preventZoom`), `errorText`, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
+| [`@wells-nelson/displays`](src/npm/displays) | `Button`, `IconButton`, `Icon` (+ `registerIcons`), `Modal`, `ConfirmDialog`, `PageHeader`, `ListRow`, `Notice`, `Badge`, `AppHeader`, `SortableTable`, `Leaderboards`, `Splash`, `FatalError`, `theme.css` and palettes |
+| [`@wells-nelson/interactions`](src/npm/interactions) | `TextField`, `SelectField`, `Field`, `Checkbox`, `Toggle`, `Combobox`, `NameModal`, `Overlay`, `Segmented`, `CollapsibleSection`, `ActiveList`, `SearchBar`, `UndoStack` + `UndoButton`, `SyncBanners`, `longpress`, drag and drop, start-up helpers (`checkForUpdatesOnStart`, `touchFeedback`, `preventZoom`), `errorText`, `DevWipeButton` + `wipeAllData`; account and sharing UI under `/account` |
 | [`@wells-nelson/data-storage`](src/npm/data-storage) | `createSyncedStore` (RxDB + TanStack DB data sets, Supabase sync, tombstones, device prefs, container operations, export / import, persistent storage, error reporting), `Persisted`, `flatSchema`, `envConfig`, `defaultContainerToOpen`; SQL migration generator and `schemaMismatches` under `/sql` |
-| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest` CLIs, a site's shared configs (`/kit` SvelteKit options, `/vitest`, `/eslint`, `/prettier`), Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and workflow templates |
+| [`@wells-nelson/build-tools`](src/npm/build-tools) | `wn-postbuild`, `wn-icons`, `wn-manifest`, `wn-check-design` CLIs, a site's shared configs (`/kit` SvelteKit options, `/vitest`, `/eslint`, `/prettier`), Vite helpers (base path, dependency pre-bundling, Content Security Policy), the app-shell service worker, and workflow templates |
 
 Dependencies between them: `interactions` depends on `displays`. Nothing else depends on another
 package. The account components in `interactions/account` describe what they need from the sync

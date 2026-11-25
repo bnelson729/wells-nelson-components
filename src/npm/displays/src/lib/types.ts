@@ -1,5 +1,8 @@
 import type { IconName } from './icons.js';
 
+/** What a control or message means. Components that take a `tone` accept the subset that fits them. */
+export type Tone = 'neutral' | 'accent' | 'danger' | 'warning' | 'success';
+
 /** One destination of `TabBar`. */
 export interface TabItem {
 	label: string;
@@ -7,7 +10,7 @@ export interface TabItem {
 	/** Where it goes; without one the tab shows disabled (e.g. nothing to open yet). */
 	href?: string;
 	/** The current section (highlighted, `aria-current="page"`). */
-	active?: boolean;
+	current?: boolean;
 	/** A round image instead of the icon, e.g. the signed-in user's avatar. */
 	imageUrl?: string | null;
 	/** A warning dot on the icon, e.g. unsynced changes; `dotLabel` says what it means. */

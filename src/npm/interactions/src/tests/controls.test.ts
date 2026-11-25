@@ -1,13 +1,16 @@
 /**
- * Controls every site uses that had no tests: adding a row by name, searching, the segmented and
+ * Controls every site uses: naming something new, fields, searching, the segmented and
  * toggle controls, the Undo button, a collapsible section's actions, the Combobox from the
  * keyboard, and drag and drop between and within zones.
  */
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import AddRow from '../lib/AddRow.svelte';
+import Checkbox from '../lib/Checkbox.svelte';
 import CollapsibleSection from '../lib/CollapsibleSection.svelte';
 import NameModal from '../lib/NameModal.svelte';
+import SelectField from '../lib/SelectField.svelte';
+import TextField from '../lib/TextField.svelte';
+import FieldFixture from './FieldFixture.svelte';
 import Combobox from '../lib/Combobox.svelte';
 import { ChoiceProps } from './reactive-api.svelte.js';
 import { DRAG_PRESS_MS, draggable, dropZone, type DragData } from '../lib/dnd.js';
@@ -29,50 +32,72 @@ function key(el: Element, k: string) {
 	flushSync();
 }
 
-describe('AddRow', () => {
-	it('adds the trimmed name, clears the field and keeps focus there for the next one', () => {
-		const onadd = vi.fn();
-		const el = render(AddRow, { placeholder: 'New list name', label: 'Create list', onadd });
+describe('fields', () => {
+	it('TextField ties its hint, then its error, to the input', () => {
+		const hinted = render(TextField, { label: 'Name', hint: 'As people know it.', optional: true });
+		const input = hinted.querySelector('input')!;
+		expect(hinted.querySelector('label')!.textContent).toBe('Name (optional)');
+		expect(document.getElementById(input.getAttribute('aria-describedby')!)!.textContent).toBe('As people know it.');
+
+		const wrong = render(TextField, { label: 'Name', hint: 'x', error: 'Add a name.', required: true }).querySelector(
+			'input'
+		)!;
+		expect(wrong.getAttribute('aria-invalid')).toBe('true');
+		expect(wrong.getAttribute('aria-required')).toBe('true');
+		expect(document.getElementById(wrong.getAttribute('aria-describedby')!)!.textContent).toBe('Add a name.');
+	});
+
+	it('SelectField picks a typed value, says so, and labels the select', () => {
+		const onchange = vi.fn();
+		const el = render(SelectField, {
+			label: 'Sort by',
+			value: 2,
+			options: [
+				{ value: 1, label: 'Name' },
+				{ value: 2, label: 'Date' }
+			],
+			hint: 'Done tasks keep their order.',
+			onchange
+		});
+		const select = el.querySelector('select')!;
+		expect(el.querySelector('label')!.getAttribute('for')).toBe(select.id);
+		expect(select.selectedOptions[0].textContent).toBe('Date');
+		expect(document.getElementById(select.getAttribute('aria-describedby')!)!.textContent).toBe(
+			'Done tasks keep their order.'
+		);
+		select.value = '1';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+		flushSync();
+		expect(onchange).toHaveBeenCalledWith(1);
+	});
+
+	it('Field gives any control its id and ARIA wiring', () => {
+		const el = render(FieldFixture, { error: 'Pick a time.' });
 		const input = el.querySelector('input')!;
-		const submit = el.querySelector('button')!;
-		// The field is named by what it shows, the button by what it does.
-		expect(input.getAttribute('aria-label')).toBe('New list name');
-		expect(submit.getAttribute('aria-label')).toBe('Create list');
-		expect(submit.disabled).toBe(true);
-
-		type(input, '  Groceries ');
-		expect(submit.disabled).toBe(false);
-		submit.click();
-		flushSync();
-		expect(onadd).toHaveBeenCalledWith('Groceries');
-		expect(input.value).toBe('');
-		expect(document.activeElement).toBe(input);
+		expect(el.querySelector('label')!.getAttribute('for')).toBe(input.id);
+		expect(input.getAttribute('aria-invalid')).toBe('true');
+		expect(document.getElementById(input.getAttribute('aria-describedby')!)!.textContent).toBe('Pick a time.');
 	});
 
-	it('adds nothing for a blank name, even from Enter', () => {
-		const onadd = vi.fn();
-		const el = render(AddRow, { placeholder: 'New', label: 'Create', onadd });
-		type(el.querySelector('input')!, '   ');
-		el.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-		expect(onadd).not.toHaveBeenCalled();
-	});
-
-	it('with onempty, the + on an empty field opens the full form instead', () => {
-		const onadd = vi.fn();
-		const onempty = vi.fn();
-		const el = render(AddRow, { placeholder: 'New', label: 'Create', onadd, onempty });
-		const submit = el.querySelector('button')!;
-		expect(submit.disabled).toBe(false);
-		type(el.querySelector('input')!, '  ');
-		submit.click();
+	it('Checkbox takes a description and an error, and fills its row with block', () => {
+		const onchange = vi.fn();
+		const el = render(Checkbox, {
+			label: 'Write the plan',
+			description: 'Due Friday',
+			error: 'Tick at least one.',
+			block: true,
+			onchange
+		});
+		const box = el.querySelector('input')!;
+		const described = box
+			.getAttribute('aria-describedby')!
+			.split(' ')
+			.map((id) => document.getElementById(id)!.textContent);
+		expect(described).toEqual(['Due Friday', 'Tick at least one.']);
+		expect(el.querySelector('.checkbox-field')!.classList.contains('block')).toBe(true);
+		box.click();
 		flushSync();
-		expect(onempty).toHaveBeenCalledOnce();
-		expect(onadd).not.toHaveBeenCalled();
-		type(el.querySelector('input')!, 'Milk');
-		submit.click();
-		flushSync();
-		expect(onadd).toHaveBeenCalledWith('Milk');
-		expect(onempty).toHaveBeenCalledOnce();
+		expect(onchange).toHaveBeenCalledWith(true);
 	});
 });
 
@@ -85,6 +110,7 @@ describe('NameModal', () => {
 		const onsubmit = vi.fn();
 		const onclose = vi.fn();
 		render(NameModal, {
+			open: true,
 			title: 'New list',
 			label: 'List name',
 			validate: (v: string) => (v === 'Taken' ? 'That name is taken.' : null),
@@ -106,12 +132,15 @@ describe('NameModal', () => {
 		submitButton().click();
 		await settle();
 		expect(onsubmit).toHaveBeenCalledWith('Groceries');
-		expect(onclose).toHaveBeenCalled();
+		expect(dialog().hasAttribute('open')).toBe(false);
+		// Closed by creating, not by the person backing out.
+		expect(onclose).not.toHaveBeenCalled();
 	});
 
 	it('stays open with the error when submitting fails', async () => {
 		const onclose = vi.fn();
 		render(NameModal, {
+			open: true,
 			title: 'Add admin',
 			label: 'Email address',
 			type: 'email',
@@ -230,14 +259,14 @@ describe('UndoButton', () => {
 
 describe('CollapsibleSection actions', () => {
 	it('collapses from the chevron or the name, and runs add and edit', () => {
-		const ontogglecollapse = vi.fn();
+		const onexpandedchange = vi.fn();
 		const onadd = vi.fn();
 		const onedit = vi.fn();
 		const el = render(CollapsibleSection, {
 			title: 'Dairy',
 			count: 2,
-			collapsed: false,
-			ontogglecollapse,
+			expanded: true,
+			onexpandedchange,
 			onadd,
 			addLabel: 'Add item to Dairy',
 			onedit,
@@ -246,7 +275,7 @@ describe('CollapsibleSection actions', () => {
 		});
 		el.querySelector<HTMLButtonElement>('.collapse')!.click();
 		button(el, 'Dairy').click();
-		expect(ontogglecollapse).toHaveBeenCalledTimes(2);
+		expect(onexpandedchange).toHaveBeenCalledTimes(2);
 		el.querySelector<HTMLButtonElement>('[aria-label="Add item to Dairy"]')!.click();
 		el.querySelector<HTMLButtonElement>('[aria-label="Edit Dairy"]')!.click();
 		expect(onadd).toHaveBeenCalledOnce();
@@ -258,7 +287,7 @@ describe('CollapsibleSection actions', () => {
 		const one = render(CollapsibleSection, {
 			title: 'Dairy',
 			count: 1,
-			collapsed: false,
+			expanded: true,
 			onadd: () => {},
 			onedit: () => {},
 			children: () => {}
@@ -267,18 +296,18 @@ describe('CollapsibleSection actions', () => {
 		expect(one.querySelector('.badge')!.textContent).not.toContain('1 items');
 		expect(one.querySelector('button[aria-label="Add to Dairy"]')).toBeTruthy();
 		expect(one.querySelector('button[aria-label="Edit Dairy"]')).toBeTruthy();
-		const three = render(CollapsibleSection, { title: 'Fridge', count: 3, collapsed: false, children: () => {} });
+		const three = render(CollapsibleSection, { title: 'Fridge', count: 3, expanded: true, children: () => {} });
 		expect(three.querySelector('.badge')!.textContent).toContain('3 items');
 	});
 
 	it('hides its rows while collapsed and says so', () => {
-		const el = render(CollapsibleSection, { title: 'Dairy', count: 0, collapsed: true, children: () => {} });
+		const el = render(CollapsibleSection, { title: 'Dairy', count: 0, expanded: false, children: () => {} });
 		expect(el.querySelector('ul')!.hidden).toBe(true);
 		expect(button(el, 'Dairy').getAttribute('aria-expanded')).toBe('false');
 	});
 
 	it('titles the section with a heading, and keeps the chevron out of the tab order', () => {
-		const el = render(CollapsibleSection, { title: 'Dairy', count: 1, collapsed: false, children: () => {} });
+		const el = render(CollapsibleSection, { title: 'Dairy', count: 1, expanded: true, children: () => {} });
 		const heading = el.querySelector('h2')!;
 		expect(heading.querySelector('button')!.textContent).toBe('Dairy');
 		const chevron = el.querySelector('.collapse')!;
@@ -288,7 +317,7 @@ describe('CollapsibleSection actions', () => {
 		const nested = render(CollapsibleSection, {
 			title: 'Fridge',
 			count: 0,
-			collapsed: false,
+			expanded: true,
 			headingLevel: 3,
 			children: () => {}
 		});

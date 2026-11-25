@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import type { Snippet } from 'svelte';
 	import { sortRows, type SortableColumn } from './types.js';
 
 	/**
@@ -14,7 +15,9 @@
 		labelHeader = 'Name',
 		sortKey = $bindable(),
 		descending = $bindable(true),
-		emptyText = 'Nothing to show yet.'
+		emptyText = 'Nothing to show yet.',
+		empty,
+		class: className
 	}: {
 		title?: string;
 		rows: T[];
@@ -27,6 +30,10 @@
 		sortKey?: string;
 		descending?: boolean;
 		emptyText?: string;
+		/** Shown instead of `emptyText` when there are no rows, for more than a sentence. */
+		empty?: Snippet;
+		/** Last resort: a class on the root element. */
+		class?: string;
 	} = $props();
 
 	const headingId = $props.id();
@@ -49,10 +56,10 @@
 	}
 </script>
 
-<section class="table-card card selectable">
+<section class={['table-card', 'card', 'selectable', className]}>
 	{#if title}<h2 id={headingId}>{title}</h2>{/if}
 	{#if rows.length === 0}
-		<p class="muted empty-row">{emptyText}</p>
+		{#if empty}{@render empty()}{:else}<p class="muted empty-row">{emptyText}</p>{/if}
 	{:else}
 		<!-- Focusable so the keyboard can scroll it sideways on a small screen. -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -95,13 +102,13 @@
 
 <style>
 	.table-card {
-		margin-bottom: 1rem;
+		margin-bottom: var(--space-4);
 		overflow: hidden;
 	}
 	h2 {
 		margin: 0;
-		padding: 0.75rem 1rem;
-		font-size: 1rem;
+		padding: var(--space-3) var(--space-4);
+		font-size: var(--text-md);
 	}
 	.scroll {
 		overflow-x: auto;
@@ -111,7 +118,7 @@
 		border-collapse: separate;
 		border-spacing: 0;
 		width: 100%;
-		font-size: 0.9rem;
+		font-size: var(--text-sm);
 		font-variant-numeric: tabular-nums;
 	}
 	th,
@@ -123,34 +130,34 @@
 	}
 	thead th {
 		background: var(--surface-2);
-		font-size: 0.8rem;
+		font-size: var(--text-xs);
 		padding: 0;
 	}
 	thead th.name {
-		padding: 0.45rem 0.75rem;
+		padding: 0.45rem var(--space-3);
 	}
 	thead button {
 		width: 100%;
 		min-height: var(--tap, 2.75rem);
-		padding: 0.5rem 0.6rem;
+		padding: var(--space-2) 0.6rem;
 		border: none;
 		background: none;
-		font-weight: 700;
+		font-weight: var(--weight-bold);
 		text-align: right;
 		cursor: pointer;
 		white-space: nowrap;
 	}
 	thead button span {
-		font-size: 0.65rem;
+		font-size: var(--text-xs);
 		color: var(--accent-text);
 	}
 	.name {
 		position: sticky;
 		left: 0;
-		z-index: 1;
+		z-index: var(--z-raised);
 		text-align: left;
 		background: var(--surface);
-		font-weight: 600;
+		font-weight: var(--weight-semibold);
 		max-width: 11rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -164,7 +171,7 @@
 		background: var(--surface-hover);
 	}
 	.empty-row {
-		padding: 0 1rem 1rem;
+		padding: 0 var(--space-4) var(--space-4);
 		margin: 0;
 	}
 </style>

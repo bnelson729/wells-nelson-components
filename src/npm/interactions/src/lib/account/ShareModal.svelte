@@ -168,7 +168,8 @@
 	{:else if !isCloud}
 		<p>Only cloud-enabled {nouns.plural} can be shared. This one is only on this device.</p>
 		<Button
-			variant="primary"
+			variant="solid"
+			tone="accent"
 			icon="cloud"
 			onclick={() => act(onmakecloud, `make the ${nouns.singular} cloud-enabled`)}
 			disabled={busy}>Make cloud-enabled</Button
@@ -192,8 +193,12 @@
 					{#if roles}
 						<Segmented label="Role for the invite" bind:value={inviteRole} options={ROLE_OPTIONS} />
 					{/if}
-					<Button variant="primary" type="submit" icon="share" disabled={!emailValid || busy || !cloud.online}
-						>Share</Button
+					<Button
+						variant="solid"
+						tone="accent"
+						type="submit"
+						icon="share"
+						disabled={!emailValid || busy || !cloud.online}>Share</Button
 					>
 				</form>
 				<p id={`${emailId}-hint`} class="muted text-sm">
@@ -276,7 +281,7 @@
 	}
 	.invite {
 		display: flex;
-		gap: 0.5rem;
+		gap: var(--space-2);
 	}
 	.invite input {
 		flex: 1;
@@ -294,8 +299,8 @@
 		clip: rect(0 0 0 0);
 	}
 	.invite-label {
-		font-weight: 600;
-		font-size: 0.9rem;
+		font-weight: var(--weight-semibold);
+		font-size: var(--text-sm);
 		margin-bottom: -0.25rem;
 	}
 	.members {
@@ -308,8 +313,8 @@
 	.members li {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.25rem 0.25rem 0.25rem 0.9rem;
+		gap: var(--space-2);
+		padding: var(--space-1) var(--space-1) var(--space-1) 0.9rem;
 		min-height: 3rem;
 	}
 	.members li + li {
@@ -321,13 +326,13 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.25rem 0.5rem;
+		gap: var(--space-1) var(--space-2);
 	}
 	.email {
 		overflow-wrap: anywhere;
 	}
 	.role {
 		color: var(--muted);
-		padding-right: 0.75rem;
+		padding-right: var(--space-3);
 	}
 </style>

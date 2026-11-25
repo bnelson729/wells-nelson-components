@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
 	compareVersions,
-	incrementFromMessages,
+	cutChangelog,
+	incrementFor,
 	latestVersion,
 	preparePackageJson,
+	readUnreleased,
+	releaseProblems,
 	siblingRange
 } from '../../scripts/release/lib.mjs';
 
@@ -67,15 +70,72 @@ describe('preparePackageJson', () => {
 	});
 });
 
-describe('incrementFromMessages', () => {
-	it('is a patch unless a commit asks for more', () => {
-		assert.equal(incrementFromMessages([]), 'patch');
-		assert.equal(incrementFromMessages(['Fix the header\n\nNo release line here.']), 'patch');
+const changelog = (heading, ...entries) =>
+	[
+		'# Changelog: @wells-nelson/displays',
+		'',
+		heading,
+		'',
+		...entries.map((e) => `- ${e}`),
+		'',
+		'## 1.2.0 (2026-11-12)',
+		'',
+		'- Older entry.',
+		''
+	].join('\n');
+const released = '# Changelog\n\n## 1.0.0 (2026-01-01)\n\n- y\n';
+
+describe('readUnreleased', () => {
+	it('reads the bump, the entries and Breaking markers, stopping at the next heading', () => {
+		assert.deepEqual(readUnreleased(changelog('## Unreleased (minor)', 'New `PageHeader`.', 'Fix a gap.')), {
+			found: true,
+			level: 'minor',
+			entries: ['New `PageHeader`.', 'Fix a gap.'],
+			breaking: false
+		});
+		assert.equal(readUnreleased(changelog('## Unreleased (major)', '**Breaking:** removed X.')).breaking, true);
+		assert.equal(readUnreleased(changelog('## Unreleased', 'x')).level, null);
+		assert.equal(readUnreleased(released).found, false);
+	});
+});
+
+describe('releaseProblems', () => {
+	it('accepts a heading with a bump and entries', () => {
+		assert.deepEqual(releaseProblems('displays', changelog('## Unreleased (patch)', 'Fix.')), []);
 	});
 
-	it('takes the biggest Release: line, in any case and anywhere in the body', () => {
-		assert.equal(incrementFromMessages(['Add showLabel\n\nRelease: minor']), 'minor');
-		assert.equal(incrementFromMessages(['a\n\nrelease: MINOR', 'b\n\nRelease: major\nmore text', 'c']), 'major');
-		assert.equal(incrementFromMessages(['Mention "release: major" mid-line doesn\'t count']), 'patch');
+	it('refuses a release without entries or without a bump', () => {
+		assert.match(releaseProblems('displays', released)[0], /no entries/);
+		assert.match(releaseProblems('displays', changelog('## Unreleased'))[0], /no entries/);
+		assert.match(releaseProblems('displays', changelog('## Unreleased', 'Fix.'))[0], /must name the bump/);
+	});
+
+	it('refuses a breaking change in anything but a major, even when chosen by hand', () => {
+		const text = changelog('## Unreleased (minor)', '**Breaking:** `confirmLabel` is required.');
+		assert.match(releaseProblems('displays', text)[0], /must be major/);
+		assert.match(releaseProblems('displays', text, 'patch')[0], /must be major/);
+		assert.deepEqual(releaseProblems('displays', text, 'major'), []);
+		assert.deepEqual(releaseProblems('displays', changelog('## Unreleased (major)', '**Breaking:** x')), []);
+	});
+});
+
+describe('incrementFor', () => {
+	it('takes the manual choice, else the heading', () => {
+		assert.equal(incrementFor(changelog('## Unreleased (minor)', 'x')), 'minor');
+		assert.equal(incrementFor(changelog('## Unreleased (minor)', 'x'), 'major'), 'major');
+		assert.throws(() => incrementFor(changelog('## Unreleased', 'x')));
+	});
+});
+
+describe('cutChangelog', () => {
+	it('turns the Unreleased heading into the release heading', () => {
+		const out = cutChangelog(changelog('## Unreleased (minor)', 'New thing.'), '1.3.0', '2026-11-25');
+		assert.match(out, /^## 1\.3\.0 \(2026-11-25\)\n\n- New thing\.$/m);
+		assert.doesNotMatch(out, /Unreleased/);
+		assert.match(out, /## 1\.2\.0 \(2026-11-12\)/);
+	});
+
+	it('leaves a changelog without an Unreleased section alone', () => {
+		assert.equal(cutChangelog(released, '1.0.1', '2026-11-25'), null);
 	});
 });

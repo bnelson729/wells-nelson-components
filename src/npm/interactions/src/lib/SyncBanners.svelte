@@ -50,6 +50,6 @@
 <style>
 	.sync-banner {
 		max-width: var(--content-w);
-		margin: 1rem auto 0;
+		margin: var(--space-4) auto 0;
 	}
 </style>

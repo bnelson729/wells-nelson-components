@@ -118,7 +118,7 @@
 <Panel title="postbuild" note="Runs against a throwaway mock build folder on the dev server.">
 	<Toggle label={`Leak a seed string (“${leakedName}”) into a chunk`} bind:checked={leak} />
 	<Toggle label="Missing 404.html shell" bind:checked={missingShell} />
-	<div class="row"><Button variant="primary" onclick={runPostbuild}>Run postbuild</Button></div>
+	<div class="row"><Button variant="solid" tone="accent" onclick={runPostbuild}>Run postbuild</Button></div>
 	{#if result}
 		{#if result.error}<p class="error">{result.error}</p>{:else}<p>Passed.</p>{/if}
 		<pre>{[...result.log, '', 'Files afterwards:', ...result.files].join('\n')}</pre>

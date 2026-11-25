@@ -12,6 +12,9 @@
 
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
+	import FieldLabel from './FieldLabel.svelte';
+	import FieldMessage from './FieldMessage.svelte';
+	import type { FieldProps } from './forms.js';
 
 	/**
 	 * Dropdown with type-to-filter. Typing text that doesn't exactly match an option (ignoring
@@ -26,23 +29,40 @@
 		placeholder = 'Select or type to create…',
 		createLabel = 'Create',
 		error,
+		hint,
 		hideLabel = false,
-		required = false
-	}: {
-		label: string;
+		required = false,
+		optional = false,
+		disabled = false,
+		onchange,
+		class: className
+	}: FieldProps & {
 		options: ComboOption[];
 		choice?: ComboChoice;
 		placeholder?: string;
 		createLabel?: string;
-		error?: string | null;
-		hideLabel?: boolean;
-		/** Adds "(required)" to the label and marks the field required. */
-		required?: boolean;
+		/** After the choice changes, by picking an option or typing: an id, a new name, or null. */
+		onchange?: (choice: ComboChoice) => void;
+		/** Last resort: a class on the root element. */
+		class?: string;
 	} = $props();
+
+	/** Set the choice and say so, when it really changed. */
+	function setChoice(next: ComboChoice) {
+		if (sameChoice(choice, next)) return;
+		choice = next;
+		onchange?.(next);
+	}
+
+	function sameChoice(a: ComboChoice, b: ComboChoice) {
+		if (!a || !b) return !a && !b;
+		if ('id' in a) return 'id' in b && a.id === b.id;
+		return 'newName' in b && sameName(a.newName, b.newName);
+	}
 
 	const id = $props.id();
 	const listId = `${id}-list`;
-	const errorId = `${id}-error`;
+	const messageId = `${id}-msg`;
 	const optionId = (i: number) => `${id}-opt-${i}`;
 
 	function labelFor(c: ComboChoice) {
@@ -77,21 +97,16 @@
 		const c = choice;
 		untrack(() => {
 			const typed: ComboChoice = exact ? { id: exact.id } : query ? { newName: query } : null;
-			const same =
-				(!c && !typed) ||
-				(!!c &&
-					!!typed &&
-					('id' in c ? 'id' in typed && typed.id === c.id : 'newName' in typed && sameName(typed.newName, c.newName)));
-			if (!same) text = labelFor(c);
+			if (!sameChoice(c, typed)) text = labelFor(c);
 		});
 	});
 
 	function select(row: (typeof rows)[number]) {
 		if (row.kind === 'option') {
-			choice = { id: row.option.id };
+			setChoice({ id: row.option.id });
 			text = row.option.label;
 		} else {
-			choice = { newName: query };
+			setChoice({ newName: query });
 			text = query;
 		}
 		open = false;
@@ -103,7 +118,7 @@
 		filtering = true;
 		highlighted = 0;
 		// Keep the choice in step with what's typed.
-		choice = exact ? { id: exact.id } : query ? { newName: query } : null;
+		setChoice(exact ? { id: exact.id } : query ? { newName: query } : null);
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -170,10 +185,8 @@
 	}
 </script>
 
-<div class="combo" bind:this={combo}>
-	<label for={id} class:visually-hidden={hideLabel}
-		>{label}{#if required}<span class="required">{' (required)'}</span>{/if}</label
-	>
+<div class={['combo', className]} bind:this={combo}>
+	<FieldLabel {label} for={id} {hideLabel} {required} {optional} />
 	<div class="control">
 		<input
 			{id}
@@ -186,7 +199,8 @@
 			aria-autocomplete="list"
 			aria-activedescendant={open && rows[highlighted] ? optionId(highlighted) : undefined}
 			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={error ? errorId : undefined}
+			aria-describedby={error || hint ? messageId : undefined}
+			{disabled}
 			{placeholder}
 			bind:value={text}
 			oninput={onInput}
@@ -216,7 +230,7 @@
 			</ul>
 		{/if}
 	</div>
-	{#if error}<p id={errorId} class="error" role="alert">{error}</p>{/if}
+	<FieldMessage id={messageId} {error} {hint} />
 	{#if reserve > 0}<div class="reserve" style:height="{reserve}px" aria-hidden="true"></div>{/if}
 </div>
 
@@ -232,22 +246,14 @@
 	.reserve {
 		flex: none;
 	}
-	.required {
-		font-weight: 400;
-		color: var(--muted);
-	}
-	label {
-		font-weight: 600;
-		font-size: 0.9rem;
-	}
 	.options {
 		position: absolute;
-		z-index: 20;
+		z-index: var(--z-dropdown);
 		top: 100%;
 		left: 0;
 		right: 0;
-		margin: 0.25rem 0 0;
-		padding: 0.25rem;
+		margin: var(--space-1) 0 0;
+		padding: var(--space-1);
 		list-style: none;
 		max-height: 14rem;
 		overflow-y: auto;
@@ -257,7 +263,7 @@
 		box-shadow: var(--shadow-lg);
 	}
 	li {
-		padding: 0.55rem 0.75rem;
+		padding: 0.55rem var(--space-3);
 		border-radius: calc(var(--radius) - 2px);
 		cursor: pointer;
 	}
@@ -265,15 +271,10 @@
 		background: var(--surface-hover);
 	}
 	li[aria-selected='true'] {
-		font-weight: 600;
+		font-weight: var(--weight-semibold);
 	}
 	li.create {
 		color: var(--accent-text);
-		font-weight: 600;
-	}
-	.error {
-		margin: 0;
-		color: var(--danger);
-		font-size: 0.85rem;
+		font-weight: var(--weight-semibold);
 	}
 </style>

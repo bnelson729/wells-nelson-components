@@ -51,9 +51,9 @@
 		Version {version}{#if available}<span class="new"> · A new version is available.</span>{/if}
 	</p>
 	{#if available}
-		<Button variant="primary" icon="refresh" onclick={() => onupdate()}>Update now</Button>
+		<Button variant="solid" tone="accent" icon="refresh" onclick={() => onupdate()}>Update now</Button>
 	{:else if oncheck}
-		<Button variant="ghost" icon="refresh" onclick={check} disabled={checking}>
+		<Button variant="ghost" tone="accent" icon="refresh" onclick={check} disabled={checking}>
 			{checking ? 'Checking…' : 'Check for updates'}
 		</Button>
 		{#if status === 'latest'}
@@ -89,15 +89,15 @@
 	.status {
 		margin: 0;
 		color: var(--muted);
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 	}
 	.links {
-		margin: 0.25rem 0 0;
-		font-size: 0.85rem;
+		margin: var(--space-1) 0 0;
+		font-size: var(--text-sm);
 		color: var(--muted);
 	}
 	.new {
 		color: var(--text);
-		font-weight: 600;
+		font-weight: var(--weight-semibold);
 	}
 </style>

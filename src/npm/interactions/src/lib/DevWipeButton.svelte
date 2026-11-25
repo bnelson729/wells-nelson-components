@@ -26,7 +26,7 @@
 	<IconButton icon="trash" {label} onclick={() => (confirming = true)} />
 </span>
 
-<ConfirmDialog bind:open={confirming} {title} {message} {confirmLabel} danger {onconfirm} />
+<ConfirmDialog bind:open={confirming} {title} {message} {confirmLabel} tone="danger" {onconfirm} />
 
 <style>
 	.dev-wipe {

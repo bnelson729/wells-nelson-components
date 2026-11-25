@@ -87,15 +87,15 @@ describe('ConfirmDialog', () => {
 			message: 'x',
 			confirmLabel: 'Delete',
 			busyLabel: 'Deleting…',
-			danger: true,
+			tone: 'danger',
 			onconfirm
 		});
 		const confirm = byText(el, 'Delete');
-		expect(confirm.classList.contains('danger')).toBe(true);
+		expect(confirm.classList.contains('tone-danger')).toBe(true);
 		confirm.click();
 		flushSync();
 		expect(confirm.textContent?.trim()).toBe('Deleting…');
-		expect(confirm.disabled).toBe(true);
+		expect(confirm.getAttribute('aria-disabled')).toBe('true');
 		expect(confirm.getAttribute('aria-busy')).toBe('true');
 		confirm.click();
 		expect(onconfirm).toHaveBeenCalledOnce();
@@ -145,14 +145,33 @@ describe('ConfirmDialog', () => {
 
 describe('IconButton', () => {
 	it('marks the current page on a link, and an on/off state on a button', () => {
-		const link = render(IconButton, { icon: 'home', label: 'Home', href: '/', active: true });
+		const link = render(IconButton, { icon: 'home', label: 'Home', href: '/', current: true });
 		expect(link.querySelector('a')!.getAttribute('aria-current')).toBe('page');
+		expect(link.querySelector('a')!.classList.contains('current')).toBe(true);
 
 		const toggle = render(IconButton, { icon: 'search', label: 'Search', pressed: true });
 		const b = toggle.querySelector('button')!;
 		expect(b.getAttribute('aria-pressed')).toBe('true');
 		expect(b.getAttribute('aria-label')).toBe('Search');
-		expect(b.classList.contains('active')).toBe(true);
+		expect(b.classList.contains('pressed')).toBe(true);
+		expect(b.classList.contains('current')).toBe(false);
+	});
+
+	it('sizes by name, takes its tone, and passes other attributes on', () => {
+		const el = render(IconButton, {
+			icon: 'pencil',
+			label: 'Edit',
+			size: 'sm',
+			tone: 'muted',
+			'data-testid': 'edit',
+			'aria-describedby': 'hint'
+		});
+		const b = el.querySelector('button')!;
+		expect(b.querySelector('svg')!.getAttribute('width')).toBe('18');
+		expect(b.classList.contains('tone-muted')).toBe(true);
+		expect(b.dataset.testid).toBe('edit');
+		expect(b.getAttribute('aria-describedby')).toBe('hint');
+		expect(render(IconButton, { icon: 'x', label: 'Close' }).querySelector('svg')!.getAttribute('width')).toBe('22');
 	});
 
 	it('is an ordinary button without pressed, and can be disabled', () => {
@@ -193,9 +212,16 @@ describe('start-up screens', () => {
 });
 
 describe('Button variants', () => {
-	it.each(['primary', 'secondary', 'danger', 'danger-ghost'] as const)('renders the %s variant', (variant) => {
-		const el = render(Button, { variant, children: text('Go') });
-		expect(el.querySelector('button')!.classList.contains(variant)).toBe(true);
+	it.each(['solid', 'outline', 'ghost'] as const)('renders the %s variant in every tone', (variant) => {
+		for (const tone of ['neutral', 'accent', 'danger', 'warning', 'success'] as const) {
+			const el = render(Button, { variant, tone, children: text('Go') });
+			expect([...el.querySelector('button')!.classList]).toEqual(expect.arrayContaining([variant, `tone-${tone}`]));
+		}
+	});
+
+	it('is an outlined neutral button by default', () => {
+		const el = render(Button, { children: text('Cancel') });
+		expect([...el.querySelector('button')!.classList]).toEqual(expect.arrayContaining(['outline', 'tone-neutral']));
 	});
 
 	it('submits its form only when it is a submit button', () => {

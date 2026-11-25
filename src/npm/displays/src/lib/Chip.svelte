@@ -14,6 +14,7 @@
 		dashed = false,
 		children,
 		type = 'button',
+		class: className,
 		...rest
 	}: HTMLButtonAttributes & {
 		/** On or off (`aria-pressed`); on is drawn filled with the accent. Leave out for an action. */
@@ -23,10 +24,14 @@
 		/** A dashed outline, for "add another" chips. */
 		dashed?: boolean;
 		children: Snippet;
+		/** Last resort: a class on the <button>. */
+		class?: string;
 	} = $props();
 </script>
 
-<button {type} class="chip {tone}" class:dashed aria-pressed={pressed} {...rest}>{@render children()}</button>
+<button {type} class={['chip', tone, dashed && 'dashed', className]} aria-pressed={pressed} {...rest}
+	>{@render children()}</button
+>
 
 <style>
 	.chip {
@@ -36,14 +41,15 @@
 		gap: 0.35rem;
 		min-height: var(--chip-h, var(--tap, 2.75rem));
 		min-width: var(--chip-h, var(--tap, 2.75rem));
-		padding: 0 1rem;
+		padding: 0 var(--space-4);
 		border: 1px solid var(--control-border);
 		border-radius: 999px;
 		background: var(--surface);
 		color: var(--text);
 		font: inherit;
-		font-weight: 600;
+		font-weight: var(--weight-semibold);
 		cursor: pointer;
+		overflow-wrap: anywhere;
 		-webkit-touch-callout: none;
 		user-select: none;
 	}

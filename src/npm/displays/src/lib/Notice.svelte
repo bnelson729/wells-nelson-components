@@ -19,9 +19,11 @@
 		children,
 		actions,
 		ondismiss,
-		dismissLabel = 'Dismiss'
+		dismissLabel = 'Dismiss',
+		class: className
 	}: {
-		tone?: 'warning' | 'danger' | 'info';
+		/** `success`: something worked that the person should know about ("Shared with …"). */
+		tone?: 'warning' | 'danger' | 'info' | 'success';
 		/** Defaults to `alert` for warning and danger, none for info. */
 		icon?: IconName | null;
 		role?: 'status' | 'alert';
@@ -30,9 +32,13 @@
 		actions?: Snippet;
 		ondismiss?: () => void;
 		dismissLabel?: string;
+		/** Last resort: a class on the root element. */
+		class?: string;
 	} = $props();
 
-	const iconName = $derived(icon === undefined ? (tone === 'info' ? null : 'alert') : icon);
+	const iconName = $derived<IconName | null>(
+		icon === undefined ? (tone === 'info' ? null : tone === 'success' ? 'check' : 'alert') : icon
+	);
 </script>
 
 {#snippet body()}
@@ -41,9 +47,9 @@
 {/snippet}
 
 {#if href}
-	<a class="notice-box {tone}" {href} {role}>{@render body()}</a>
+	<a class={['notice-box', tone, className]} {href} {role}>{@render body()}</a>
 {:else}
-	<div class="notice-box {tone}" {role}>
+	<div class={['notice-box', tone, className]} {role}>
 		{@render body()}
 		{#if actions}<div class="actions">{@render actions()}</div>{/if}
 		{#if ondismiss}<IconButton icon="x" label={dismissLabel} onclick={ondismiss} />{/if}
@@ -55,8 +61,8 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.25rem 0.6rem;
-		padding: 0.5rem 0.5rem 0.5rem 1rem;
+		gap: var(--space-1) 0.6rem;
+		padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
 		min-height: 3rem;
 		border-radius: var(--radius);
 		color: var(--text);
@@ -75,6 +81,10 @@
 		background: var(--accent-soft);
 		--mark: var(--accent-text);
 	}
+	.success {
+		background: var(--success-soft);
+		--mark: var(--success);
+	}
 	.mark {
 		align-self: flex-start;
 		margin-top: 0.3rem;
@@ -83,7 +93,7 @@
 	.text {
 		flex: 1;
 		min-width: min(12rem, 100%);
-		padding: 0.25rem 0;
+		padding: var(--space-1) 0;
 	}
 	.text :global(p) {
 		margin: 0;
@@ -91,7 +101,7 @@
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: var(--space-2);
 		margin-left: auto;
 	}
 	a.notice-box:hover {

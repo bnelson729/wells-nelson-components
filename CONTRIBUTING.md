@@ -7,7 +7,7 @@ each package offers is in its own README under [src/npm](src/npm); releases and 
 ## How changes reach `main`
 
 Every push to `main` runs the [Packages](.github/workflows/packages.yml) workflow, and each package whose
-shipped files changed is **published to npm**: a patch, unless a commit says otherwise (below). So `main`
+shipped files changed is **published to npm**, with the bump its changelog names (below). So `main`
 should only ever get commits that pass the checks below.
 
 - **Maintainers** may commit directly to `main`. Run `npm run check && npm run lint && npm test` first (and try
@@ -16,11 +16,15 @@ should only ever get commits that pass the checks below.
   `git switch -c <type>/<short-topic>` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`), push, and open a
   pull request to `main`. The Packages workflow builds, type-checks, tests and packs every package on the
   pull request, without publishing. Merge once it's green.
-- **Say how big the change is in the commit message**: a line `Release: minor` for a new feature (a new
-  component, option, export or a changed default), `Release: major` for a breaking change. The release takes
-  the biggest one among the package's commits since its last release; without one it's a patch. A manual run
-  (**Actions → Packages → Run workflow**) can still choose. A breaking change also needs a note in the package
-  README on how to upgrade.
+- **Say how big the change is in the changelog**: the package's `CHANGELOG.md` starts with
+  `## Unreleased (patch|minor|major)`. `patch` for fixes (behavior or looks), `minor` for anything new (a
+  component, option, export or token) and for deprecations, `major` for anything an app must change. Raise the
+  heading when your entry needs more; never lower it. Start an entry an app must act on with `**Breaking:**`
+  (the workflow refuses to release it in anything but a major) and a deprecation with `**Deprecated:**`, and
+  say what an app runs or changes (`**Apps:** run node scripts/codemods/<name>.mjs <app folder>`). The pull
+  request check fails when a changed package has no Unreleased entries. A manual run (**Actions → Packages →
+  Run workflow**) can still choose the bump. A breaking change also needs a note in the package README on how
+  to upgrade.
 
 Whatever the route, each change comes with:
 
@@ -28,7 +32,7 @@ Whatever the route, each change comes with:
 - an example in the sandbox when it's visible or interactive;
 - the package README updated (props, options, defaults);
 - a line under **Unreleased** in the package's `CHANGELOG.md` (what changed, in a sentence, and what a site
-  has to do, if anything); a release moves them under its version;
+  has to do, if anything); the release turns the heading into its version's;
 - defaults that keep existing apps working unless they opt in.
 
 **Four packages are enough.** Their split follows their dependencies (UI, interactive UI, storage, build), and
@@ -36,8 +40,51 @@ sites upgrade all of them together. Add a fifth only for something with differen
 never just to group code.
 
 **This repository is public.** Code, tests, docs, commit messages and pull requests must not name or describe
-the private apps that use these packages. Use generic examples (projects, tasks, lists). `docs/todo.md` and
-`docs/review.md` are git-ignored working notes for that reason; keep them out of commits.
+the private apps that use these packages. Use generic examples (projects, tasks, lists). `docs/todo.md`,
+`docs/*-review.md` and `docs/promotion-log.md` are git-ignored working notes for that reason; keep them out of
+commits.
+
+## What belongs in the library
+
+The one copy of this policy; sites' style guides link here. The shared design (tokens, patterns, which
+component to use) is in [docs/design-guide.md](docs/design-guide.md).
+
+**Update a shared component** when a site needs something it almost does and the change is general: a bug, an
+accessibility or behavior fix, or an option, variant, prop or snippet any site could use. Keep the defaults, so
+other sites don't change unless they opt in. Don't add a site's concepts to a component; pass them in as props,
+labels or snippets. If a site can't make a component fit without styling its internals (`:global(.icon-btn)`),
+that's the sign it needs an option.
+
+**Create a shared component** the second time a pattern appears in a site (extract it then, not the first time),
+or when it's generic and clearly reusable. Put it in the matching package: `displays` (presentational),
+`interactions` (inputs, actions, account and sharing), `data-storage` (storage and sync) or `build-tools`
+(build and deploy).
+
+**Build it in the site** when it's about the site's domain, composes shared components with site-specific
+wiring, or is an experiment that hasn't settled. Use the shared components and tokens inside it, and promote it
+when a second site needs it. Never fork a shared component into a site to tweak it: copies drift and miss fixes.
+
+**Keep a promotion log.** `docs/promotion-log.md` (git-ignored, since it names sites) lists patterns seen in two
+or more sites that aren't in the library yet. Add to it when reviewing site work; empty it by promoting.
+
+**The maintainer decides.** No review board: the checklist below is what keeps one person's decisions consistent
+over time, so agents follow it too (it's in the pull request template).
+
+### Checklist for a new or changed component
+
+- [ ] Follows the [API conventions](docs/design-guide.md#conventions-for-component-apis): `tone` / `variant` /
+      `size` vocabulary, required `label`s, ARIA state names, bindable value with a change event.
+- [ ] Only tokens in its CSS: no raw colors, font sizes, z-indexes or durations.
+- [ ] Form controls take `FieldProps`; interactive components pass other attributes on (`...rest`); every
+      component takes `class`.
+- [ ] Forced colors: every state (checked, pressed, current, selected) still shows. Motion uses the duration
+      tokens (reduced motion turns it off).
+- [ ] Its states (disabled, busy, error, empty, read-only, long text) are on the sandbox's States page.
+- [ ] A test in the package's `src/tests`.
+- [ ] A changelog entry, with the heading's bump raised if needed (`**Breaking:**` / `**Deprecated:**` entries
+      say what sites run or change).
+- [ ] A line in the design guide's [Choosing a component](docs/design-guide.md#choosing-a-component) table, and
+      a component entry for anything sites will reach for often.
 
 ## Setup
 

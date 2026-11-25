@@ -51,7 +51,7 @@
 	message={`These ${nouns.plural} have changes that haven't synced yet:\n${pending.map((p) => `• ${p.name}`).join('\n')}\n\nIf you sign out now, those changes will be lost. To keep them, connect to the internet and wait for them to sync (or press Sync now).`}
 	confirmLabel="Sign out anyway"
 	busyLabel="Signing out…"
-	danger
+	tone="danger"
 	onconfirm={signOut}
 />
 

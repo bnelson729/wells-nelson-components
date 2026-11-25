@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Icon, IconButton } from '@wells-nelson/displays';
+	import { Badge, Icon, IconButton, setIconButtonDefaults } from '@wells-nelson/displays';
 	import { tick, type Snippet } from 'svelte';
 	import { draggable, dropZone, type DragData, type DropZoneOptions } from './dnd.js';
 
@@ -7,7 +7,8 @@
 	 * A card whose header (chevron, title, count, add and edit actions) stays pinned below the app
 	 * header while you scroll through its rows. Collapsed sections hide rows with CSS rather than
 	 * unmounting them, so a row being dragged stays attached to the page.
-	 * Children are rendered inside a <ul>; give draggable rows `data-dnd-item`.
+	 * Children are rendered inside a <ul> (`ListRow`s for `layout="lines"`); give draggable rows
+	 * `data-dnd-item`. `IconButton`s in the rows are small and muted unless they say otherwise.
 	 * The title is a heading (`headingLevel`, h2 by default) holding the button that collapses the
 	 * section, so screen reader users can move between sections by heading. The chevron does the
 	 * same for pointers and stays out of the tab order.
@@ -16,8 +17,8 @@
 		title,
 		count,
 		countLabel = (n: number) => (n === 1 ? '1 item' : `${n} items`),
-		collapsed,
-		ontogglecollapse,
+		expanded = $bindable(true),
+		onexpandedchange,
 		onedit,
 		editLabel,
 		onadd,
@@ -26,17 +27,21 @@
 		ondragstart,
 		ondragend,
 		drop,
-		variant = 'default',
-		appearance = 'card',
+		emphasis = 'default',
+		layout = 'card',
 		appHeaderSelector = '.app-header',
 		headingLevel = 2,
-		children
+		children,
+		empty,
+		class: className
 	}: {
 		title: string;
 		count: number;
 		countLabel?: (count: number) => string;
-		collapsed: boolean;
-		ontogglecollapse: () => void;
+		/** Whether its rows show. Bind it, or pass it and save it in `onexpandedchange`. */
+		expanded?: boolean;
+		/** After the person expands or collapses it. */
+		onexpandedchange?: (expanded: boolean) => void;
 		/** Opens the section's settings (pencil icon, right of the plus). */
 		onedit?: () => void;
 		editLabel?: string;
@@ -49,19 +54,25 @@
 		/** Accept dropped rows. */
 		drop?: DropZoneOptions;
 		/** `subtle` gives the header a muted background (e.g. an "unallocated" bucket). */
-		variant?: 'default' | 'subtle';
+		emphasis?: 'default' | 'subtle';
 		/**
 		 * `card` (default): a rounded card. `lines`: fills its container edge to edge with no card,
 		 * so sections and rows read like lines on paper. The pinned header needs an opaque
 		 * background: set `--section-header-bg` to whatever it sits on (default `--bg`).
 		 */
-		appearance?: 'card' | 'lines';
+		layout?: 'card' | 'lines';
 		/** The fixed app header, measured when scrolling a collapsed section back into view. */
 		appHeaderSelector?: string;
 		/** Level of the title's heading: 2 under a page's h1, 3 for sections inside another section. */
 		headingLevel?: 2 | 3 | 4;
 		children: Snippet;
+		/** Shown while `count` is 0, in place of the rows (e.g. "Nothing here yet."). */
+		empty?: Snippet;
+		/** Last resort: a class on the root element. */
+		class?: string;
 	} = $props();
+
+	setIconButtonDefaults({ size: 'sm', tone: 'muted' });
 
 	const noDrop: DropZoneOptions = { accepts: () => false, ondrop: () => {} };
 	const noDrag: DragData = { type: 'none', id: '' };
@@ -80,8 +91,9 @@
 	 */
 	async function toggle() {
 		const pinnedTop = header?.getBoundingClientRect().top ?? 0;
-		const wasPinned = !collapsed && !!section && section.getBoundingClientRect().top < pinnedTop - 1;
-		ontogglecollapse();
+		const wasPinned = expanded && !!section && section.getBoundingClientRect().top < pinnedTop - 1;
+		expanded = !expanded;
+		onexpandedchange?.(expanded);
 		if (!wasPinned) return;
 		await tick();
 		if (!section) return;
@@ -93,7 +105,7 @@
 
 <section
 	bind:this={section}
-	class={['group', variant, appearance, appearance === 'card' && 'card', collapsed && 'collapsed']}
+	class={['group', emphasis, layout, layout === 'card' && 'card', !expanded && 'collapsed', className]}
 	data-dnd-item={dragData ? '' : undefined}
 	use:dropZone={drop ?? noDrop}
 >
@@ -104,22 +116,22 @@
 	>
 		<!-- A bigger target for pointers; keyboards and screen readers use the title's button. -->
 		<button type="button" class="collapse" tabindex="-1" aria-hidden="true" onclick={toggle}>
-			<span class="chev" class:collapsed><Icon name="chevron" size={20} /></span>
+			<span class="chev" class:collapsed={!expanded}><Icon name="chevron" size={20} /></span>
 		</button>
 		<!-- The name collapses the section; settings live behind the pencil. -->
 		<svelte:element this={`h${headingLevel}`} class="heading">
-			<button type="button" class="title" aria-expanded={!collapsed} onclick={toggle}>{title}</button>
+			<button type="button" class="title" aria-expanded={expanded} onclick={toggle}>{title}</button>
 		</svelte:element>
 		<Badge tone="count" label={countLabel(count)}>{count}</Badge>
 		{#if onadd}
-			<IconButton icon="plus" label={addLabel ?? `Add to ${title}`} onclick={onadd} />
+			<IconButton icon="plus" label={addLabel ?? `Add to ${title}`} size="lg" tone="neutral" onclick={onadd} />
 		{/if}
 		{#if onedit}
-			<IconButton icon="pencil" label={editLabel ?? `Edit ${title}`} size={20} onclick={onedit} />
+			<IconButton icon="pencil" label={editLabel ?? `Edit ${title}`} size="md" tone="neutral" onclick={onedit} />
 		{/if}
 	</div>
-	<ul class="items" hidden={collapsed}>
-		{@render children()}
+	<ul class="items" hidden={!expanded}>
+		{#if count === 0 && empty}<li class="empty-row">{@render empty()}</li>{:else}{@render children()}{/if}
 	</ul>
 </section>
 
@@ -130,14 +142,14 @@
 	.group-header {
 		position: sticky;
 		top: var(--header-offset, 0px);
-		z-index: 5;
+		z-index: var(--z-sticky);
 		display: flex;
 		align-items: center;
 		gap: 0.15rem;
 		min-height: 3rem;
-		padding: 0.15rem 0.25rem;
+		padding: 0.15rem var(--space-1);
 		background: var(--surface);
-		transition: top 0.2s ease;
+		transition: top var(--duration-normal) ease;
 		-webkit-touch-callout: none;
 		user-select: none;
 	}
@@ -191,7 +203,7 @@
 		background: var(--surface-hover);
 	}
 	.chev {
-		transition: transform 0.15s;
+		transition: transform var(--duration-fast);
 	}
 	.chev.collapsed {
 		transform: rotate(-90deg);
@@ -204,12 +216,12 @@
 	}
 	.title {
 		width: 100%;
-		padding: 0.5rem 0.25rem;
+		padding: var(--space-2) var(--space-1);
 		border: none;
 		background: none;
 		text-align: left;
-		font-weight: 700;
-		font-size: 1.02rem;
+		font-weight: var(--weight-bold);
+		font-size: var(--text-md);
 		cursor: pointer;
 		overflow-wrap: anywhere;
 	}
@@ -219,5 +231,11 @@
 	}
 	.items:empty {
 		display: none;
+	}
+	.empty-row {
+		list-style: none;
+		padding: var(--space-3) var(--space-4);
+		border-top: 1px solid var(--border);
+		color: var(--muted);
 	}
 </style>

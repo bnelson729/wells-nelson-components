@@ -55,6 +55,7 @@ The site installs the tools these use: `@sveltejs/adapter-static`, `@sveltejs/vi
 "scripts": {
 	"build": "vite build && wn-postbuild --forbid-from seed/demo.json#people.name",
 	"icons": "wn-icons --letters MA --background \"#1f5fa8\"",
+	"check:design": "wn-check-design",
 	"manifest": "wn-manifest --name \"My App\" --short-name MA --background \"#f3f5f8\" --theme \"#1f5fa8\" --description \"…\""
 }
 ```
@@ -65,9 +66,15 @@ The site installs the tools these use: `@sveltejs/adapter-static`, `@sveltejs/vi
 - `wn-icons`: `static/icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` and
   `static/favicon.svg` from one to three letters (A–Z) and colors. No dependencies.
 - `wn-manifest`: `static/manifest.webmanifest`.
+- `wn-check-design`: the design check, run by the shared CI as `npm run check:design`. In `src/`, a raw color
+  in a component's styles (tokens only; a site's own tokens live in `src/app.css`) and a selector reaching into a
+  library component's internals (`:global(.icon-btn)`, `.line .icon-btn` in a global stylesheet) are errors;
+  literal font sizes and z-indexes are warnings (errors with `--strict`). Each finding says what to use
+  instead; a `design-allow: <reason>` comment on the line (or the one above) allows it. `--warn` reports
+  without failing, for a site still moving over.
 
 The same functions are exported: `postbuild`, `collectStrings`, `writeIcons`, `renderPng`,
-`renderSvg`, `renderManifest`.
+`renderSvg`, `renderManifest`, `checkDesign`, `formatFindings`.
 
 ## Vite (`@wells-nelson/build-tools/vite`)
 

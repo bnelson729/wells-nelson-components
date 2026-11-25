@@ -6,8 +6,6 @@ export { deviceMayClearData, installHint } from './storage-risk.js';
 export { default as LocalItemsPrompt } from './LocalItemsPrompt.svelte';
 export { default as ShareModal } from './ShareModal.svelte';
 export { default as SignInCard } from './SignInCard.svelte';
-export { default as SignOutCard } from './SignOutCard.svelte';
-export { default as SyncStatusCard } from './SyncStatusCard.svelte';
 export {
 	EMAIL_PATTERN,
 	ROLE_OPTIONS,

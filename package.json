@@ -17,6 +17,8 @@
 		"check:compat": "tsc -p tests/compat/tsconfig.json",
 		"test": "npm run test --workspaces --if-present && npm run test:release",
 		"test:release": "node --test \"tests/release/*.test.mjs\"",
+		"test:visual": "playwright test",
+		"test:visual:update": "playwright test --update-snapshots",
 		"lint:package": "npm run lint:package --workspaces --if-present",
 		"pack:all": "node -e \"require('fs').mkdirSync('packs',{recursive:true})\" && npm pack -w src/npm/displays -w src/npm/interactions -w src/npm/data-storage -w src/npm/build-tools --pack-destination packs",
 		"lint": "eslint .",
@@ -25,6 +27,8 @@
 		"try": "node scripts/try.mjs"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.14.1",
+		"@playwright/test": "^1.65.1",
 		"@sveltejs/package": "^3.0.2",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"eslint": "^9.39.5",

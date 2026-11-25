@@ -79,7 +79,7 @@
 	.who {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--space-3);
 	}
 	.who img {
 		width: 3rem;
@@ -87,13 +87,13 @@
 		border-radius: 50%;
 	}
 	.name {
-		font-weight: 700;
-		font-size: 1.1rem;
+		font-weight: var(--weight-bold);
+		font-size: var(--text-lg);
 	}
 	.status {
 		display: grid;
 		grid-template-columns: max-content 1fr;
-		gap: 0.3rem 1rem;
+		gap: 0.3rem var(--space-4);
 		margin: 0;
 	}
 	dt {
@@ -108,7 +108,7 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: var(--space-1);
 	}
 	.pending li {
 		display: flex;

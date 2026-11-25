@@ -11,7 +11,8 @@
 		error,
 		action,
 		text,
-		role = 'alert'
+		role = 'alert',
+		class: className
 	}: {
 		/** An Error, a message string, or anything thrown. Nothing is shown while it's null or undefined. */
 		error: unknown;
@@ -20,6 +21,8 @@
 		/** The sentence to show instead of the computed one (the raw text still goes in Details). */
 		text?: string;
 		role?: 'alert' | 'status';
+		/** Last resort: a class on the root element. */
+		class?: string;
 	} = $props();
 
 	const shown = $derived(error == null ? '' : (text ?? errorText(error, action)));
@@ -27,7 +30,7 @@
 </script>
 
 {#if shown}
-	<div class="error-message">
+	<div class={['error-message', className]}>
 		<p class="error-text" {role}>{shown}</p>
 		{#if raw && raw !== shown}
 			<details>
@@ -42,13 +45,13 @@
 	.error-message {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: var(--space-1);
 	}
 	.error-message p {
 		margin: 0;
 	}
 	details {
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		color: var(--muted);
 	}
 	summary {

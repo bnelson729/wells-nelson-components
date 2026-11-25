@@ -2,20 +2,31 @@
 	import type { Snippet } from 'svelte';
 	import IconButton from './IconButton.svelte';
 
+	/**
+	 * A dialog over the page (the native <dialog>: top layer, background inert, Escape closes). Keep it
+	 * mounted and drive `bind:open`; for a modal about one thing (edit this task), hold that thing in
+	 * an `Overlay` from @wells-nelson/interactions and pass `onclosed={overlay.closed}`, so it's
+	 * kept until the dialog is gone.
+	 */
 	let {
 		open = $bindable(false),
 		title,
 		children,
 		footer,
 		onclose,
+		onclosed,
 		size = 'md',
-		dismissible = true
+		dismissible = true,
+		class: className
 	}: {
 		open?: boolean;
 		title: string;
 		children: Snippet;
 		footer?: Snippet;
+		/** The person closed it (✕, Escape or a click outside). Not called when `open` is set false in code. */
 		onclose?: () => void;
+		/** It has finished closing, by any route: clear what it was showing here. */
+		onclosed?: () => void;
 		/** sm: confirmations; md: forms (default); lg: near full width and height, for dense pickers. */
 		size?: 'sm' | 'md' | 'lg';
 		/**
@@ -24,6 +35,8 @@
 		 * the footer's buttons always close.
 		 */
 		dismissible?: boolean;
+		/** Last resort: a class on the <dialog>. Ask for an option before styling it from outside. */
+		class?: string;
 	} = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
@@ -61,6 +74,7 @@
 			open = false;
 			onclose?.();
 		}
+		onclosed?.();
 	}
 
 	function onBackdrop(e: MouseEvent) {
@@ -72,7 +86,7 @@
 
 <dialog
 	bind:this={dialog}
-	class="modal {size}"
+	class={['modal', size, className]}
 	onclose={handleClose}
 	onpointerdown={(e) => (pressedOnBackdrop = e.target === dialog)}
 	onclick={onBackdrop}
@@ -116,7 +130,7 @@
 		width: min(24rem, var(--modal-max-w, 100vw), calc(100vw - 2rem));
 	}
 	.modal::backdrop {
-		background: rgb(0 0 0 / 0.45);
+		background: var(--scrim);
 	}
 	.panel {
 		display: flex;
@@ -127,26 +141,26 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.75rem 0.75rem 0.25rem 1.25rem;
+		gap: var(--space-2);
+		padding: var(--space-3) var(--space-3) var(--space-1) 1.25rem;
 	}
 	h2 {
 		margin: 0;
-		font-size: 1.15rem;
+		font-size: var(--text-lg);
 	}
 	.body {
-		padding: 0.5rem 1.25rem 1rem;
+		padding: var(--space-2) 1.25rem var(--space-4);
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: var(--space-4);
 	}
 	footer {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: var(--space-2);
 		justify-content: flex-end;
-		padding: 0.75rem 1.25rem 1rem;
+		padding: var(--space-3) 1.25rem var(--space-4);
 		border-top: 1px solid var(--border);
 	}
 </style>
