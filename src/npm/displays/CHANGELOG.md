@@ -43,6 +43,9 @@ registered icons in `AppIcons`.
   so focus no longer drops to the page; a disabled or busy link has no `href`. Long labels wrap.
 - `Modal` `onclosed`: called once the dialog has closed, by any route. Use it with `Overlay` (interactions)
   to keep modals mounted. Its backdrop is `--scrim`.
+- `formatAgo`: "2 hours and 5 minutes ago" (rounded down) within the last 10 hours, else as `formatRecent`.
+- `Modal`: sticky content in its body (a `CollapsibleSection`'s header) pins flush to the top of the body,
+  instead of below the app header or with a gap the content showed through.
 - `Icon` `inline` (sits on a line of text), and a development warning for a name nobody registered. Base
   icons `chevron-up`, `chevron-left` and `chevron-right`.
 - Forced colors: a pressed `IconButton` is filled with the highlight color, the current page's is ringed

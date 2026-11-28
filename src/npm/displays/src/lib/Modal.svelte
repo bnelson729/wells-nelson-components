@@ -149,6 +149,12 @@
 		font-size: var(--text-lg);
 	}
 	.body {
+		/*
+		 * Sticky content (a CollapsibleSection's header) pins to the top edge of the body, flush under
+		 * the modal's header: not below the app header, which the modal covers, and not below the
+		 * body's top padding, which would leave a gap the content scrolls through.
+		 */
+		--header-offset: calc(-1 * var(--space-2));
 		padding: var(--space-2) 1.25rem var(--space-4);
 		overflow-y: auto;
 		display: flex;

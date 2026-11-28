@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, ErrorMessage, Icon, formatRecent } from '@wells-nelson/displays';
+	import { Button, ErrorMessage, Icon, formatAgo } from '@wells-nelson/displays';
 	import { capitalize, type AccountActions, type CloudStatus, type Nouns } from './types.js';
 
 	/** Signed-in summary: who, connection, last sync, what's waiting to upload, force re-sync. */
@@ -20,7 +20,15 @@
 	const user = $derived(cloud.user);
 	const meta = $derived((user?.user_metadata ?? {}) as Record<string, string | undefined>);
 	const displayName = $derived(meta.full_name ?? meta.name ?? user?.email);
-	const lastSync = $derived(cloud.lastSync ? formatRecent(cloud.lastSync) : 'Not synced yet');
+	/** The clock "5 minutes ago" counts from, moved on every 30 seconds while the card is shown. */
+	let now = $state(Date.now());
+	$effect(() => {
+		const timer = setInterval(() => (now = Date.now()), 30_000);
+		return () => clearInterval(timer);
+	});
+	const lastSync = $derived(
+		cloud.lastSync ? formatAgo(cloud.lastSync, Math.max(now, cloud.lastSync)) : 'Not synced yet'
+	);
 
 	async function resync() {
 		resyncing = true;

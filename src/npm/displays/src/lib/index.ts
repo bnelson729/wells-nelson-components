@@ -43,6 +43,8 @@ export {
 	formatDateTime,
 	formatLongDate,
 	formatRecent,
+	formatAgo,
+	AGO_MAX_HOURS,
 	formatTime,
 	isUserFacing,
 	knownErrorText,

@@ -131,6 +131,20 @@ describe('SyncStatusCard', () => {
 		expect(el.textContent).not.toContain('Not synced yet');
 	});
 
+	it('says how long ago the last sync was within 10 hours, and keeps counting', async () => {
+		vi.setSystemTime(new Date(2026, 10, 22, 15, 0));
+		const el = render(SyncStatusCard, {
+			cloud: fakeCloud({ user, email: user.email, lastSync: new Date(2026, 10, 22, 12, 55, 30).getTime() }),
+			account: { forceResync: vi.fn() },
+			nouns,
+			pending: []
+		});
+		expect(el.textContent).toContain('2 hours and 4 minutes ago');
+		await vi.advanceTimersByTimeAsync(60_000);
+		flushSync();
+		expect(el.textContent).toContain('2 hours and 5 minutes ago');
+	});
+
 	it('lists what is waiting to sync, and the last error with what it means', () => {
 		const el = render(SyncStatusCard, {
 			cloud: fakeCloud({ user, error: 'Failed to fetch', active: true }),

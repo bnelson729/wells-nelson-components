@@ -5,7 +5,7 @@
 
 	/**
 	 * A card whose header (chevron, title, count, add and edit actions) stays pinned below the app
-	 * header while you scroll through its rows. Collapsed sections hide rows with CSS rather than
+	 * header while you scroll through its rows (in a `Modal`, to the top of the modal's body). Collapsed sections hide rows with CSS rather than
 	 * unmounting them, so a row being dragged stays attached to the page.
 	 * Children are rendered inside a <ul> (`ListRow`s for `layout="lines"`); give draggable rows
 	 * `data-dnd-item`. `IconButton`s in the rows are small and muted unless they say otherwise.
@@ -83,6 +83,15 @@
 	/** Space left above a section scrolled back into view after collapsing. */
 	const COLLAPSE_MARGIN = 12;
 
+	/** The nearest ancestor that scrolls on its own (a modal's body), or null when the page does. */
+	function scrollingAncestor(el: HTMLElement): HTMLElement | null {
+		for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+			const { overflowY } = getComputedStyle(p);
+			if ((overflowY === 'auto' || overflowY === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+		}
+		return null;
+	}
+
 	/**
 	 * Collapsing from the pinned header while scrolled down inside a long section would leave the
 	 * page somewhere further down; scroll up so the collapsed section is in view near the top.
@@ -97,6 +106,12 @@
 		if (!wasPinned) return;
 		await tick();
 		if (!section) return;
+		// In a modal (or another scrolling box), scroll that box so the section is back at its top.
+		const scroller = scrollingAncestor(section);
+		if (scroller) {
+			scroller.scrollBy({ top: section.getBoundingClientRect().top - scroller.getBoundingClientRect().top });
+			return;
+		}
 		const appHeader = document.querySelector(appHeaderSelector);
 		const target = (appHeader?.getBoundingClientRect().height ?? 0) + COLLAPSE_MARGIN;
 		window.scrollBy({ top: section.getBoundingClientRect().top - target });

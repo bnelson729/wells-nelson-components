@@ -33,6 +33,10 @@ repository and finish what it lists.
 - `TextField`: other attributes go to the input as before; `readonly` reads as plain text.
 - `CollapsibleSection` and `ActiveList` take an `empty` snippet; icon buttons in a section's rows are small and
   muted.
+- The account page's Last synced says how long ago within the last 10 hours ("2 hours and 5 minutes ago"),
+  and keeps counting while it's shown.
+- `CollapsibleSection`: collapsing from the pinned header inside a modal scrolls the modal's body back to the
+  section, not the page.
 - Every component uses the theme's scales (space, type, layers, motion) and takes `class`.
 
 ## 1.2.5 (2026-11-24)

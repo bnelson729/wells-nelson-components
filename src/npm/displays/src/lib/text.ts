@@ -115,6 +115,28 @@ export function formatRecent(ms: number, now = Date.now()): string {
 	return `${when} at ${formatTime(ms)}`;
 }
 
+/** How far back `formatAgo` counts in hours and minutes before it gives the time instead. */
+export const AGO_MAX_HOURS = 10;
+
+/**
+ * "5 minutes ago", "2 hours and 5 minutes ago" (rounded down) within the last 10 hours; earlier, as
+ * `formatRecent` ("Yesterday at 3:04 PM"). For when something last happened, e.g. the last sync.
+ * Re-render it as time passes (each minute) so the count stays right.
+ */
+export function formatAgo(ms: number, now = Date.now()): string {
+	if (!valid(ms)) return 'Unknown time';
+	// A time a little ahead (another device's clock) counts as just now.
+	const minutes = Math.max(0, Math.floor((now - ms) / 60_000));
+	if (minutes >= AGO_MAX_HOURS * 60) return formatRecent(ms, now);
+	if (minutes === 0) return 'Less than a minute ago';
+	const hours = Math.floor(minutes / 60);
+	const rest = minutes % 60;
+	const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+	if (hours === 0) return `${unit(rest, 'minute')} ago`;
+	if (rest === 0) return `${unit(hours, 'hour')} ago`;
+	return `${unit(hours, 'hour')} and ${unit(rest, 'minute')} ago`;
+}
+
 /** "November 22, 2026": for long-form pages such as policies. */
 export function formatLongDate(ms: number): string {
 	if (!valid(ms)) return 'Unknown date';

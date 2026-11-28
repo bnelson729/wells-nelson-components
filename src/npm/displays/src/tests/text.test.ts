@@ -4,6 +4,7 @@ import {
 	formatDate,
 	formatDateTime,
 	formatLongDate,
+	formatAgo,
 	formatRecent,
 	formatTime,
 	isUserFacing,
@@ -71,6 +72,20 @@ describe('dates and times', () => {
 		expect(formatRecent(new Date(2026, 10, 22, 9, 30).getTime(), now)).toBe('Today at 9:30 AM');
 		expect(formatRecent(new Date(2026, 10, 21, 23, 59).getTime(), now)).toBe('Yesterday at 11:59 PM');
 		expect(formatRecent(new Date(2026, 10, 14, 8, 0).getTime(), now)).toBe('Sat, Nov 14 at 8:00 AM');
+	});
+
+	it('counts hours and minutes ago, rounded down, within the last 10 hours', () => {
+		const ago = (minutes: number, seconds = 0) => formatAgo(now - minutes * 60_000 - seconds * 1000, now);
+		expect(ago(0, 59)).toBe('Less than a minute ago');
+		expect(formatAgo(now + 30_000, now)).toBe('Less than a minute ago');
+		expect(ago(1, 59)).toBe('1 minute ago');
+		expect(ago(45)).toBe('45 minutes ago');
+		expect(ago(60)).toBe('1 hour ago');
+		expect(ago(61)).toBe('1 hour and 1 minute ago');
+		expect(ago(125, 30)).toBe('2 hours and 5 minutes ago');
+		expect(ago(9 * 60 + 59, 59)).toBe('9 hours and 59 minutes ago');
+		expect(ago(10 * 60)).toBe(formatRecent(now - 10 * 3_600_000, now));
+		expect(formatAgo(Number.NaN, now)).toBe('Unknown time');
 	});
 
 	it('writes long dates for policy pages', () => {

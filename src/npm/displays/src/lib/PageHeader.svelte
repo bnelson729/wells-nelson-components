@@ -71,14 +71,15 @@
 	.title-row > :global(.page-title) {
 		margin: 0;
 	}
-	.title {
+	/* Rules reach the heading only through .title-row, so a `class` passed in (even "title") can't match them. */
+	.title-row > .title {
 		margin: 0;
 		font-size: var(--text-lg);
 	}
-	.level-3 .title {
+	.level-3 .title-row > .title {
 		font-size: var(--text-md);
 	}
-	.title,
+	.title-row > .title,
 	.title-row > :global(.page-title) {
 		min-width: 0;
 		overflow-wrap: anywhere;
