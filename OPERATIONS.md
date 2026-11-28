@@ -65,6 +65,8 @@ Two jobs, for the site's schema, using SQL from this repository's [`ops/sql/`](o
 - **backup:** `pg_dump` of the schema, restored into a scratch Postgres to prove it restores (the row counts
   must land between the counts taken before and after the dump), then encrypted with the database password
   and kept as the `<schema>-backup` artifact for 30 days.
+  A site whose data is short-lived (nothing worth restoring) calls the workflow with `backup: false`, which
+  skips this job.
 - **checks:** a request to the project so a free-plan project isn't paused after a quiet week; the
   [security lint](ops/sql/security-lint.sql) (a table without row-level security, anything signed-out callers
   can reach other than `report_client_error`, a security-definer function without a fixed `search_path`);

@@ -2,7 +2,8 @@ name: Site database
 
 # Reusable nightly checks of a site's schema in its Supabase project:
 #   backup     pg_dump of the schema, restored into a scratch Postgres to prove it restores, then
-#              encrypted and kept as a workflow artifact for 30 days.
+#              encrypted and kept as a workflow artifact for 30 days. Skipped with `backup: false`,
+#              for a site whose data is short-lived and not worth keeping.
 #   checks     keeps the project awake (free projects pause after a week without traffic), fails
 #              if a table lacks row level security or anything is open to signed-out callers, and
 #              fails when the site reported errors in the last day (so GitHub emails you).
@@ -39,6 +40,10 @@ on:
         description: The site's Postgres schema
         type: string
         required: true
+      backup:
+        description: Run the backup job (false for a site whose data isn't worth keeping)
+        type: boolean
+        default: true
       pg-major:
         description: Postgres major version of the client tools and the scratch database (match Supabase's)
         type: string
@@ -49,6 +54,7 @@ permissions:
 
 jobs:
   backup:
+    if: inputs.backup
     runs-on: ubuntu-latest
     environment: database
     services:
